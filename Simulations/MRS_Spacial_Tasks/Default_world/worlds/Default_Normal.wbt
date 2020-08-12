@@ -1,0 +1,155 @@
+#VRML_SIM R2020a utf8
+WorldInfo {
+  basicTimeStep 16
+  optimalThreadCount 4
+}
+Viewpoint {
+  orientation -0.0010737794709795038 -0.6903666407995458 -0.7234588780772536 3.1454170472527676
+  position 0.005073482517702582 9.835947024119744 0.4745414884937831
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+RectangleArena {
+  floorSize 3 3
+  floorTileSize 0.2 0.2
+}
+DEF Supervisor Robot {
+  translation 1.5 1.5 3
+  children [
+    DEF DEF_RECEVE Receiver {
+      name "receiver_serial"
+      type "serial"
+      channel 3
+      baudRate 152
+    }
+    DEF RECIEVE Receiver {
+      channel -1
+      baudRate 152
+    }
+    DEF EMIT Emitter {
+      channel 3
+      baudRate 152
+    }
+    DEF SupCone Solid {
+      children [
+        DEF SUPER_CONE Shape {
+          geometry DEF SCylinder Cylinder {
+            height 0.1
+            radius 0.05
+          }
+        }
+      ]
+      boundingObject USE SCylinder
+      physics Physics {
+      }
+    }
+  ]
+  boundingObject USE SUPER_CONE
+  physics Physics {
+  }
+  controller "operator_robot"
+  controllerArgs "4"
+  supervisor TRUE
+}
+DEF ROBOT1 E-puck {
+  rotation 0 1 0 3.14159
+  controller "EPuck_Robot"
+  controllerArgs "1 0 0 0"
+  synchronization FALSE
+  emitter_channel 3
+  receiver_channel 3
+  baudRate 152
+}
+DEF ROBOT2 E-puck {
+  translation 0 0 0.1
+  rotation 0 1 0 3.14159
+  name "e-puck(1)"
+  controller "EPuck_Robot"
+  controllerArgs "2 0 0.1 0"
+  emitter_channel 3
+  receiver_channel 3
+  baudRate 152
+}
+DEF ROBOT3 E-puck {
+  translation 0 0 0.2
+  rotation 0 1 0 3.14159
+  name "e-puck(2)"
+  controller "EPuck_Robot"
+  controllerArgs "3 0 0.2 0"
+  emitter_channel 3
+  receiver_channel 3
+  baudRate 152
+}
+DEF ROBOT4 E-puck {
+  translation -0.1 0 0.3
+  rotation 0 1 0 3.14159
+  name "e-puck(3)"
+  controller "EPuck_Robot"
+  controllerArgs "4 -0.1 0.3 0"
+  emitter_channel 3
+  receiver_channel 3
+  baudRate 152
+  window "generic"
+}
+DEF ROBOT5 E-puck {
+  translation 0.1 0 0.3
+  rotation 0 1 0 3.14159
+  name "e-puck(4)"
+  controller "EPuck_Robot"
+  controllerArgs "5 0.1 0.3 0"
+  emitter_channel 3
+  receiver_channel 3
+  baudRate 152
+}
+DEF ROBOT6 E-puck {
+  translation 0.1 0 0.2
+  rotation 0 1 0 3.14159
+  name "e-puck(5)"
+  controller "EPuck_Robot"
+  controllerArgs "6 0.1 0.2 0"
+  emitter_channel 3
+  receiver_channel 3
+  baudRate 152
+}
+DEF ROBOT7 E-puck {
+  translation 0.1 0 0.1
+  rotation 0 1 0 3.14159
+  name "e-puck(6)"
+  controller "EPuck_Robot"
+  controllerArgs " 7 0.1 0.1 0"
+  emitter_channel 3
+  receiver_channel 3
+  baudRate 152
+}
+DEF ROBOT8 E-puck {
+  translation -0.1 0 0.2
+  rotation 0 1 0 3.14159
+  name "e-puck(7)"
+  controller "EPuck_Robot"
+  controllerArgs "8 -0.1 0.2 0"
+  emitter_channel 3
+  receiver_channel 3
+  baudRate 152
+}
+DEF ROBOT9 E-puck {
+  translation -0.1 0 0.1
+  rotation 0 1 0 3.14159
+  name "e-puck(8)"
+  controller "EPuck_Robot"
+  controllerArgs "9 -0.1 0.1 0"
+  emitter_channel 3
+  receiver_channel 3
+  baudRate 152
+}
+DEF ROBOT10 E-puck {
+  translation 0 0 0.3
+  rotation 0 1 0 3.14159
+  name "e-puck(9)"
+  controller "EPuck_Robot"
+  controllerArgs "10 0 0.3 0"
+  emitter_channel 3
+  receiver_channel 3
+  baudRate 152
+}

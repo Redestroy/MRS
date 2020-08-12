@@ -1,0 +1,24 @@
+Metadata-Version: 2.0
+Name: formlayout
+Version: 1.1.0
+Summary: Python module for creating Qt form dialogs and widgets
+Home-page: https://github.com/PierreRaybaut/formlayout
+Author: Pierre Raybaut
+Author-email: pierre.raybaut@gmail.com
+License: MIT
+Keywords: PyQt4 PyQt5 PySide GUI
+Platform: any
+Classifier: Development Status :: 5 - Production/Stable
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: MacOS
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Operating System :: OS Independent
+Classifier: Operating System :: POSIX
+Classifier: Operating System :: Unix
+Classifier: Programming Language :: Python :: 2.6
+Classifier: Programming Language :: Python :: 2.7
+Classifier: Programming Language :: Python :: 3
+
+UNKNOWN
+
+

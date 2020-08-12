@@ -1,0 +1,8 @@
+﻿  operator_robot.cpp
+D:\Robotics\MRS\Simulations\MRS_Spacial_Tasks\Default_world\controllers\operator_robot\operator_robot.cpp(75,38): warning C4305: 'initializing': truncation from 'double' to 'float'
+D:\Robotics\MRS\Simulations\MRS_Spacial_Tasks\Default_world\controllers\operator_robot\operator_robot.cpp(131,59): warning C4267: 'argument': conversion from 'size_t' to 'int', possible loss of data
+  Generating code
+  Previous IPDB was built with incompatible compiler, fall back to full compilation.
+  All 655 functions were compiled because no usable IPDB/IOBJ from previous compilation was found.
+  Finished generating code
+  operator_robot.vcxproj -> D:\Robotics\MRS\Simulations\MRS_Spacial_Tasks\Default_world\controllers\operator_robot\operator_robot.exe

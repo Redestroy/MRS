@@ -1,0 +1,241 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Debug|Win32">
+      <Configuration>Debug</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|Win32">
+      <Configuration>Release</Configuration>
+      <Platform>Win32</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <VCProjectVersion>15.0</VCProjectVersion>
+    <ProjectGuid>{B2AA53B0-6416-4406-8FF5-6D43BBA8B305}</ProjectGuid>
+    <RootNamespace>EPuck_Robot</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.17134.0</WindowsTargetPlatformVersion>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>true</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <ConfigurationType>Application</ConfigurationType>
+    <UseDebugLibraries>false</UseDebugLibraries>
+    <PlatformToolset>v141</PlatformToolset>
+    <WholeProgramOptimization>true</WholeProgramOptimization>
+    <CharacterSet>MultiByte</CharacterSet>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+  </ImportGroup>
+  <ImportGroup Label="Shared">
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <OutDir>$(SolutionDir)\</OutDir>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <OutDir>$(SolutionDir)\</OutDir>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>D:\Robotics software\Webots\Webots\include\controller\c;D:\Robotics software\Webots\Webots\include\controller\cpp;D:\Dokumenti\Bakalaura priekšmeti\Bakalaura darbs\Kods\Classes\MRS_STA\MRS_STA;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalUsingDirectories>D:\Robotics software\Webots\Webots\include;%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <OutputFile>$(projectdir)$(TargetName)$(TargetExt)</OutputFile>
+      <AdditionalLibraryDirectories>D:\Robotics software\Webots\Webots\lib;D:\Robotics software\Webots\Webots\lib\controller;D:\Robotics software\Webots\Webots\msys64\mingw64\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Controller.lib;%(AdditionalDependencies)</AdditionalDependencies>
+    </Link>
+    <ProjectReference>
+      <UseLibraryDependencyInputs>true</UseLibraryDependencyInputs>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <Optimization>Disabled</Optimization>
+      <FunctionLevelLinking>true</FunctionLevelLinking>
+      <IntrinsicFunctions>true</IntrinsicFunctions>
+      <SDLCheck>true</SDLCheck>
+      <ConformanceMode>true</ConformanceMode>
+      <AdditionalIncludeDirectories>D:\Robotics software\Webots\Webots\include\controller\c;D:\Robotics software\Webots\Webots\include\controller\cpp;D:\Dokumenti\Bakalaura priekšmeti\Bakalaura darbs\Kods\Classes\MRS_STA\MRS_STA;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalUsingDirectories>D:\Robotics software\Webots\Webots\include;%(AdditionalUsingDirectories)</AdditionalUsingDirectories>
+    </ClCompile>
+    <Link>
+      <EnableCOMDATFolding>true</EnableCOMDATFolding>
+      <OptimizeReferences>true</OptimizeReferences>
+      <AdditionalLibraryDirectories>D:\Robotics software\Webots\Webots\lib;D:\Robotics software\Webots\Webots\lib\controller;D:\Robotics software\Webots\Webots\msys64\mingw64\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalDependencies>Controller.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <OutputFile>$(projectdir)$(TargetName)$(TargetExt)</OutputFile>
+    </Link>
+    <ProjectReference>
+      <UseLibraryDependencyInputs>true</UseLibraryDependencyInputs>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="$(WEBOTS_HOME)\resources\languages\cpp\Accelerometer.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\Brake.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\Camera.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\Compass.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\Connector.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\Device.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\DifferentialWheels.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\Display.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\DistanceSensor.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\Emitter.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\Field.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\GPS.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\Gyro.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\InertialUnit.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\Joystick.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\Keyboard.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\LED.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\Lidar.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\LightSensor.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\Motion.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\Motor.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\Mouse.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\Node.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\Pen.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\PositionSensor.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\Radar.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\RangeFinder.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\Receiver.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\Robot.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\Skin.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\Speaker.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\Supervisor.cpp" />
+    <ClCompile Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\TouchSensor.cpp" />
+    <ClCompile Include="Action.cpp" />
+    <ClCompile Include="Actuator.cpp" />
+    <ClCompile Include="ActuatorBlock.cpp" />
+    <ClCompile Include="AnalogSensor.cpp" />
+    <ClCompile Include="ATask.cpp" />
+    <ClCompile Include="CBAA_Manager.cpp" />
+    <ClCompile Include="CommunicationDevice.cpp" />
+    <ClCompile Include="Condition.cpp" />
+    <ClCompile Include="ConditionNull.cpp" />
+    <ClCompile Include="ConditionPosition.cpp" />
+    <ClCompile Include="ConditionUndefined.cpp" />
+    <ClCompile Include="DigitalActuatorArray.cpp" />
+    <ClCompile Include="DirectDrive.cpp" />
+    <ClCompile Include="DistanceView.cpp" />
+    <ClCompile Include="EpuckDistanceSensorArray.cpp" />
+    <ClCompile Include="EPuckDrive.cpp" />
+    <ClCompile Include="EpuckEncoderSet.cpp" />
+    <ClCompile Include="EpuckLedArray.cpp" />
+    <ClCompile Include="EPuck_R.cpp" />
+    <ClCompile Include="EPuck_Robot.cpp" />
+    <ClCompile Include="MessageTranslator.cpp" />
+    <ClCompile Include="MRS_Robot.cpp" />
+    <ClCompile Include="Sensor.cpp" />
+    <ClCompile Include="SensorBlock.cpp" />
+    <ClCompile Include="SerialCommunication.cpp" />
+    <ClCompile Include="Task.cpp" />
+    <ClCompile Include="TaskPriorityList.cpp" />
+    <ClCompile Include="View.cpp" />
+    <ClCompile Include="ViewPosition2D.cpp" />
+    <ClCompile Include="Worldview.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\..\..\..\..\Robotics software\Webots\Webots\resources\languages\cpp\Makefile" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="Action.h" />
+    <ClInclude Include="Actuator.h" />
+    <ClInclude Include="ActuatorBlock.h" />
+    <ClInclude Include="AnalogSensor.h" />
+    <ClInclude Include="ATask.h" />
+    <ClInclude Include="CBAA_Manager.h" />
+    <ClInclude Include="CommunicationDevice.h" />
+    <ClInclude Include="Condition.h" />
+    <ClInclude Include="ConditionNull.h" />
+    <ClInclude Include="ConditionPosition.h" />
+    <ClInclude Include="ConditionUndefined.h" />
+    <ClInclude Include="DigitalActuatorArray.h" />
+    <ClInclude Include="DirectDrive.h" />
+    <ClInclude Include="DistanceView.h" />
+    <ClInclude Include="EpuckDistanceSensorArray.h" />
+    <ClInclude Include="EPuckDrive.h" />
+    <ClInclude Include="EpuckEncoderSet.h" />
+    <ClInclude Include="EpuckLedArray.h" />
+    <ClInclude Include="EPuck_R.h" />
+    <ClInclude Include="MessageTranslator.h" />
+    <ClInclude Include="MRS_Robot.h" />
+    <ClInclude Include="Sensor.h" />
+    <ClInclude Include="SensorBlock.h" />
+    <ClInclude Include="SerialCommunication.h" />
+    <ClInclude Include="Task.h" />
+    <ClInclude Include="TaskPriorityList.h" />
+    <ClInclude Include="TypeDefinitions.h" />
+    <ClInclude Include="View.h" />
+    <ClInclude Include="ViewPosition2D.h" />
+    <ClInclude Include="Worldview.h" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+  </ImportGroup>
+</Project>

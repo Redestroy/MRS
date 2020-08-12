@@ -1,0 +1,9 @@
+﻿  EPuck_Robot.cpp
+d:\robotics\mrs\simulations\mrs_spacial_tasks\default_world\controllers\epuck_robot\epuck_robot.cpp(101): warning C4101: 'deltatime2': unreferenced local variable
+  Generating code
+d:\robotics\mrs\simulations\mrs_spacial_tasks\default_world\controllers\epuck_robot\epuck_r.cpp(243): warning C4715: 'EPuck_R::OnMessageRecieved': not all control paths return a value
+  46 of 1281 functions ( 3.6%) were compiled, the rest were copied from previous compilation.
+    0 functions were new in current compilation
+    34 functions had inline decision re-evaluated but remain unchanged
+  Finished generating code
+  EPuck_Robot.vcxproj -> D:\Robotics\MRS\Simulations\MRS_Spacial_Tasks\Default_world\controllers\EPuck_Robot\\EPuck_Robot.exe

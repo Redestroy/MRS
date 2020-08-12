@@ -1,0 +1,25 @@
+#VRML_SIM R2020a utf8
+WorldInfo {
+}
+Viewpoint {
+  orientation -0.09626474313344127 -0.9707035728901107 -0.22015374811214616 2.230612361790447
+  position -1.8031609132871171 1.1488669324348184 -1.647291000915106
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+RobotstadiumSoccerField {
+}
+Nao {
+  controller "Nao_Controller"
+  jersey DEF JEARSEY_GREEN NaoJersey {
+    jerseyTexture [
+      ""
+    ]
+    jerseyColor 0.4 0.59 0.05
+  }
+}
+RobocupSoccerBall {
+  translation 0.23 0.05 0
+}
