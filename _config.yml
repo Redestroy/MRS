@@ -25,7 +25,7 @@ github_username:  Redestroy
 
 # Build settings
 markdown: kramdown
-theme: jekyll-theme-midnight
+theme: jekyll-theme-tactile
 plugins:
   - jekyll-feed
 
