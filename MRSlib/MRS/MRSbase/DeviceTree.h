@@ -1,6 +1,7 @@
 
-#include "Device.hpp"
+//#include "Device.hpp"
 #include "tree.h"
+/*
 namespace MRSbase {
 	class DeviceTree :
 		public tree<Device>
@@ -11,5 +12,5 @@ namespace MRSbase {
 		Device* GetDevice(DeviceType, long deviceId);
 
 	};
-}
+}*/
 

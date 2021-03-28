@@ -12,6 +12,8 @@
 #include <webots/Emitter.hpp>
 #include <webots/Receiver.hpp>
 #include <MRSbase.h>
+#include <Device.hpp>
+#include <DeviceTree.hpp>
 
 // All the webots classes are defined in the "webots" namespace
 using namespace webots;
@@ -40,7 +42,10 @@ int main(int argc, char **argv) {
   //Receiver * reciever = robot->getReceiver("Receiver");
   //std::cout << "Hello world !\n";
   MRSbase::fnMRSbase();
-  DeviceTree devices;
+  MRS::Device::Device device;
+  MRS::Device::DeviceTree tree;
+  if (device.GetDeviceType() == MRS::Device::DeviceType::Null) std::cout << "Device lib works\n";
+  //DeviceTree devices;
   // Main loop:
   // - perform simulation steps until Webots is stopping the controller
   while (robot->step(timeStep) != -1) {

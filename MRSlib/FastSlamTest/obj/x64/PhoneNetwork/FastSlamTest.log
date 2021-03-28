@@ -1,0 +1,34 @@
+﻿  Cleaning remote project directory
+  Validating sources
+  Copying sources remotely to '192.168.43.215'
+  Validating architecture
+D:\Program Files (x86)\VisualStudio2019\MSBuild\Microsoft\VC\v160\Application Type\Linux\1.0\Linux.targets(183,5): warning : The remote systems used in deploy have incompatible platform architectures ('x64', 'ARM').
+  Validating architecture
+  Starting remote build
+  Compiling sources:
+  DistanceSensor_Driver.cpp
+  FastSLAM.cpp
+D:\Robotics\MRS\MRSlib\FastSlamTest\FastSLAM.cpp(168,11): warning : unused variable ‘g’ [-Wunused-variable]
+D:\Robotics\MRS\MRSlib\FastSlamTest\FastSLAM.cpp(168,11): warning :        int g = p->AddObject((int)p->GetSize() + 4, &new_pos);
+D:\Robotics\MRS\MRSlib\FastSlamTest\FastSLAM.cpp(168,11): warning :            ^
+  main.cpp
+  ObjectSensor_Driver.cpp
+  Particle.cpp
+D:\Robotics\MRS\MRSlib\FastSlamTest\Particle.cpp(36,9): warning : variable ‘pair’ set but not used [-Wunused-but-set-variable]
+D:\Robotics\MRS\MRSlib\FastSlamTest\Particle.cpp(36,9): warning :     auto pair = objects.emplace(0, position);
+D:\Robotics\MRS\MRSlib\FastSlamTest\Particle.cpp(36,9): warning :          ^~~~
+D:\Robotics\MRS\MRSlib\FastSlamTest\Particle.cpp(70,27): warning : conversion to ‘int’ from ‘std::map<int, MRS::Device::View2DPosition>::size_type {aka long unsigned int}’ may alter its value [-Wconversion]
+D:\Robotics\MRS\MRSlib\FastSlamTest\Particle.cpp(70,27): warning :      me_size = objects.size();
+D:\Robotics\MRS\MRSlib\FastSlamTest\Particle.cpp(70,27): warning :                ~~~~~~~~~~~~^~
+D:\Robotics\MRS\MRSlib\FastSlamTest\Particle.cpp(66,10): warning : variable ‘pair’ set but not used [-Wunused-but-set-variable]
+D:\Robotics\MRS\MRSlib\FastSlamTest\Particle.cpp(66,10): warning :      auto pair = objects.emplace(id, *obj_pos);
+D:\Robotics\MRS\MRSlib\FastSlamTest\Particle.cpp(66,10): warning :           ^~~~
+D:\Robotics\MRS\MRSlib\FastSlamTest\Particle.cpp(95,27): warning : conversion to ‘int’ from ‘std::map<int, MRS::Device::View2DPosition>::size_type {aka long unsigned int}’ may alter its value [-Wconversion]
+D:\Robotics\MRS\MRSlib\FastSlamTest\Particle.cpp(95,27): warning :      me_size = objects.size();
+D:\Robotics\MRS\MRSlib\FastSlamTest\Particle.cpp(95,27): warning :                ~~~~~~~~~~~~^~
+D:\Robotics\MRS\MRSlib\FastSlamTest\Particle.cpp(207,25): warning : conversion to ‘int’ from ‘std::map<int, MRS::Device::View2DPosition>::size_type {aka long unsigned int}’ may alter its value [-Wconversion]
+D:\Robotics\MRS\MRSlib\FastSlamTest\Particle.cpp(207,25): warning :    me_size = objects.size();
+D:\Robotics\MRS\MRSlib\FastSlamTest\Particle.cpp(207,25): warning :              ~~~~~~~~~~~~^~
+  SpatialObjectSensor_File.cpp
+  Linking objects
+  FastSlamTest.vcxproj -> D:\Robotics\MRS\MRSlib\FastSlamTest\bin\x64\PhoneNetwork\FastSlamTest.out

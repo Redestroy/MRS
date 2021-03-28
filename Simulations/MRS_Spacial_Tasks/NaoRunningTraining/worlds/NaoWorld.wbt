@@ -1,0 +1,43 @@
+#VRML_SIM R2020a utf8
+WorldInfo {
+}
+Viewpoint {
+  orientation -0.7131120119841663 0.6851431788895006 0.14849270280079063 0.7430649454629196
+  position 7.423588432955377 8.875866597677286 12.903794969155678
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+DEF TRACK Floor {
+  translation 0 0 0.39
+  size 11 3
+  tileSize 11 3
+  appearance PBRAppearance {
+    baseColorMap ImageTexture {
+      url [
+        "D:/Robotics/MRS/Simulations/ThirdPartyProtos/textures/nao_10m_track_base_color.jpg"
+      ]
+    }
+    roughness 1
+    roughnessMap ImageTexture {
+      url [
+        "textures/nao_10m_track_roughness.jpg"
+      ]
+    }
+    metalness 0
+    normalMap ImageTexture {
+      url [
+        "textures/nao_10m_track_normal.jpg"
+      ]
+    }
+  }
+}
+Nao {
+  translation -5.18 0.334 -0.66
+}
+RaceStopwatch {
+  translation 4.73 0 -1.19623
+  rotation 0 -1 0 -1.57
+  window "humanoid_sprint"
+}

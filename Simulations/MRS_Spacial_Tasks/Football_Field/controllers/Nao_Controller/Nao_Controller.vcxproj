@@ -71,7 +71,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <OutDir>$(SolutionDir)\</OutDir>
-    <IncludePath>D:\Robotics\MRS\MRSlib\MRS\MRSbase\Include;$(IncludePath)</IncludePath>
+    <IncludePath>D:\Robotics\MRS\MRSlib\MRS\MRS\Include;D:\Robotics\MRS\MRSlib\MRS\MRSbase\Include;$(IncludePath)</IncludePath>
     <LibraryPath>D:\Robotics\MRS\MRSlib\MRS\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -126,7 +126,7 @@
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <OptimizeReferences>true</OptimizeReferences>
       <AdditionalLibraryDirectories>D:\Robotics\MRS\MRSlib\MRS\x64\Release;$(WEBOTS_HOME)\lib\controller\;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
-      <AdditionalDependencies>MRSbase.lib;Controller.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>MRSbase.lib;MRSbase_Windows.lib;Controller.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>

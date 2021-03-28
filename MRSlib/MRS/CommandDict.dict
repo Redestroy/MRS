@@ -1,0 +1,27 @@
+init : (init Arg_TeamName [(version Arg_VerNum)] [Arg_goalie]) ; 1="MyTeam" 2=15 3=(goalie)
+reconnect : (reconnect Arg_TeamName [(version Arg_VerNum)] [(Arg_goalie)]) ; 1="MyTeam" 2=15 3
+bye : (bye)
+compression : (compression Arg_Level) ; 1=0
+clang : (ver Arg_MinVer Arg_MaxVer) ; 1=0 2=10
+ear : (ear (Arg_OnOff [Arg_Team] [Arg_Type])) ; 1=on 2=our 3=interesting
+synch_see : (synch_see)
+turn : (turn Arg_Moment) ; 1=15
+dash : (dash Arg_Power [Arg_Direction]) ; 1=5 2=20
+kick : (kick Arg_Power Arg_Direction) ; 1=5 2=0
+tackle : (tackle Arg_PowerOrAngle [Arg_Foul]) ; 1=5
+catch : (catch Arg_Direction) ; 1=5
+move : (move Arg_X Arg_Y) ; 1=55 2=25
+change_view : (change_view Arg_Width Arg_Quality) ; 1="narrow" 2="high"
+say : (say Arg_message) ; 1=~"This_is_message"
+pointto1 : (pointto Arg_Distance Arg_Direction) ; 1=30 2=90
+pointto2 : (pointto Arg_Off) ; 1="false"
+attentionto1 : (attentionto Arg_Team Arg_Unam) ; 1="our" 2=5
+attentionto2 : (attentionto Arg_Off) ; 1="false"
+done : (done)
+sense_body : (sense_body)
+score : (score)
+#hear : (hear Arg_Time Arg_Sender "Arg_Message")
+#hear2 : (hear Arg_Time Arg_OnlineCoach Arg_CoachLanguageMessage)
+#see : (see Time Arg_ObjInfo) ; 1="TO_DO"
+#sense_body : (TO_DO)
+#fullstate : (TO_DO)

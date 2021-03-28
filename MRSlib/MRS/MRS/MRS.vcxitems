@@ -1,0 +1,178 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <MSBuildAllProjects>$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <ItemsProjectGuid>{6a9d77b8-6a4c-464b-a310-d3c30da08311}</ItemsProjectGuid>
+  </PropertyGroup>
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories);$(MSBuildThisFileDirectory)</AdditionalIncludeDirectories>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ProjectCapability Include="SourceItemsFromImports" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\Action.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\Actuator.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\ActuatorBlock.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\AngleJoint.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\CommunicationDevice.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\Condition.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\Controller.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\Device.cpp">
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Linux|Win32'">D:\Robotics\MRS\MRSlib\MRS\MRSbase\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">D:\Robotics\MRS\MRSlib\MRS\MRSbase\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">D:\Robotics\MRS\MRSlib\MRS\MRSbase\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Linux|ARM'">D:\Robotics\MRS\MRSlib\MRS\MRSbase\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">D:\Robotics\MRS\MRSlib\MRS\MRSbase\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">D:\Robotics\MRS\MRSlib\MRS\MRSbase\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Linux|x64'">D:\Robotics\MRS\MRSlib\MRS\MRSbase\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Release|x64'">D:\Robotics\MRS\MRSlib\MRS\MRSbase\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">D:\Robotics\MRS\MRSlib\MRS\MRSbase\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\DeviceBlock.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\DeviceTree.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\DistanceSensor.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\DistanceView.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\Emitter.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\FeedbackPair.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\InformationSensor.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\InformationView.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\MovementActuator2D_soccer.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\ObjectSensor.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\ObjectView.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\ObjectViewList.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\ProtocolParser.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\Receiver.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\Sensor.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\SensorBlock.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\SIMPLE_MRS_PARSER.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\SpatialObjectSensor.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\Task.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\View.cpp">
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|x64'">NotUsing</PrecompiledHeader>
+      <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
+    </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\View2DPosition.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\Action.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\Actuator.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\ActuatorBlock.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\AngleJoint.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\CommunicationDevice.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\Condition.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\Controller.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\Device.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\DeviceBlock.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\DeviceTree.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\DistanceSensor.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\DistanceView.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\Emitter.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\FeedbackPair.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\InformationSensor.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\InformationView.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\MovementActuator2D_soccer.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\ObjectSensor.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\ObjectView.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\ObjectViewList.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\ProtocolParser.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\Receiver.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\Sensor.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\SensorBlock.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\SIMPLE_MRS_PARSER.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\SpatialObjectSensor.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\Task.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\View.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\View2DPosition.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\Worldview.hpp" />
+  </ItemGroup>
+</Project>

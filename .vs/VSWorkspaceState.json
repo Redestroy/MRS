@@ -1,0 +1,16 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\MRSlib",
+    "\\MRSlib\\MRS",
+    "\\MRSlib\\MRS\\MRS",
+    "\\MRSlib\\MRS\\MRSbase",
+    "\\MRSlib\\MRS\\MRSbase\\Include",
+    "\\MRSlib\\MRS\\MRSbase\\Source",
+    "\\MRSlib\\MRS\\MRS\\Include",
+    "\\MRSlib\\MRS\\MRS\\Source",
+    "\\MRSlib\\MRS\\SoccerSimClient"
+  ],
+  "SelectedNode": "\\MRSlib\\MRS\\MRS\\Include\\ObjectSensor.hpp",
+  "PreviewInSolutionExplorer": false
+}

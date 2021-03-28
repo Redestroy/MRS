@@ -1,0 +1,6 @@
+#VRML_OBJ R2020a utf8
+RaceStopwatch {
+  translation 4.73 0 -1.19623
+  rotation 0 -1 0 -1.57
+  window "humanoid_sprint"
+}

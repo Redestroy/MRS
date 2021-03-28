@@ -1,0 +1,1 @@
+g++ -o "/home/research/projects/SoccerSimClient/bin/x64/VNPC_net/SoccerSimClient.out" -Wl,--no-undefined -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack /home/research/projects/SoccerSimClient/obj/x64/VNPC_net/main.o -lboost_system

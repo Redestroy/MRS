@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "tree.h"
+/*
 namespace MRSbase {
 	template <typename T>
 	tree<T>::tree() : children()
@@ -145,4 +146,4 @@ namespace MRSbase {
 	{
 		return nullptr;
 	}
-}
+}*/

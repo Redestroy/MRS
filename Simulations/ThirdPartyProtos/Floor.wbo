@@ -1,0 +1,25 @@
+#VRML_OBJ R2020a utf8
+DEF TRACK Floor {
+  translation 0 0 0.39
+  size 11 3
+  tileSize 11 3
+  appearance PBRAppearance {
+    baseColorMap ImageTexture {
+      url [
+        "textures/nao_10m_track_base_color.jpg"
+      ]
+    }
+    roughness 1
+    roughnessMap ImageTexture {
+      url [
+        "textures/nao_10m_track_roughness.jpg"
+      ]
+    }
+    metalness 0
+    normalMap ImageTexture {
+      url [
+        "textures/nao_10m_track_normal.jpg"
+      ]
+    }
+  }
+}

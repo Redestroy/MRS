@@ -1,0 +1,3 @@
+﻿  Validating sources
+  Copying sources remotely to '192.168.43.215'
+D:\Program Files (x86)\VisualStudio2019\MSBuild\Microsoft\VC\v160\Application Type\Linux\1.0\Linux.targets(223,5): error : Could not connect to the remote system. Please verify your connection settings, and that your machine is on the network and reachable.

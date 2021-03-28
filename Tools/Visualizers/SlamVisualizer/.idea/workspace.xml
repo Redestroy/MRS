@@ -1,0 +1,269 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="de050cc9-1510-4116-be45-66b5f5affabb" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/../../Generators/SensorImitationGeneration/.idea/SensorImitationGeneration.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../../Generators/SensorImitationGeneration/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../../Generators/SensorImitationGeneration/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../../Generators/SensorImitationGeneration/.idea/modules.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../../Generators/SensorImitationGeneration/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../../Generators/SensorImitationGeneration/.idea/workspace.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../../Generators/SensorImitationGeneration/SensorImitationGenerator.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../../Generators/TaskSetGenerator/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../ResultVisualizer/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/SlamVisualizer.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/modules.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/SlamVisualizer1D.py" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/.vs/MRSbase/v16/.suo" beforeDir="false" afterPath="$PROJECT_DIR$/../../../MRSlib/MRS/.vs/MRSbase/v16/.suo" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/.vs/MRSbase/v16/Browse.VC.db" beforeDir="false" afterPath="$PROJECT_DIR$/../../../MRSlib/MRS/.vs/MRSbase/v16/Browse.VC.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/.vs/MRSbase/v16/Solution.VC.db" beforeDir="false" afterPath="$PROJECT_DIR$/../../../MRSlib/MRS/.vs/MRSbase/v16/Solution.VC.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/.vs/MRSbase/v16/ipch/741f0e7b9d8a4c4.ipch" beforeDir="false" afterPath="$PROJECT_DIR$/../../../MRSlib/MRS/.vs/MRSbase/v16/ipch/741f0e7b9d8a4c4.ipch" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase.sln" beforeDir="false" afterPath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase.sln" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/Agent.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/Agent.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/DeviceTree.h" beforeDir="false" afterPath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/DeviceTree.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/Devices/Actuator.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/Devices/Actuator.h" beforeDir="false" afterPath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/Devices/Actuator.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/Devices/Device.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/Devices/Device.hpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/Devices/Sensor.cpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/Devices/Sensor.hpp" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/Include/Agent.h" beforeDir="false" afterPath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/Include/Agent.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/Include/World.h" beforeDir="false" afterPath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/Include/World.h" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/MRSbase.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/MRSbase.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/MRSbase.vcxproj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/MRSbase.vcxproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/MRSbase.vcxproj.filters" beforeDir="false" afterPath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/MRSbase.vcxproj.filters" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/Release/MRSbase.log" beforeDir="false" afterPath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/Release/MRSbase.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/World.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/World.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/tree.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/tree.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/x64/Release/MRSbase.log" beforeDir="false" afterPath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/x64/Release/MRSbase.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/x64/Release/MRSbase.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/x64/Release/MRSbase.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/x64/Release/MRSbase.pch" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/x64/Release/MRSbase.pdb" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/x64/Release/pch.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase/x64/Release/pch.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase_Linux/MRSbase_Linux.vcxproj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase_Linux/MRSbase_Linux.vcxproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase_Linux/MRSbase_Linux.vcxproj.user" beforeDir="false" afterPath="$PROJECT_DIR$/../../../MRSlib/MRS/MRSbase_Linux/MRSbase_Linux.vcxproj.user" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/RPITest/RPITest.vcxproj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../MRSlib/MRS/RPITest/RPITest.vcxproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../MRSlib/MRS/Release/MRSbase.lib" beforeDir="false" afterPath="$PROJECT_DIR$/../../../MRSlib/MRS/Release/MRSbase.lib" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Default_world/controllers/operator_robot/Results/MRS_RTA/Taskset4.res" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Default_world/controllers/operator_robot/Results/MRS_RTA/Taskset4.res" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Default_world/worlds/.Default_Normal.wbproj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Default_world/worlds/.Default_Normal.wbproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/.vs/Nao_Controller/v16/.suo" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/.vs/Nao_Controller/v16/.suo" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/.vs/Nao_Controller/v16/Browse.VC.db" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/.vs/Nao_Controller/v16/Browse.VC.db" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/.vs/Nao_Controller/v16/ipch/AutoPCH/5f5de2d15181e5cb/NAO_CONTROLLER.ipch" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/.vs/Nao_Controller/v16/ipch/AutoPCH/5f5de2d15181e5cb/NAO_CONTROLLER.ipch" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/Nao_Controller.cpp" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/Nao_Controller.cpp" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/Nao_Controller.exe" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/Nao_Controller.exe" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/Nao_Controller.iobj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/Nao_Controller.iobj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/Nao_Controller.ipdb" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/Nao_Controller.ipdb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/Nao_Controller.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/Nao_Controller.pdb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/Nao_Controller.vcxproj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/Nao_Controller.vcxproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/Release/Nao_Controller.log" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/Release/Nao_Controller.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/Release/Nao_Controller.obj" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/Release/Nao_Controller.tlog/CL.command.1.tlog" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/Release/Nao_Controller.tlog/CL.command.1.tlog" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/Release/Nao_Controller.tlog/CL.read.1.tlog" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/Release/Nao_Controller.tlog/CL.read.1.tlog" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/Release/Nao_Controller.tlog/CL.write.1.tlog" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/Release/Nao_Controller.tlog/CL.write.1.tlog" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/Release/vc142.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/Release/vc142.pdb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Accelerometer.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Accelerometer.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Brake.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Brake.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Camera.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Camera.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Compass.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Compass.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Connector.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Connector.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Device.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Device.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/DifferentialWheels.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/DifferentialWheels.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Display.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Display.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/DistanceSensor.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/DistanceSensor.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Emitter.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Emitter.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Field.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Field.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/GPS.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/GPS.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Gyro.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Gyro.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/InertialUnit.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/InertialUnit.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Joystick.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Joystick.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Keyboard.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Keyboard.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/LED.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/LED.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Lidar.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Lidar.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/LightSensor.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/LightSensor.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Motion.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Motion.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Motor.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Motor.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Mouse.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Mouse.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Nao_Controller.Build.CppClean.log" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Nao_Controller.Build.CppClean.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Nao_Controller.log" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Nao_Controller.log" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Nao_Controller.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Nao_Controller.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Nao_Controller.tlog/CL.read.1.tlog" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Nao_Controller.tlog/CL.read.1.tlog" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Nao_Controller.tlog/Nao_Controller.write.1u.tlog" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Nao_Controller.tlog/Nao_Controller.write.1u.tlog" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Nao_Controller.tlog/link.command.1.tlog" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Nao_Controller.tlog/link.command.1.tlog" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Nao_Controller.tlog/link.delete.1.tlog" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Nao_Controller.tlog/link.delete.1.tlog" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Nao_Controller.tlog/link.read.1.tlog" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Nao_Controller.tlog/link.read.1.tlog" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Node.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Node.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Pen.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Pen.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/PositionSensor.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/PositionSensor.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Radar.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Radar.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/RangeFinder.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/RangeFinder.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Receiver.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Receiver.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Robot.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Robot.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Skin.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Skin.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Speaker.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Speaker.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Supervisor.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/Supervisor.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/TouchSensor.obj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/TouchSensor.obj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/vc142.pdb" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/controllers/Nao_Controller/x64/Release/vc142.pdb" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/worlds/.Football_Field.wbproj" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/worlds/.Football_Field.wbproj" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/worlds/Football_Field.wbt" beforeDir="false" afterPath="$PROJECT_DIR$/../../../Simulations/MRS_Spacial_Tasks/Football_Field/worlds/Football_Field.wbt" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../Generators/TaskSetGenerator/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../../Generators/TaskSetGenerator/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../Generators/TaskSetGenerator/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../../Generators/TaskSetGenerator/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ResultVisualizer/.idea/inspectionProfiles/Project_Default.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../ResultVisualizer/.idea/inspectionProfiles/Project_Default.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../ResultVisualizer/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/../ResultVisualizer/.idea/workspace.xml" afterDir="false" />
+    </list>
+    <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FUSProjectUsageTrigger">
+    <session id="-1589610629">
+      <usages-collector id="statistics.lifecycle.project">
+        <counts>
+          <entry key="project.closed" value="1" />
+          <entry key="project.open.time.106" value="1" />
+          <entry key="project.opened" value="1" />
+        </counts>
+      </usages-collector>
+      <usages-collector id="statistics.file.extensions.open">
+        <counts>
+          <entry key="py" value="1" />
+        </counts>
+      </usages-collector>
+      <usages-collector id="statistics.file.types.open">
+        <counts>
+          <entry key="Python" value="1" />
+        </counts>
+      </usages-collector>
+      <usages-collector id="statistics.file.extensions.edit">
+        <counts>
+          <entry key="py" value="1159" />
+        </counts>
+      </usages-collector>
+      <usages-collector id="statistics.file.types.edit">
+        <counts>
+          <entry key="Python" value="1159" />
+        </counts>
+      </usages-collector>
+    </session>
+  </component>
+  <component name="FileEditorManager">
+    <leaf>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/SlamVisualizer1D.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="-663">
+              <caret line="3" column="32" selection-start-line="3" selection-start-column="32" selection-end-line="3" selection-end-column="32" />
+              <folding>
+                <marker date="1608483688038" expanded="true" signature="121:228" ph="..." />
+                <marker date="1608483688038" expanded="true" signature="258:411" ph="..." />
+                <marker date="1608483688038" expanded="true" signature="2225:2228" ph="..." />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+    </leaf>
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Python Script" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/../../.." />
+  </component>
+  <component name="IdeDocumentHistory">
+    <option name="CHANGED_PATHS">
+      <list>
+        <option value="$PROJECT_DIR$/SlamVisualizer1D.py" />
+      </list>
+    </option>
+  </component>
+  <component name="ProjectFrameBounds" extendedState="7">
+    <option name="x" value="-10" />
+    <option name="y" value="-10" />
+    <option name="width" value="1939" />
+    <option name="height" value="1049" />
+  </component>
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectView">
+    <navigator proportions="" version="1">
+      <foldersAlwaysOnTop value="true" />
+    </navigator>
+    <panes>
+      <pane id="ProjectPane">
+        <subPane>
+          <expand>
+            <path>
+              <item name="SlamVisualizer" type="b2602c69:ProjectViewProjectNode" />
+              <item name="SlamVisualizer" type="462c0819:PsiDirectoryNode" />
+            </path>
+          </expand>
+          <select />
+        </subPane>
+      </pane>
+      <pane id="Course" />
+    </panes>
+  </component>
+  <component name="PropertiesComponent">
+    <property name="last_opened_file_path" value="$USER_HOME$" />
+  </component>
+  <component name="RunDashboard">
+    <option name="ruleStates">
+      <list>
+        <RuleState>
+          <option name="name" value="ConfigurationTypeDashboardGroupingRule" />
+        </RuleState>
+        <RuleState>
+          <option name="name" value="StatusDashboardGroupingRule" />
+        </RuleState>
+      </list>
+    </option>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="ToolWindowManager">
+    <frame x="-8" y="-8" width="1936" height="1056" extended-state="7" />
+    <layout>
+      <window_info active="true" content_ui="combo" id="Project" order="0" visible="true" weight="0.24973656" />
+      <window_info id="Structure" order="1" weight="0.25" />
+      <window_info anchor="bottom" id="Version Control" />
+      <window_info anchor="bottom" id="Python Console" />
+      <window_info anchor="bottom" id="Message" order="0" />
+      <window_info anchor="bottom" id="Find" order="1" />
+      <window_info anchor="bottom" id="Run" order="2" />
+      <window_info anchor="bottom" id="Debug" order="3" weight="0.4" />
+      <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
+      <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
+      <window_info anchor="bottom" id="TODO" order="6" />
+      <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
+      <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
+      <window_info anchor="right" content_ui="combo" id="Hierarchy" order="2" weight="0.25" />
+    </layout>
+  </component>
+  <component name="VcsContentAnnotationSettings">
+    <option name="myLimit" value="2678400000" />
+  </component>
+  <component name="editorHistoryManager">
+    <entry file="file://$PROJECT_DIR$/SlamVisualizer1D.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="-663">
+          <caret line="3" column="32" selection-start-line="3" selection-start-column="32" selection-end-line="3" selection-end-column="32" />
+          <folding>
+            <marker date="1608483688038" expanded="true" signature="121:228" ph="..." />
+            <marker date="1608483688038" expanded="true" signature="258:411" ph="..." />
+            <marker date="1608483688038" expanded="true" signature="2225:2228" ph="..." />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+  </component>
+</project>

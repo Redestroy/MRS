@@ -1,0 +1,9 @@
+﻿  Validating sources
+  Copying sources remotely to '192.168.1.42'
+  Validating architecture
+  Validating architecture
+  Starting remote build
+  Compiling sources:
+  main.cpp
+  Linking objects
+  SoccerSimClient.vcxproj -> D:\Robotics\MRS\MRSlib\MRS\SoccerSimClient\bin\x64\VNPC_net\SoccerSimClient.out

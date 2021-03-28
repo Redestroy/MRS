@@ -1,6 +1,6 @@
 #include "pch.h"
 #include "Agent.h"
-
+/*
 void Agent::Init()
 {
 	sensor_count = 0;
@@ -16,3 +16,4 @@ void Agent::AddSensor(Sensor * sensor)
 {
 	sensors.emplace(sensor_count++, sensor);
 }
+*/

@@ -1,0 +1,19 @@
+﻿  Validating sources
+  Copying sources remotely to '192.168.43.215'
+  Validating architecture
+D:\Program Files (x86)\VisualStudio2019\MSBuild\Microsoft\VC\v160\Application Type\Linux\1.0\Linux.targets(183,5): warning : The remote systems used in deploy have incompatible platform architectures ('x64', 'ARM').
+  Validating architecture
+  Starting remote build
+  Compiling sources:
+  ObjectViewList.cpp
+/home/research/projects/MRSbase_Linux/MRS/Source/../Include/DistanceView.hpp(20,63): warning : conversion to ‘unsigned char’ from ‘long unsigned int’ may alter its value [-Wconversion]
+/home/research/projects/MRSbase_Linux/MRS/Source/../Include/DistanceView.hpp(20,63): warning :     const unsigned char DISTANCE_PTR_OFFSET = ANGLE_PTR_OFFSET + sizeof(double);
+/home/research/projects/MRSbase_Linux/MRS/Source/../Include/DistanceView.hpp(20,63): warning :                                               ~~~~~~~~~~~~~~~~~^~~~~~~~~
+/home/research/projects/MRSbase_Linux/MRS/Source/../Include/DistanceView.hpp(21,69): warning : conversion to ‘unsigned char’ from ‘long unsigned int’ may alter its value [-Wconversion]
+/home/research/projects/MRSbase_Linux/MRS/Source/../Include/DistanceView.hpp(21,69): warning :     const unsigned char PRECISION_A_PTR_OFFSET = DISTANCE_PTR_OFFSET + sizeof(double);
+/home/research/projects/MRSbase_Linux/MRS/Source/../Include/DistanceView.hpp(21,69): warning :                                                  ~~~~~~~~~~~~~~~~~~~~^~~~~~~~~
+/home/research/projects/MRSbase_Linux/MRS/Source/../Include/DistanceView.hpp(22,72): warning : conversion to ‘unsigned char’ from ‘long unsigned int’ may alter its value [-Wconversion]
+/home/research/projects/MRSbase_Linux/MRS/Source/../Include/DistanceView.hpp(22,72): warning :     const unsigned char PRECISION_D_PTR_OFFSET = PRECISION_A_PTR_OFFSET + sizeof(double);
+/home/research/projects/MRSbase_Linux/MRS/Source/../Include/DistanceView.hpp(22,72): warning :                                                  ~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~
+  Linking objects
+  MRSbase_Linux.vcxproj -> D:\Robotics\MRS\MRSlib\MRS\MRSbase_Linux\bin\x64\PhoneNetwork\libMRSbase_Linux.so

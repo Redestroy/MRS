@@ -13,7 +13,8 @@ void World::Add(Agent* agent)
 {
 	agents.emplace(agent_count++, agent);
 }
-
+/*
 void World::Affect(Action)
 {
 }
+*/

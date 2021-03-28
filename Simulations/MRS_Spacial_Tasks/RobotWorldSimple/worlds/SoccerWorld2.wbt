@@ -1,0 +1,16 @@
+#VRML_SIM R2020a utf8
+WorldInfo {
+}
+Viewpoint {
+  orientation 0.2937676227275432 -0.9229835041696046 -0.24860015057880644 5.272779412799819
+  position 4.059481710132816 1.9653349699457086 2.856132905874933
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+RobotstadiumSoccerField {
+}
+Robotino3 {
+  rotation -0.5773509358554485 0.5773509358554485 0.5773489358556708 2.0944
+}

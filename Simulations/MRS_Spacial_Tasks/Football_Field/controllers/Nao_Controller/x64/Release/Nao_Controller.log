@@ -1,6 +1,12 @@
-﻿  Generating code
-  5 of 424 functions ( 1.2%) were compiled, the rest were copied from previous compilation.
-    1 functions were new in current compilation
-    0 functions had inline decision re-evaluated but remain unchanged
+﻿  Nao_Controller.cpp
+D:\Robotics\MRS\MRSlib\MRS\MRS\Include\DeviceTree.hpp(24,36): warning C4251: 'MRS::Device::DeviceTree::children': class 'std::deque<MRS::Device::DeviceTree *,std::allocator<MRS::Device::DeviceTree *>>' needs to have dll-interface to be used by clients of class 'MRS::Device::DeviceTree'
+D:\Robotics\MRS\MRSlib\MRS\MRS\Include\DeviceTree.hpp(24): message : see declaration of 'std::deque<MRS::Device::DeviceTree *,std::allocator<MRS::Device::DeviceTree *>>'
+     Creating library D:\Robotics\MRS\Simulations\MRS_Spacial_Tasks\Football_Field\controllers\Nao_Controller\\Nao_Controller.lib and object D:\Robotics\MRS\Simulations\MRS_Spacial_Tasks\Football_Field\controllers\Nao_Controller\\Nao_Controller.exp
+  Generating code
+  124 of 536 functions (23.1%) were compiled, the rest were copied from previous compilation.
+    105 functions were new in current compilation
+    11 functions had inline decision re-evaluated but remain unchanged
   Finished generating code
+MRSbase.lib(MRSbase.obj) : warning LNK4099: PDB 'MRSbase.pdb' was not found with 'MRSbase.lib(MRSbase.obj)' or at 'D:\Robotics\MRS\Simulations\MRS_Spacial_Tasks\Football_Field\controllers\Nao_Controller\MRSbase.pdb'; linking object as if no debug info
+MRSbase.lib(pch.obj) : warning LNK4099: PDB 'MRSbase.pdb' was not found with 'MRSbase.lib(pch.obj)' or at 'D:\Robotics\MRS\Simulations\MRS_Spacial_Tasks\Football_Field\controllers\Nao_Controller\MRSbase.pdb'; linking object as if no debug info
   Nao_Controller.vcxproj -> D:\Robotics\MRS\Simulations\MRS_Spacial_Tasks\Football_Field\controllers\Nao_Controller\\Nao_Controller.exe

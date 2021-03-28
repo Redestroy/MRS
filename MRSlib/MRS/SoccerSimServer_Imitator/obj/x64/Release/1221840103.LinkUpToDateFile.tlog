@@ -1,0 +1,1 @@
+g++ -o "/home/research/projects/SoccerSimServer_Imitator/bin/x64/Release/SoccerSimServer_Imitator.out" -Wl,--no-undefined -Wl,-z,relro -Wl,-z,now -Wl,-z,noexecstack /home/research/projects/SoccerSimServer_Imitator/obj/x64/Release/main.o /home/research/projects/SoccerSimServer_Imitator/obj/x64/Release/udp_server.o -lboost_system

@@ -1,7 +1,8 @@
 #pragma once
+
 #include "Action.h"
-#include "TypeDefinitions.h"
 #include <string>
+
 class Actuator
 {
 private:

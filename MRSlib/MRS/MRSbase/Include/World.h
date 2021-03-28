@@ -10,6 +10,6 @@ public:
 	World();
 	void Init();
 	void Add(Agent*);
-	void Affect(Action);
+	//void Affect(Action);
 };
 

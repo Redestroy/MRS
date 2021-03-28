@@ -1,0 +1,10 @@
+﻿  Validating sources
+  Copying sources remotely to '192.168.1.42'
+  Validating architecture
+D:\Program Files (x86)\VisualStudio2019\MSBuild\Microsoft\VC\v160\Application Type\Linux\1.0\Linux.targets(183,5): warning : The remote systems used in deploy have incompatible platform architectures ('x64', 'ARM').
+  Validating architecture
+  Starting remote build
+  Compiling sources:
+  main.cpp
+  Linking objects
+  SoccerSimServer_Imitator.vcxproj -> D:\Robotics\MRS\MRSlib\MRS\SoccerSimServer_Imitator\bin\x64\Release\SoccerSimServer_Imitator.out
