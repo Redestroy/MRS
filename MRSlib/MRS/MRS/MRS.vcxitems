@@ -14,6 +14,7 @@
     <ProjectCapability Include="SourceItemsFromImports" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\AbsoluteTimeCondition.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Source\Action.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
@@ -48,8 +49,12 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\ATask.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\Behaviour.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\BehaviourLibrary.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Source\CommunicationDevice.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Source\Condition.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\ConditionNull.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Source\Controller.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Source\Device.cpp">
       <AdditionalIncludeDirectories Condition="'$(Configuration)|$(Platform)'=='Linux|Win32'">D:\Robotics\MRS\MRSlib\MRS\MRSbase\Include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -113,8 +118,12 @@
     <ClCompile Include="$(MSBuildThisFileDirectory)Source\ObjectSensor.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Source\ObjectView.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Source\ObjectViewList.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\ParametricAction.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\ParametricATask.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\PredicateCondition.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Source\ProtocolParser.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Source\Receiver.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\Robot.cpp" />
     <ClCompile Include="$(MSBuildThisFileDirectory)Source\Sensor.cpp">
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Linux|Win32'">NotUsing</PrecompiledHeader>
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">NotUsing</PrecompiledHeader>
@@ -142,14 +151,21 @@
       <PrecompiledHeader Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">NotUsing</PrecompiledHeader>
     </ClCompile>
     <ClCompile Include="$(MSBuildThisFileDirectory)Source\View2DPosition.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\Worldview.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\AbsoluteTimeCondition.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include\Action.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include\Actuator.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include\ActuatorBlock.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\Agent.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include\AngleJoint.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\ATask.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\Behaviour.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\BehaviourLibrary.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include\CommunicationDevice.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include\Condition.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\ConditionNull.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include\Controller.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include\Device.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include\DeviceBlock.hpp" />
@@ -160,12 +176,17 @@
     <ClInclude Include="$(MSBuildThisFileDirectory)Include\FeedbackPair.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include\InformationSensor.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include\InformationView.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\MathFunction.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include\MovementActuator2D_soccer.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include\ObjectSensor.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include\ObjectView.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include\ObjectViewList.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\ParametricAction.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\ParametricATask.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\PredicateCondition.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include\ProtocolParser.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include\Receiver.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\Robot.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include\Sensor.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include\SensorBlock.hpp" />
     <ClInclude Include="$(MSBuildThisFileDirectory)Include\SIMPLE_MRS_PARSER.hpp" />

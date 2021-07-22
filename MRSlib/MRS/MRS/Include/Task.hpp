@@ -8,9 +8,11 @@ namespace MRS {
 		{
 			ATOMIC,
 			BEHAVIOUR,
+			PARAMETRIC,
 			ROLE,
 			TREE,
-			COMPLEX
+			COMPLEX,
+			UNDEFINED
 		};
 
 		enum class TaskState
@@ -36,6 +38,7 @@ namespace MRS {
 			float givenPriority;
 			unsigned char ID;
 			long timestamp;
+			std::string taskString;
 		protected:
 			//void SetState(TypeDefinitions::TaskState);
 			size_t size;
@@ -68,6 +71,9 @@ namespace MRS {
 			TaskType GetType();
 			virtual Device::Action GetNextCommand() = 0; // Returns the next command to be executed
 			virtual std::string* toString() = 0;
+
+			static TaskState GetTaskStateFromInteger(int);
+			static TaskType GetTaskTypeFromInteger(int);
 		};
 	}
 }

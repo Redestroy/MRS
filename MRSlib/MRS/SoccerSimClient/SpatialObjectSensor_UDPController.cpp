@@ -52,9 +52,9 @@ namespace MRS {
 				std::unique_ptr<ObjectView> obj(new ObjectView());
 				obj->onCreate((long)timestamp); //TODO: change to double in onCreate
 				obj->SetName(SoccerServerCommandDict::ParseObjectParameter("ObjName", subpacket));
-				DistanceView * obj_distance_view = (SoccerServerCommandDict::ToPolRelCoords(SoccerServerCommandDict::ParseObjectParameter("Coords", subpacket))); //TODO: add a copy function and an = operator to distance view
-				std::unique_ptr<DistanceView> obj_dist_view_ptr(obj_distance_view); //TODO: fix pointer situation - change 3 lines into single line
-				obj->SetCoords(obj_distance_view);
+				DistanceView obj_distance_view = (SoccerServerCommandDict::ToPolRelCoords(SoccerServerCommandDict::ParseObjectParameter("Coords", subpacket))); //TODO: add a copy function and an = operator to distance view
+				std::unique_ptr<DistanceView> obj_dist_view_ptr(&obj_distance_view); //TODO: fix pointer situation - change 3 lines into single line
+				obj->SetCoords(&obj_distance_view);
 				//ObjectView(timestamp, SoccerServerCommandDict::ParseObjectParameter("ObjName", subpacket), SoccerServerCommandDict::ToPolRelCoords(SoccerServerCommandDict::ParseObjectParameter("Coords", subpacket)))
 				obj_view.Add(std::move(obj));
 			}

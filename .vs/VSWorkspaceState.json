@@ -3,14 +3,14 @@
     "",
     "\\MRSlib",
     "\\MRSlib\\MRS",
-    "\\MRSlib\\MRS\\MRS",
-    "\\MRSlib\\MRS\\MRSbase",
     "\\MRSlib\\MRS\\MRSbase\\Include",
     "\\MRSlib\\MRS\\MRSbase\\Source",
-    "\\MRSlib\\MRS\\MRS\\Include",
     "\\MRSlib\\MRS\\MRS\\Source",
+    "\\MRSlib\\MRS\\MRS_Algorithms_cpp",
+    "\\MRSlib\\MRS\\MRS_Algorithms_cpp\\Include",
+    "\\MRSlib\\MRS\\MRS_Algorithms_cpp\\Source",
     "\\MRSlib\\MRS\\SoccerSimClient"
   ],
-  "SelectedNode": "\\MRSlib\\MRS\\MRS\\Include\\ObjectSensor.hpp",
+  "SelectedNode": "\\MRSlib\\MRS\\SoccerSimClient\\main.cpp",
   "PreviewInSolutionExplorer": false
 }

@@ -16,6 +16,7 @@ namespace MRS {
 			double* precision_angle;
 			double* precision_distance;
 
+			//TODO Fix this shit
 			const unsigned char ANGLE_PTR_OFFSET = 0;
 			const unsigned char DISTANCE_PTR_OFFSET = ANGLE_PTR_OFFSET + sizeof(double);
 			const unsigned char PRECISION_A_PTR_OFFSET = DISTANCE_PTR_OFFSET + sizeof(double);
@@ -23,7 +24,7 @@ namespace MRS {
 		public:
 			DistanceView();
 			DistanceView(double distance, double direction);
-			~DistanceView();
+			virtual ~DistanceView();
 
 			void SetDistance(double);
 			double GetDistance();

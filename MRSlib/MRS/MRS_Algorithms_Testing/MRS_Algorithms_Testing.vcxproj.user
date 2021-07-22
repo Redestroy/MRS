@@ -1,0 +1,35 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="Current" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <RemoteTarget>15928398;192.168.38.27 (username=, port=22, authentication=Password)</RemoteTarget>
+    <AdditionalDebuggerCommands>set args -f</AdditionalDebuggerCommands>
+    <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
+    <RemoteDebuggerWorkingDirectory>
+    </RemoteDebuggerWorkingDirectory>
+    <RemoteDebuggerCommand>projects/$(ProjectName)/$(ProjectName)/bin/$(Platform)/$(Configuration)/$(ProjectName).out</RemoteDebuggerCommand>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
+    <RemoteTarget>15928398;192.168.38.27 (username=, port=22, authentication=Password)</RemoteTarget>
+    <AdditionalDebuggerCommands>set args -f</AdditionalDebuggerCommands>
+    <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
+    <RemoteDebuggerWorkingDirectory>
+    </RemoteDebuggerWorkingDirectory>
+    <RemoteDebuggerCommand>projects/$(ProjectName)/$(ProjectName)/bin/$(Platform)/$(Configuration)/$(ProjectName).out</RemoteDebuggerCommand>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'">
+    <RemoteTarget>15928398;192.168.38.27 (username=, port=22, authentication=Password)</RemoteTarget>
+    <AdditionalDebuggerCommands>set args -f</AdditionalDebuggerCommands>
+    <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
+    <RemoteDebuggerWorkingDirectory>
+    </RemoteDebuggerWorkingDirectory>
+    <RemoteDebuggerCommand>projects/$(ProjectName)/$(ProjectName)/bin/$(Platform)/$(Configuration)/$(ProjectName).out</RemoteDebuggerCommand>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x86'">
+    <RemoteTarget>15928398;192.168.38.27 (username=, port=22, authentication=Password)</RemoteTarget>
+    <AdditionalDebuggerCommands>set args -f</AdditionalDebuggerCommands>
+    <DebuggerFlavor>LinuxDebugger</DebuggerFlavor>
+    <RemoteDebuggerWorkingDirectory>
+    </RemoteDebuggerWorkingDirectory>
+    <RemoteDebuggerCommand>projects/$(ProjectName)/$(ProjectName)/bin/$(Platform)/$(Configuration)/$(ProjectName).out</RemoteDebuggerCommand>
+  </PropertyGroup>
+</Project>

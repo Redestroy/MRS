@@ -1,15 +1,26 @@
 #pragma once
 #include "Device.hpp"
+#include "SensorBlock.hpp"
+#include "ActuatorBlock.hpp"
 #include <deque>			//might need to implament seperatly
 namespace MRS {
-	namespace Device {
-		class __declspec(dllexport) Agent {
+	namespace Task {
+		class 
+#ifdef BUILD_DLL
+			__declspec(dllexport)
+#endif // BUILD_DLL
+			Agent {
 		private:
-		//sensor block
-		//actuator block
+			Device::SensorBlock * sensors;
+			Device::ActuatorBlock* actuators;
 		public:
-			virtual void * Update() = 0;
-			virtual void * DoAction() = 0;
+			void SetSensors(Device::SensorBlock*);
+			void SetActuators(Device::ActuatorBlock*);
+			Device::SensorBlock * GetSensors();
+			Device::ActuatorBlock* GetActuators();
+
+			virtual void Update() = 0;
+			virtual void DoAction(Device::Action) = 0;
 		};
 	}
 }

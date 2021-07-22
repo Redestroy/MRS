@@ -26,7 +26,7 @@ namespace MRS {
 			typedef std::string (T::* infoDetector)(std::string);
 		private:
 			//ObjectView
-			std::unique_ptr<ObjectView> object;
+			std::unique_ptr<InformationView> object;
 			infoDetector detector;
 			T* overtaker_object;
 		public:

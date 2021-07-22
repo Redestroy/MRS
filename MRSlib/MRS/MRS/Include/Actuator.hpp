@@ -28,7 +28,7 @@ namespace MRS {
 		public:
 			Actuator();
 			Actuator(std::string*);
-			~Actuator();
+			virtual ~Actuator();
 			void SetDescription(std::string*);
 			std::string* GetDescription();
 			virtual void Init();

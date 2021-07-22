@@ -18,15 +18,22 @@ namespace MRS {
 			ACTION_DELAY = 'W',
 			ACTION_IMPOSSIBLE,
 			DASH,
-			MOVE
+			MOVE,
+			TURN,
+			KICK,
+			TACKLE,
+			CATCH,
+			TURN_VIEWPORT
 		};
 
 		class Action
 		{
 		private:
 			ActionType actionType;
-			long long int actionParameter;
 			char data[13];
+		protected:
+			long long int actionParameter;
+			double actionParameter2;
 		public:
 			Action();
 			Action(Action*);
@@ -38,10 +45,14 @@ namespace MRS {
 			void SetActionParameter(long long int);
 
 			ActionType GetActionType();
-			long long int GetActionParameter();
+			virtual long long int GetActionParameter();
 
 			std::string* toString();
 			static ActionType CharToAction(char a);
+			static double FirstHalfAsDouble(long long int p);
+			static double SecondHalfAsDouble(long long int p);
+			static int FirstHalfAsInteger(long long int p);
+			static int SecondHalfAsInteger(long long int p);
 		};
 	}
 }

@@ -5,6 +5,38 @@
       <Configuration>Debug</Configuration>
       <Platform>ARM</Platform>
     </ProjectConfiguration>
+    <ProjectConfiguration Include="LMinc_Wifi_UnitTest|ARM">
+      <Configuration>LMinc_Wifi_UnitTest</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="LMinc_Wifi_UnitTest|ARM64">
+      <Configuration>LMinc_Wifi_UnitTest</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="LMinc_Wifi_UnitTest|x64">
+      <Configuration>LMinc_Wifi_UnitTest</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="LMinc_Wifi_UnitTest|x86">
+      <Configuration>LMinc_Wifi_UnitTest</Configuration>
+      <Platform>x86</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="LMinc_Wifi|ARM">
+      <Configuration>LMinc_Wifi</Configuration>
+      <Platform>ARM</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="LMinc_Wifi|ARM64">
+      <Configuration>LMinc_Wifi</Configuration>
+      <Platform>ARM64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="LMinc_Wifi|x64">
+      <Configuration>LMinc_Wifi</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="LMinc_Wifi|x86">
+      <Configuration>LMinc_Wifi</Configuration>
+      <Platform>x86</Platform>
+    </ProjectConfiguration>
     <ProjectConfiguration Include="PhoneNetwork|ARM">
       <Configuration>PhoneNetwork</Configuration>
       <Platform>ARM</Platform>
@@ -86,6 +118,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='VNPC_net|ARM'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='LMinc_Wifi|ARM'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='LMinc_Wifi_UnitTest|ARM'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='PhoneNetwork|ARM'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
@@ -96,6 +134,12 @@
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='VNPC_net|x86'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='LMinc_Wifi|x86'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='LMinc_Wifi_UnitTest|x86'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='PhoneNetwork|x86'" Label="Configuration">
@@ -110,6 +154,12 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='VNPC_net|x64'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='LMinc_Wifi|x64'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='LMinc_Wifi_UnitTest|x64'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='PhoneNetwork|x64'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
@@ -117,6 +167,12 @@
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='VNPC_net|ARM64'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='LMinc_Wifi|ARM64'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='LMinc_Wifi_UnitTest|ARM64'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='PhoneNetwork|ARM64'" Label="Configuration">
@@ -130,16 +186,34 @@
   <ImportGroup Label="Shared" />
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <IncludePath>D:\Robotics\MRS\MRSlib\MRS\ThirdParty\librcsc\src;D:\Robotics\MRS\MRSlib\MRS\ThirdParty\agent2d-stack\Agent\src;$(IncludePath)</IncludePath>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='LMinc_Wifi_UnitTest|x64'">
+    <TargetName>$(ProjectName)_Test</TargetName>
+  </PropertyGroup>
   <ItemGroup>
     <ClCompile Include="AudialSensor_UDPController.cpp" />
     <ClCompile Include="BallActuator_UDPController.cpp" />
+    <ClCompile Include="BehaviourRCSC.cpp" />
     <ClCompile Include="BodyInformationSensor_UDPController.cpp" />
-    <ClCompile Include="main.cpp" />
+    <ClCompile Include="main.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='LMinc_Wifi_UnitTest|x64'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="MovementActuator2D_UDPController.cpp" />
     <ClCompile Include="PlayerBodyInformationView.cpp" />
+    <ClCompile Include="RCSCSoccerRobot.cpp" />
+    <ClCompile Include="rcsc_debug.cpp" />
     <ClCompile Include="SoccerPlayerRobot.cpp" />
     <ClCompile Include="SoccerServerCommandDict.cpp" />
     <ClCompile Include="SpatialObjectSensor_UDPController.cpp" />
+    <ClCompile Include="Test.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='LMinc_Wifi|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='LMinc_Wifi_UnitTest|x64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='LMinc_Wifi_UnitTest|ARM64'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='LMinc_Wifi_UnitTest|ARM'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='LMinc_Wifi_UnitTest|x86'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="UDPController.cpp" />
     <ClCompile Include="UDPSensor.cpp" />
     <ClCompile Include="VoiceEmitter.cpp" />
@@ -147,9 +221,11 @@
   <ItemGroup>
     <ClInclude Include="AudialSensor_UDPController.h" />
     <ClInclude Include="BallActuator_UDPController.h" />
+    <ClInclude Include="BehaviourRCSC.h" />
     <ClInclude Include="BodyInformationSensor_UDPController.h" />
     <ClInclude Include="MovementActuator2D_UDPController.h" />
     <ClInclude Include="PlayerBodyInformationView.h" />
+    <ClInclude Include="RCSCSoccerRobot.h" />
     <ClInclude Include="SoccerPlayerRobot.h" />
     <ClInclude Include="SoccerServerCommandDict.h" />
     <ClInclude Include="SpatialObjectSensor_UDPController.h" />
@@ -164,6 +240,23 @@
       <AdditionalOptions>
       </AdditionalOptions>
       <LibraryDependencies>boost_system</LibraryDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='LMinc_Wifi|x64'">
+    <Link />
+    <Link>
+      <AdditionalOptions>
+      </AdditionalOptions>
+      <LibraryDependencies>boost_system;MRSbase_Linux;boost_signals;pthread;boost_timer;rcsc_agent;rcsc_time;rcsc_rcg;rcsc_param;rcsc_net;rcsc_gz;rcsc_geom;rcsc_ann</LibraryDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='LMinc_Wifi_UnitTest|x64'">
+    <Link />
+    <Link>
+      <AdditionalOptions>
+      </AdditionalOptions>
+      <LibraryDependencies>boost_system;MRSbase_Linux;boost_signals;pthread;boost_timer;rcsc_agent;rcsc_time;rcsc_rcg;rcsc_param;rcsc_net;rcsc_gz;rcsc_geom;rcsc_ann</LibraryDependencies>
+      <AdditionalLibraryDirectories>/usr/lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='PhoneNetwork|x64'">
@@ -190,6 +283,21 @@
     <Link>
       <LibraryDependencies>MRSbase_Linux;boost_system</LibraryDependencies>
       <AdditionalOptions />
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='LMinc_Wifi_UnitTest|ARM'">
+    <Link>
+      <LibraryDependencies>;MRSbase_Linux</LibraryDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='LMinc_Wifi_UnitTest|ARM64'">
+    <Link>
+      <LibraryDependencies>;MRSbase_Linux</LibraryDependencies>
+    </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='LMinc_Wifi_UnitTest|x86'">
+    <Link>
+      <LibraryDependencies>;MRSbase_Linux</LibraryDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -6,4 +6,10 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='PhoneNetwork|ARM64'">
     <RemoteTarget>1117701363;192.168.43.215 (username=, port=22, authentication=Password)</RemoteTarget>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='LMinc_Wifi|x64'">
+    <RemoteTarget>15928398;192.168.38.27 (username=, port=22, authentication=Password)</RemoteTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='LMinc_Wifi_UnitTest|x64'">
+    <RemoteTarget>15928398;192.168.38.27 (username=, port=22, authentication=Password)</RemoteTarget>
+  </PropertyGroup>
 </Project>

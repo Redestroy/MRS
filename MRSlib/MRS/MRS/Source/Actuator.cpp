@@ -1,5 +1,5 @@
 //#include "pch.h"
-#include "Actuator.hpp"
+#include "../Include/Actuator.hpp"
 
 namespace MRS {
 	namespace Device {

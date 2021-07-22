@@ -21,7 +21,7 @@ namespace MRS {
 		template <class T>
 		class DummyObjectSensor : public ObjectSensor {
 			//typedef std::unique_ptr<ObjectView*> (T::* objDetector)(void);
-			typedef int*(T::* objDetector)(void);
+			typedef int (T::* objDetector)(void);
 		private:
 			//ObjectView
 			std::unique_ptr<ObjectView> object;
@@ -36,15 +36,16 @@ namespace MRS {
 			};
 			virtual void DetectObject() {
 				//fill object view with something
-				int * i = (overtaker_object->*detector)();
+				int i = (overtaker_object->*detector)();
 				//DistanceView* view = (overtaker_object->*detector)();
 			};
 
-			void SetDetector(objDetector* ptr) {
+			void SetDetector(objDetector ptr) {
 				detector = ptr;
 			}
 			void SetOvertaker(T* ptr) {
-				overtaker_object = std::make_shared<T*>(ptr);
+				//overtaker_object = std::make_shared<T*>(ptr);
+				overtaker_object = ptr;
 			}
 		};
 	}

@@ -46,6 +46,7 @@ namespace MRS {
 			for (auto a : *actuators) {
 				a.second->Init();
 			}
+			return 0; //TODO: count actuators initialised
 		}
 
 		bool ActuatorBlock::DoAction(Action* action)

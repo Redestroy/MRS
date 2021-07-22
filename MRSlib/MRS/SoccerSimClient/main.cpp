@@ -8,6 +8,7 @@
 #include <deque>
 #include <map>
 #include <fstream>
+#include <rcsc/version.h>
 #include <MRS/Include/Device.hpp>
 #include <boost/timer/timer.hpp>
 #include "UDPController.h"
@@ -35,6 +36,7 @@ using namespace boost::asio;
 enum { max_length = 1024 };
 int main(int argc, char* argv[])
 {
+    printf("librcsc Version %s\n", rcsc::version());
     try
     {
         if (argc != 4 && argc != 5)

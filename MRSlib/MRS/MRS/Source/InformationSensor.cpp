@@ -20,9 +20,9 @@ namespace MRS {
 			//TODO: add a way to cycle through parameters in information view
 			//For efficiency don't update all values each cycle
 			if (update_all) {
-				for (auto param : *information) {
-					param.value = UpdateParameter(param.key);
-				}
+				//for (auto param : *information) {
+				//	param.value = UpdateParameter(param.key);
+				//}
 				update_all = false;
 			}
 			else {

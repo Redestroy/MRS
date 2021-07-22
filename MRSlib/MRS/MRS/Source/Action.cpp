@@ -1,4 +1,4 @@
-#include "Action.hpp"
+#include "../Include/Action.hpp"
 
 namespace MRS {
 	namespace Device {
@@ -94,6 +94,23 @@ namespace MRS {
 			case (char)ActionType::ACTION_NULL: return ActionType::ACTION_NULL;
 			default: return ActionType::ACTION_IMPOSSIBLE;
 			}
+		}
+
+		double Action::FirstHalfAsDouble(long long int p)
+		{
+			return (double)(p&0xFFFFFFFF);
+		}
+		double Action::SecondHalfAsDouble(long long int p)
+		{
+			return (double)(p>>32);
+		}
+		int Action::FirstHalfAsInteger(long long int p)
+		{
+			return (int)(p & 0xFFFFFFFF);;
+		}
+		int Action::SecondHalfAsInteger(long long int p)
+		{
+			return (int)(p >> 32);
 		}
 	}
 }

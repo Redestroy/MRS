@@ -10,8 +10,14 @@
 #include "UDPController.h"
 #include "SoccerServerCommandDict.h"
 #include "VoiceEmitter.h"
+#include <rcsc/player/player_agent.h>
 #include <string>
 #include <deque>
+//From agent2D
+//TODO: move to emiter and other drivers
+//#include "../chain_action/action_generator.h"
+//#include "../chain_action/field_evaluator.h"
+//#include "../communication.h"
 
 #define RIGHT true
 #define LEFT false
@@ -31,7 +37,7 @@ namespace MRS {
 		OTHER
 	};
 
-	class SoccerPlayerRobot //: public MRS::Device::Robot
+	class SoccerPlayerRobot : rcsc::PlayerAgent //: public MRS::Device::Robot
 	{
 	private:
 		// Team info
@@ -54,6 +60,46 @@ namespace MRS {
 		// Base agent stuff
 		std::deque<Device::View*> * percepts; // used to invoke agent stuff in robot - gives percepts to Robot
 		std::deque<Device::Action*>* actions; // used to invoke agent stuff in robot - stores actions for Robot to execute
+		
+		//rcsc::Agent prerequisites
+		// copied from sample agent
+
+		//Communication::Ptr M_communication;
+		//FieldEvaluator::ConstPtr M_field_evaluator;
+		//ActionGenerator::ConstPtr M_action_generator;
+
+		virtual
+			bool initImpl(rcsc::CmdLineParser& cmd_parser);
+
+		//! main decision
+		virtual
+			void actionImpl();
+
+		//! communication decision
+		virtual
+			void communicationImpl();
+
+		virtual
+			void handleActionStart();
+		virtual
+			void handleActionEnd();
+
+		virtual
+			void handleServerParam();
+		virtual
+			void handlePlayerParam();
+		virtual
+			void handlePlayerType();
+
+		virtual
+			FieldEvaluator::ConstPtr createFieldEvaluator() const;
+
+		virtual
+			ActionGenerator::ConstPtr createActionGenerator() const;
+
+		//rcsc::Agent management
+		
+
 		// World
 
 		// Behaviours / actions

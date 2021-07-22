@@ -1,5 +1,4 @@
 //#include "pch.h"
-#include "Device.hpp"
 #include "../Include/Device.hpp"
 
 namespace MRS {

@@ -22,6 +22,27 @@ namespace MRS {
 			return type;
 		}
 
+		TaskState Task::GetTaskStateFromInteger(int a)
+		{
+			switch (a) {
+			case (int)TaskState::FAILED: return TaskState::FAILED;
+			case (int)TaskState::SUCCEEDED: return TaskState::SUCCEEDED;
+			default: return TaskState::NEW;
+			}
+		}
+
+		TaskType Task::GetTaskTypeFromInteger(int a)
+		{
+			switch (a) {
+			case (int)TaskType::ATOMIC: return TaskType::ATOMIC;
+			case (int)TaskType::BEHAVIOUR: return TaskType::BEHAVIOUR;
+			case (int)TaskType::COMPLEX: return TaskType::COMPLEX;
+			case (int)TaskType::ROLE: return TaskType::ROLE;
+			case (int)TaskType::TREE: return TaskType::TREE;
+			default: return TaskType::UNDEFINED;
+			}
+		}
+
 		void Task::SetID(unsigned char id)
 		{
 			ID = id;
@@ -57,6 +78,7 @@ namespace MRS {
 
 		}
 
+		//TODO: change 1 to static counter for IDs
 		Task::Task() : Task(1, 0.9f)
 		{
 

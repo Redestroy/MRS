@@ -15,6 +15,16 @@
     <ProjectCapability Include="SourceItemsFromImports" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(MSBuildThisFileDirectory)Include\MRS_STA.h" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\MRS_Layer.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\MRS_SCA.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\MRS_STA.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\State.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\StatePredictor.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\Value.hpp" />
+    <ClInclude Include="$(MSBuildThisFileDirectory)Include\ValueCalculator.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\MRS_Layer.cpp" />
+    <ClCompile Include="$(MSBuildThisFileDirectory)Source\MRS_SCA.cpp" />
   </ItemGroup>
 </Project>

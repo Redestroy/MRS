@@ -56,11 +56,12 @@ namespace MRS {
 				return view->GetPrecisionDistance();
 			};
 
-			void SetDetector(distDetector* ptr) {
+			void SetDetector(distDetector ptr) {
 				detector = ptr;
 			}
 			void SetOvertaker(T* ptr) {
-				overtaker_object = std::make_shared<T*>(ptr);
+				//overtaker_object = std::make_shared<T*>(ptr);
+				overtaker_object = ptr;
 			}
 		};
 	}

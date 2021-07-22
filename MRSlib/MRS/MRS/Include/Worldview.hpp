@@ -2,8 +2,17 @@
 #include "View.hpp"
 #include <map>
 #include <string>
+#include <deque>
+#include <boost/timer/timer.hpp>
+//#include "C:/Users/JB00636/AppData/Local/Microsoft/Linux/HeaderCache/1.0/15928398/usr/local/include/boost/timer/timer.hpp"
 namespace MRS {
 	namespace Environment {
+
+		struct Predicate {
+			std::string name;
+			bool value;
+		};
+
 		enum class WorldviewType
 		{
 			Spatial1D,	// line world - operates with 1d line position
@@ -21,7 +30,11 @@ namespace MRS {
 		{
 		private:
 			std::multimap<MRS::Device::ViewType, std::map<std::string, Device::View*>, std::greater_equal<MRS::Device::ViewType>>* all_views;
+			std::map<std::string, double> parameters;
+			std::map<std::string, bool> predicates;
 			WorldviewType world_type;
+			boost::timer::cpu_timer central_timer;
+			boost::timer::nanosecond_type time;
 			//LinkedList<View> views;
 			//std::vector<View*> attributes;
 			//unsigned int attributeCount;
@@ -50,6 +63,19 @@ namespace MRS {
 			
 			void SetWorldviewType(WorldviewType);
 			WorldviewType GetWorldviewType();
+
+			bool GetPredicateValue(std::string name);
+			Predicate GetPredicate(std::string name);
+
+			double GetParameterValue(std::string name);
+			std::pair<std::string, double> GetParameter(std::string name);
+
+			boost::timer::nanosecond_type GetTime();
+
+			void Update();
+
+			virtual void OnUpdate(){}
+
 			//bool hasAttribute(TypeDefinitions::ViewType);
 			//char GetAttributePlace(TypeDefinitions::ViewType);
 			//ViewPosition2D * GetPosition2D();
