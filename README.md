@@ -1,5 +1,6 @@
 # MRS
-Directory for my research of Multi robot systems
+Dynamic Spatial Task allocation in Multi-robot systems
+Paper related code base
 
 ## Folder descriptions
 ### MRSlib
