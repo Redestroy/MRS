@@ -1,3 +1,0 @@
-﻿D:\Program Files (x86)\VisualStudio2019\MSBuild\Microsoft\VC\v160\Microsoft.CppBuild.targets(459,5): warning MSB8028: The intermediate directory (Release\) contains files shared from another project (MRSbase.vcxproj).  This can lead to incorrect clean and rebuild behavior.
-  pch.cpp
-D:\Robotics\MRS\MRSlib\MRS\MRSbase\pch.cpp(3,10): fatal error C1083: Cannot open include file: 'pch.h': No such file or directory
