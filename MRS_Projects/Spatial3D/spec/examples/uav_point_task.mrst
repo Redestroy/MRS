@@ -1,0 +1,17 @@
+# One spatial task: fly to (120, -40, 15), flash the LEDs green, wait 2 s, turn them off.
+# The start condition is fulfilled by the behaviour library (flyto.layered).
+@: MRS 0.1/
+
+T: T_A op.17 1 0 C_1 C_2 R_1 A_1..4/
+C_1: C_P3 120 -40 15 1 0.5 0 -1/
+C_2: C_N/
+R_1: R_S R_1 R_2/
+R_1: R_E energy_wh 2.5/
+R_2: R_C C_1/
+C_1: C_L NOT C_1/
+C_1: C_? ?_1/
+?_1: battery.critical T/
+A_1: A_L 3 65280/
+A_2: A_W 2/
+A_3: A_L 3 0/
+A_4: A_N/

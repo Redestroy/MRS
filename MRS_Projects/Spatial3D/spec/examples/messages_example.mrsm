@@ -1,0 +1,16 @@
+M: M_MISSION 0.1 m1 op all 1 0 H_1/
+H_1: H_M m1 56.9496 24.1052 10 -500 500 -500 500 120 20 5 120 3 1 0 0 0 2 5 0 0 3 10 0 0/
+M: M_TASK 0.1 m1 op all 2 0.5 T_1/
+T_1: T_A op.17 1 0 C_1 C_2 A_1/
+C_1: C_P3 120 -40 15 1 0.5 0 -1/
+C_2: C_N/
+A_1: A_N/
+M: M_CLAIM 0.1 m1 r2 all 57 142.35 op.17 172.35 0.84/
+M: M_STATE 0.1 m1 r2 all 58 142.5 V_1/
+V_1: V_PEER 142.48 2 118.2 -39.1 20.4 1.5 -0.6 -0.9 0.71 op.17/
+M: M_DUMP 0.1 m1 r3 all 31 150 op.17 NO_ACTUATOR T 0/
+M: M_DONE 0.1 m1 r2 all 75 160.2 op.17/
+M: M_PROFILE 0.1 m1 r1 all 3 1 mavic2pro 1 camera_uav K_1..2/
+K_1: K_A A_PXY 1 max_speed_xy 8/
+K_2: K_Q energy_wh 50 0/
+M: M_CMD 0.1 m1 op all 9 400 recall 0/
