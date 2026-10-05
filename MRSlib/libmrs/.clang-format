@@ -1,0 +1,8 @@
+# Based on the legacy MRSlib style: tabs, braces on the same line.
+BasedOnStyle: LLVM
+UseTab: ForIndentation
+IndentWidth: 4
+TabWidth: 4
+ColumnLimit: 130
+NamespaceIndentation: All
+AllowShortFunctionsOnASingleLine: Inline

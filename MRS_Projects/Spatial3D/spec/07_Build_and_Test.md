@@ -20,6 +20,7 @@ MRSlib/
     platforms/ardupilot/   later (WP10)
     devices/uav/
     behaviours/            .mrsb files
+    tools/                 mrs_fmt (check a file, print its canonical form)
     tests/
       third_party/doctest.h
       protocol/            round-trip and error tests
@@ -46,7 +47,7 @@ MRS_Projects/Spatial3D/
 | Warnings | MSVC `/W4 /permissive-`, GCC and Clang `-Wall -Wextra -Wpedantic`. Warnings are errors in CI |
 | Dependencies | `core` and `algorithms`: the C++ standard library only. No Boost. `platforms/webots`: the Webots C++ API from `WEBOTS_HOME`. `platforms/ardupilot`: MAVLink C headers, vendored |
 | Targets | `mrs_core`, `mrs_algorithms` (static libraries), `mrs_webots` (optional), `mrs_tests` |
-| Options | `MRS_BUILD_TESTS` (ON), `MRS_BUILD_WEBOTS` (AUTO: ON when `WEBOTS_HOME` is set) |
+| Options | `MRS_BUILD_TESTS` (ON), `MRS_BUILD_TOOLS` (ON), `MRS_WARNINGS_AS_ERRORS` (OFF; ON in CI), `MRS_BUILD_WEBOTS` (AUTO: ON when `WEBOTS_HOME` is set) |
 | Exports | No DLL macros in `core`. The C API (later) is a separate target with its own export macro |
 | Formatting | `.clang-format` at `MRSlib/libmrs/`, based on the existing code style (tabs, braces on the same line) |
 | Text I/O | Number formatting and parsing use `<charconv>` (`std::to_chars`, `std::from_chars`), so results do not depend on the locale |

@@ -73,7 +73,7 @@ Anything else is a lexical error.
 Numbers:
 * Integers MUST fit in a signed 64-bit integer.
 * Other numbers are parsed as IEEE-754 binary64. A writer MUST write them so that they parse back to the same binary64 value (shortest round-trip form, for example `std::to_chars`).
-* `nan`, `inf`, hexadecimal and leading `+` are not valid.
+* `nan`, `inf`, hexadecimal and leading `+` are not valid. The words `nan`, `inf` and `infinity`, in any case, are a lexical error even though they look like identifiers.
 
 ## 3. Records
 
@@ -100,7 +100,7 @@ field        = number | boolean | label | range | ident | taskid | string | code
 * The header of each sub-record MUST equal the reference that points to it. A parser MUST check this and report a mismatch.
 * **Labels are local to their parent.** The same label MAY be used again under a different parent. Two references in one body MUST NOT use the same label.
 * References form a **tree**. A sub-record has exactly one parent. Sharing a sub-record between two parents is not expressible; it has to be repeated.
-* A range `K_a..b` with `a ≤ b` expands to `K_a K_(a+1) … K_b`. `a > b` is an error.
+* A range `K_a..b` with `a ≤ b` expands to `K_a K_(a+1) … K_b` before the slots are read, so one range MAY fill several slots (`T_B ... C_1..3` gives the start, end and until conditions). `a > b` is an error.
 
 Example. The parent references `C_1 C_2 A_1..2`, so the order of the following records is fixed:
 

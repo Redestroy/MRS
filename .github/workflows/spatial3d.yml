@@ -1,0 +1,30 @@
+name: spatial3d
+
+on:
+  push:
+    branches: [spatial-3d]
+    paths:
+      - 'MRSlib/libmrs/**'
+      - 'MRS_Projects/Spatial3D/spec/**'
+      - '.github/workflows/spatial3d.yml'
+  pull_request:
+    paths:
+      - 'MRSlib/libmrs/**'
+      - 'MRS_Projects/Spatial3D/spec/**'
+      - '.github/workflows/spatial3d.yml'
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure
+        run: cmake -S MRSlib/libmrs -B build -DMRS_WARNINGS_AS_ERRORS=ON -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --config Release --parallel
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
