@@ -4,14 +4,14 @@ Status: **draft for WP0**, spec version `0.1`. Plan reference: §3.2 (modules) a
 
 ## 1. Repository layout (branch `spatial-3d`)
 
+The library lives in `MRSlib/` (JB, 2026-10-05); the project's documents, specification and experiments stay in `MRS_Projects/Spatial3D/`.
+
 ```
-MRS_Projects/Spatial3D/
-  README.md
-  docs/                    plan and design notes
-  spec/                    this specification
-    examples/              example protocol files (also test inputs)
-  mrs/                     the new library (WP0 creates the skeleton)
+MRSlib/
+  MRS/                     the legacy 2021 code, left untouched
+  libmrs/                  the new library (WP0 creates the skeleton)
     CMakeLists.txt
+    .clang-format
     core/                  MRS::Port, MRS::Device, MRS::Environment, MRS::Task, MRS::Comm, MRS::Protocol
       include/mrs/...      public headers
       src/
@@ -23,10 +23,18 @@ MRS_Projects/Spatial3D/
     tests/
       third_party/doctest.h
       protocol/            round-trip and error tests
+MRS_Projects/Spatial3D/
+  README.md
+  docs/                    plan and design notes
+  spec/                    this specification
+    examples/              example protocol files (also test inputs)
   experiments/uav_spatial/ worlds, task sets, batch runner, analysis (WP6)
+.github/workflows/spatial3d.yml
 ```
 
-The legacy `MRSlib/` tree is left untouched. Classes are ported from it into `mrs/` piece by piece in WP1.
+* The folder is `libmrs`, not `mrs`, because Windows file systems ignore case and `MRSlib/mrs` would be the same folder as the legacy `MRSlib/MRS`.
+* Headers are still included as `#include <mrs/...>`.
+* Classes are ported from `MRSlib/MRS` into `MRSlib/libmrs` piece by piece in WP1.
 
 ## 2. Build rules
 
@@ -40,14 +48,14 @@ The legacy `MRSlib/` tree is left untouched. Classes are ported from it into `mr
 | Targets | `mrs_core`, `mrs_algorithms` (static libraries), `mrs_webots` (optional), `mrs_tests` |
 | Options | `MRS_BUILD_TESTS` (ON), `MRS_BUILD_WEBOTS` (AUTO: ON when `WEBOTS_HOME` is set) |
 | Exports | No DLL macros in `core`. The C API (later) is a separate target with its own export macro |
-| Formatting | `.clang-format` at `mrs/`, based on the existing code style (tabs, braces on the same line) |
+| Formatting | `.clang-format` at `MRSlib/libmrs/`, based on the existing code style (tabs, braces on the same line) |
 | Text I/O | Number formatting and parsing use `<charconv>` (`std::to_chars`, `std::from_chars`), so results do not depend on the locale |
 
 `std::from_chars` for floating point needs MSVC 2019 16.4+, GCC 11+ and a recent libc++; the compiler minimums above cover this.
 
 ## 3. Continuous integration
 
-GitHub Actions workflow `.github/workflows/spatial3d.yml`, triggered on pushes and pull requests that touch `MRS_Projects/Spatial3D/**`:
+GitHub Actions workflow `.github/workflows/spatial3d.yml` (JB, 2026-10-05), triggered on pushes to `spatial-3d` and on pull requests, when they touch `MRSlib/libmrs/**`, `MRS_Projects/Spatial3D/spec/**` or the workflow itself:
 
 * Jobs: `windows-latest` (MSVC) and `ubuntu-latest` (GCC).
 * Steps: configure, build, `ctest --output-on-failure`.
@@ -55,9 +63,9 @@ GitHub Actions workflow `.github/workflows/spatial3d.yml`, triggered on pushes a
 
 ## 4. Test framework
 
-* **doctest** (single header, MIT licence), vendored at `mrs/tests/third_party/doctest.h`.
+* **doctest** (single header, MIT licence), vendored at `MRSlib/libmrs/tests/third_party/doctest.h`.
 * One test executable, `mrs_tests`, registered with CTest.
-* Test data is read from `MRS_Projects/Spatial3D/spec/examples/`, so the examples in the spec and the tests cannot drift apart.
+* Test data is read from `MRS_Projects/Spatial3D/spec/examples/` (the path is passed to the tests by CMake), so the examples in the spec and the tests cannot drift apart.
 
 ## 5. WP0 test suite
 

@@ -156,11 +156,12 @@ A function computes one `double` from the worldview `w` and the mission time `t`
 | `F_S` | Sum | `F+` | sum of the child functions |
 | `F_P` | Product | `F+` | product of the child functions |
 | `F_C` | Clamp | `num lo`, `num hi`, `F` | the child value limited to `[lo, hi]` |
-| `F_E` | Expression | reserved | A parsable expression string. Reserved until its syntax is decided (open question WP0-3) |
+| `F_E` | Expression | reserved | Not planned (JB, 2026-10-05). The parser rejects it |
 
 Rules:
 * Field names in `F_L` are **scalar** field paths (spec 05 §2), for example `pose.enu.x` or `target.yaw`.
 * `F_L` with `n = 0` is a constant `c`.
+* Expression strings are not parsed, but they MAY be written as comments to document what a function tree computes, for example `F_1: F_L 2 0.8 -0.8 0 target.x pose.enu.x/  # 0.8*(target.x - pose.enu.x)`.
 * A function that reads a field records it, so the executor and the requirement check (spec 03 §5) know which fields a task needs.
 
 Examples:
@@ -169,7 +170,7 @@ A proportional velocity command, saturated to ±5 m/s. `F_C` is the parent and `
 
 ```
 F_1: F_C -5 5 F_1/
-F_1: F_L 2 0.8 -0.8 0 target.x pose.enu.x/
+F_1: F_L 2 0.8 -0.8 0 target.x pose.enu.x/   # 0.8*(target.x - pose.enu.x)
 ```
 
 The value is `clamp(0.8·target.x − 0.8·pose.enu.x, −5, 5)`. The same command from the registry, with gain 0.8 and limit 5 m/s:

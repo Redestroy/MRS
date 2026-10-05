@@ -8,7 +8,7 @@ C_2: C_N/
 R_1: R_S R_1 R_2/
 R_1: R_E energy_wh 2.5/
 R_2: R_C C_1/
-C_1: C_L NOT C_1/
+C_1: C_L 3 C_1/               # NOT
 C_1: C_? ?_1/
 ?_1: battery.critical T/
 A_1: A_L 3 65280/

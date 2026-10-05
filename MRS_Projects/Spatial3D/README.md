@@ -2,7 +2,7 @@
 
 This project builds a group of flight-capable UAVs on the MRS framework. The UAVs allocate and execute 3D spatial tasks. The project also answers one question: **does a group of N UAVs finish a set of spatial tasks faster than one UAV flying a planned mission?**
 
-Branch: `spatial-3d`. Status: **WP0, specification**. No library code exists yet.
+Branch: `spatial-3d`. Status: **WP0**. The specification is written; the library skeleton goes in [`MRSlib/libmrs`](../../MRSlib/libmrs).
 
 ## Contents
 
@@ -32,14 +32,13 @@ Branch: `spatial-3d`. Status: **WP0, specification**. No library code exists yet
 
 ## Where files live
 
-* In the repository, everything for this project is under `MRS_Projects/Spatial3D/`.
-* On JB's PC, the same tree is mirrored at `E:\Claude\MRS_Projects\Spatial3D\`.
+* Project documents, the specification and experiments: `MRS_Projects/Spatial3D/` in the repository.
+* Library code: `MRSlib/libmrs/` in the repository, next to the legacy `MRSlib/MRS/` (spec 07 §1).
+* On JB's PC, the project folder is mirrored at `E:\Claude\MRS_Projects\Spatial3D\`.
 
-## Open questions for WP0
+## WP0 decisions (JB, 2026-10-05)
 
-Each one has a default that the documents already use, so work can continue.
-
-1. **Library location.** The new library goes in `MRS_Projects/Spatial3D/mrs/` (default) or in `MRSlib/` next to the old code?
-2. **Expression functions (`F_E`).** Is a parsable expression string such as `"0.8*(target.x - pose.enu.x)"` needed now? Default: no. Version 0.1 has linear (`F_L`) and registry (`F_X`) functions plus sum, product and clamp, and `F_E` is reserved.
-3. **Legacy units for the converter.** In the old strings, what unit did `C_T 3000023` and `A_W 30` use (milliseconds, simulation steps)? And what did the number in `C_L 1 C_1 C_2` mean (1 = OR)? Default: milliseconds, and 0 = AND, 1 = OR.
-4. **CI.** Add a GitHub Actions workflow that builds and tests on Windows and Linux for every push to `spatial-3d`? Default: yes.
+1. **Library location:** `MRSlib/`. The folder is `MRSlib/libmrs/` because `MRSlib/mrs` and `MRSlib/MRS` are the same folder on Windows.
+2. **Expression functions (`F_E`):** not planned. Expression strings may be written in comments (spec 02 §7).
+3. **Units and logic codes:** `A_W` is in seconds and `C_T` in milliseconds (spec 03 §4). `C_L` uses the `LogicalOperation` enum: AND = 1, OR = 2, NOT = 3, XOR = 4, NAND = 5, NOR = 6, NXOR = 7 (spec 03 §4.1).
+4. **CI:** a GitHub Actions workflow builds and tests on Windows and Linux (spec 07 §3).

@@ -34,7 +34,8 @@ The MRS text protocol is one grammar for every object that is stored, sent or wr
 ```ebnf
 digit        = "0" | "1" | ... | "9" ;
 letter       = "A" | ... | "Z" | "a" | ... | "z" ;
-kind         = letter | "?" | "@" ;                       (* see §4.1 *)
+upper        = "A" | ... | "Z" ;
+kind         = upper | "?" | "@" ;                        (* see §4.1; never lower case *)
 
 integer      = [ "-" ] digit { digit } ;
 number       = [ "-" ] digit { digit } [ "." { digit } ] [ exponent ]
@@ -67,7 +68,7 @@ Disambiguation, applied in this order to a whitespace-separated token:
 
 Anything else is a lexical error.
 
-*Note:* `C_1` is a label and `C_N` is a code because a subcode never starts with a digit.
+*Note:* `C_1` is a label and `C_N` is a code because a subcode never starts with a digit. `m_fl` is an identifier, not a code, because a kind is never lower case. Identifiers SHOULD start with a lower-case letter so they never look like a code or a label.
 
 Numbers:
 * Integers MUST fit in a signed 64-bit integer.
@@ -115,7 +116,7 @@ A nested example: `C_1` is a logic condition with its own sub-records, which com
 
 ```
 T: T_A op.2 1.0 0 C_1 C_2 A_1/
-C_1: C_L AND C_1 C_2/
+C_1: C_L 1 C_1 C_2/
 C_1: C_? ?_1/
 ?_1: airborne T/
 C_2: C_H 15 0.5/
@@ -193,7 +194,7 @@ The full list of codes, with links to their slot definitions:
 | `C` | `C_N`, `C_F`, `C_?`, `C_m`, `C_T`, `C_W`, `C_L`, `C_V`, `C_S`, `C_P`, `C_P3`, `C_G`, `C_H`, `C_Q` (spec 03 §4) |
 | `R` | `R_S`, `R_F`, `R_A`, `R_R`, `R_E`, `R_K`, `R_C` (spec 03 §5) |
 | `A` | see the action registry (spec 02 §4) |
-| `F` | `F_K`, `F_L`, `F_X`, `F_S`, `F_P`; reserved `F_E` (spec 02 §6) |
+| `F` | `F_K`, `F_L`, `F_X`, `F_S`, `F_P`, `F_C`; reserved `F_E` (spec 02 §7) |
 | `V` | see the view registry (spec 05 §6) |
 | `D`, `P`, `K` | spec 04 |
 | `M`, `H`, `L`, `J` | spec 06 |

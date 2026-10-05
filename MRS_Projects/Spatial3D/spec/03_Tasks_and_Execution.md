@@ -106,9 +106,9 @@ A condition evaluates to **TRUE**, **FALSE** or **UNKNOWN**. UNKNOWN means a fie
 | `C_F` | False | — | never | — |
 | `C_?` | Predicate | `?` | the predicate field equals the literal's value | the predicate name |
 | `C_m` | Parameter | `id field`, `id op`, `num value`, `num tol` | `w[field] op value`; `op` ∈ `lt le eq ne ge gt`; `eq` and `ne` use `tol` | `field` |
-| `C_T` | Absolute time | `num t` | mission time ≥ `t` | `time` |
+| `C_T` | Absolute time | `int t` | mission time ≥ `t` **milliseconds** | `time` |
 | `C_W` | Elapsed time | `num d` | at least `d` seconds have passed since the condition's context started (§8.3) | `time` |
-| `C_L` | Logic | `id op`, `C+` | `op` ∈ `AND OR XOR NOT`; `NOT` takes exactly one child | children's fields |
+| `C_L` | Logic | `int op`, `C+` | the children combined by the `LogicalOperation` `op` (§4.1) | children's fields |
 | `C_V` | View match | `V` | the worldview holds a view of that type that matches (spec 05 §6) | per view type |
 | `C_S` | Task state | `tid task`, `id state` | the pool state of `task` equals `state` (§3.2) | — |
 | `C_P` | Position 2D | `num x`, `num y`, `num yaw`, `num tol_xy`, `num tol_yaw` | horizontal distance ≤ `tol_xy` and (yaw within `tol_yaw`, or `tol_yaw < 0`) | `pose.enu`, `att.yaw` |
@@ -120,12 +120,34 @@ A condition evaluates to **TRUE**, **FALSE** or **UNKNOWN**. UNKNOWN means a fie
 Rules:
 * Angle differences are wrapped to (−π, π] before comparing.
 * All tolerances MUST be ≥ 0, except `tol_yaw`, where a negative value means "ignore yaw".
-* `C_T` and `C_W` use seconds. The 2021 core strings (`C_T 3000023`) used other units; the converter handles them.
+* `C_T` uses **milliseconds** of mission time, as in the 2021 core (`C_T 3000023`), so those strings keep their meaning (JB, 2026-10-05). `C_W` uses seconds, like `A_W` (spec 02 §4.1).
+
+### 4.1 Logic operations (`C_L`)
+
+The `op` slot is the integer value of the library's enum, unchanged from the 2021 core (JB, 2026-10-05):
+
+```cpp
+enum class LogicalOperation { AND = 1, OR = 2, NOT = 3, XOR = 4, NAND = 5, NOR = 6, NXOR = 7 };
+```
+
+| `op` | Name | Children | TRUE when |
+|---|---|---|---|
+| 1 | AND | ≥ 2 | all children are TRUE |
+| 2 | OR | ≥ 2 | at least one child is TRUE |
+| 3 | NOT | exactly 1 | the child is FALSE |
+| 4 | XOR | ≥ 2 | an odd number of children are TRUE |
+| 5 | NAND | ≥ 2 | NOT AND |
+| 6 | NOR | ≥ 2 | NOT OR |
+| 7 | NXOR | ≥ 2 | NOT XOR (an even number are TRUE) |
+
+* Any other value of `op`, or a wrong number of children, is a slot error.
+* UNKNOWN follows Kleene rules: AND is FALSE if any child is FALSE, OR is TRUE if any child is TRUE, otherwise UNKNOWN if any child is UNKNOWN. XOR and NXOR are UNKNOWN if any child is UNKNOWN. NOT, NAND, NOR and NXOR negate, and NOT UNKNOWN is UNKNOWN.
+* Writers SHOULD add the name as a comment where it helps a reader, for example `C_1: C_L 1 C_1 C_2/  # AND`.
 
 Examples:
 
 ```
-C_1: C_L AND C_1 C_2/
+C_1: C_L 1 C_1 C_2/          # AND
 C_1: C_? ?_1/
 ?_1: airborne T/
 C_2: C_m battery.remaining ge 0.3 0/
