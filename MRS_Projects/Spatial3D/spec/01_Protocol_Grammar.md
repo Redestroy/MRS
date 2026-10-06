@@ -147,6 +147,7 @@ version-body   = "MRS" number ;                      (* kind "@": "@: MRS 0.1/" 
 | `.mrsl` | Timeline: task dispatch schedule (spec 06 §7) |
 | `.mrsj` | Task journal (spec 06 §8) |
 | `.mrsm` | Message log: one `M` record per line (spec 06 §2) |
+| `.mrsp` | Port map: one `P_A` record per assigned port requirement (spec 04 §6.2) |
 
 ### 3.5 Writer rules (canonical form)
 
@@ -175,7 +176,7 @@ A parser MUST accept any valid input, not only the canonical form.
 | `F` | Function | yes | spec 02 |
 | `V` | View | yes | spec 05 |
 | `D` | Device node | yes | spec 04 |
-| `P` | Port requirement | yes | spec 04 |
+| `P` | Port requirement (`P_R`) or port map entry (`P_A`) | yes | spec 04 |
 | `K` | Capability | yes | spec 04 |
 | `M` | Message | yes | spec 06 |
 | `H` | Mission header | yes | spec 06 |

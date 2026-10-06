@@ -1,6 +1,6 @@
 # 07 Build and test
 
-Status: **draft for WP0**, spec version `0.1`. Plan reference: §3.2 (modules) and §11 (WP0).
+Status: **draft for WP0, updated in WP2**, spec version `0.1`. Plan reference: §3.2 (modules) and §11 (WP0).
 
 ## 1. Repository layout (branch `spatial-3d`)
 
@@ -13,17 +13,18 @@ MRSlib/
     CMakeLists.txt
     .clang-format
     core/                  MRS::Port, MRS::Device, MRS::Environment, MRS::Task, MRS::Comm, MRS::Protocol
-      include/mrs/...      public headers
+      include/mrs/...      public headers; device/uav/ holds the UAV device classes (WP2)
       src/
     algorithms/            MRS::Algorithms
-    platforms/webots/      built only when Webots is found
+    platforms/webots/      WebotsPlatform (mrs_webots), built only when WEBOTS_HOME is set
     platforms/ardupilot/   later (WP10)
-    devices/uav/
     behaviours/            .mrsb files
     tools/                 mrs_fmt (check a file, print its canonical form)
     tests/
       third_party/doctest.h
       protocol/            round-trip and error tests
+      task/                conditions and executor (WP1)
+      device/              device tree, ports, blocks, self model, with a mock platform (WP2)
 MRS_Projects/Spatial3D/
   README.md
   docs/                    plan and design notes
@@ -106,6 +107,7 @@ For every file in `spec/examples/*.mrs?`:
 | `slot_logic_op.mrst` | `C_L 8`, not a `LogicalOperation` |
 | `slot_view_match.mrst` | `C_V` with a view other than `V_DET` or `V_PEER` |
 | `slot_atomic_fn.mrst` | `A_FN` inside a `T_A` |
+| `slot_port_any.mrsp` | `P_A` with address `any` |
 
 ### 5.3 Action packing
 
@@ -122,6 +124,17 @@ Fixed vectors for spec 02 §2:
 
 Plus: unpacking each `arg` gives back the values; `A_PXY 1e39 0` fails (outside the binary32 range).
 
-### 5.4 Out of scope for WP0
+### 5.4 Device tests (WP2)
+
+`tests/device/` runs against `MockPlatform`, which lists the Webots Mavic 2 Pro device names and records writes and messages:
+
+* `examples/mavic_webots.mrsd` with `examples/mavic_webots.mrsp` builds with no faults, every port from the map; the self model lists the expected actions, views, message mode, capacity and fields, and meets the static requirements of `uav_point_task.mrst`.
+* Without the GNSS line, `pose.enu` (and what depends on it) is gone and the point task no longer fits.
+* Without a port map, addresses come from the parameters, and the port map written from that assignment has the example map's addresses.
+* Port assignment: `any` without an identity stays unresolved even when ports are free; a scan resolves an identity that matches exactly one port; the map comes before the address; unlisted ports are not present; an exclusive port given twice and bad map entries are build errors.
+* A missing or unopened device makes its node unavailable (a fault, not an error), and the fcu follows its motors.
+* Dispatch rules of spec 04 §4.2, sensor views through ports, and definition errors.
+
+### 5.5 Out of scope for WP0
 
 Condition evaluation, the executor, devices and the worldview get their own tests in WP1–WP3. WP0 only checks that every object can be read and written exactly.

@@ -3,8 +3,20 @@ add_library(mrs_core STATIC
 	src/protocol/Parser.cpp
 	src/protocol/Writer.cpp
 	src/device/Action.cpp
+	src/device/Params.cpp
+	src/device/Capability.cpp
+	src/device/DeviceNode.cpp
+	src/device/DeviceRegistry.cpp
+	src/device/DeviceTree.cpp
+	src/device/BlockBuilder.cpp
+	src/device/SelfModel.cpp
+	src/device/Robot.cpp
+	src/device/uav/UavDevices.cpp
+	src/port/Port.cpp
+	src/port/PortManager.cpp
 	src/world/Worldview.cpp
 	src/world/GeoReference.cpp
+	src/world/ProcessorCatalog.cpp
 	src/task/Condition.cpp
 	src/task/Function.cpp
 	src/task/TaskAction.cpp

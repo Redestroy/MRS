@@ -1,0 +1,27 @@
+@: MRS 0.1/
+
+P: P_A m_fl motor SIM "front left propeller" 0/
+
+P: P_A m_fr motor SIM "front right propeller" 0/
+
+P: P_A m_rl motor SIM "rear left propeller" 0/
+
+P: P_A m_rr motor SIM "rear right propeller" 0/
+
+P: P_A imu inertial SIM "inertial unit" 1 rate_hz 125/
+
+P: P_A imu gyro SIM "gyro" 1 rate_hz 125/
+
+P: P_A gnss gnss SIM "gps" 1 rate_hz 31.25/
+
+P: P_A compass compass SIM "compass" 1 rate_hz 31.25/
+
+P: P_A leds led0 SIM "front left led" 0/
+
+P: P_A leds led1 SIM "front right led" 0/
+
+P: P_A bat battery SIM "battery" 1 rate_hz 1/
+
+P: P_A radio tx SIM "emitter" 0/
+
+P: P_A radio rx SIM "receiver" 1 rate_hz 31.25/

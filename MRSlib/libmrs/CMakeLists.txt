@@ -5,6 +5,12 @@ project(libmrs VERSION 0.1.0 LANGUAGES CXX)
 option(MRS_BUILD_TESTS "Build the mrs_tests executable" ON)
 option(MRS_BUILD_TOOLS "Build command-line tools such as mrs_fmt" ON)
 option(MRS_WARNINGS_AS_ERRORS "Treat compiler warnings as errors (on in CI)" OFF)
+if(DEFINED ENV{WEBOTS_HOME})
+	set(MRS_WEBOTS_DEFAULT ON)
+else()
+	set(MRS_WEBOTS_DEFAULT OFF)
+endif()
+option(MRS_BUILD_WEBOTS "Build the Webots platform (needs WEBOTS_HOME)" ${MRS_WEBOTS_DEFAULT})
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -24,6 +30,10 @@ else()
 endif()
 
 add_subdirectory(core)
+
+if(MRS_BUILD_WEBOTS)
+	add_subdirectory(platforms/webots)
+endif()
 
 if(MRS_BUILD_TOOLS)
 	add_subdirectory(tools)

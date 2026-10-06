@@ -1,0 +1,4 @@
+# expect: slot_error 110
+# a port map entry with address any (spec 04 §6.2)
+@: MRS 0.1/
+P: P_A gnss gnss SIM any 0/

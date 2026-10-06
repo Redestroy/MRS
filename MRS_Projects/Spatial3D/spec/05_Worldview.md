@@ -1,6 +1,6 @@
 # 05 Worldview
 
-Status: **draft for WP0**, spec version `0.1`. Conventions (units, frames, time): [00](00_Conventions.md). Plan reference: §6.
+Status: **draft for WP0, updated in WP2**, spec version `0.1`. Conventions (units, frames, time): [00](00_Conventions.md). Plan reference: §6.
 
 ## 1. Model
 
@@ -127,6 +127,28 @@ namespace MRS::Environment {
 * The self model's field list (spec 04 §7) is the union of `Provides()` over the processors whose subscriptions the robot's sensors can satisfy.
 
 Per tick (plan §6.3): views are routed, `Process` runs per view, then `Tick` runs per processor in chain order, then predicates are recomputed.
+
+### 5.1 Processor catalog (version 0.1)
+
+The catalog describes each processor without instantiating it. The self model (spec 04 §7) resolves it to a fixed point to learn which fields a robot can provide. Entries are in preference order.
+
+| Processor | Subscriptions (any one) | Needs | Provides | Optional outputs |
+|---|---|---|---|---|
+| `Clock` | none | — | `time` | |
+| `GnssProcessor` | `V_GEO` | — | `geo.position` | |
+| `GeoToLocalProcessor` | none | `geo.position` | `pose.enu` | |
+| `LocalPositionProcessor` | `V_POS3` | — | `pose.enu` | |
+| `AltitudeProcessor` | `V_BARO`, `V_GEO`, `V_RNG` | — | `alt.amsl`, `alt.agl` | |
+| `AttitudeProcessor` | `V_ATT` | — | `att`, `heading` | `rate.body` with `V_RATE` |
+| `KinematicsEstimator` | none | `pose.enu` | `vel.enu`, `acc.enu` | |
+| `BatteryProcessor` | `V_BAT` | — | `battery`, `battery.low`, `battery.critical` | |
+| `FlightStateProcessor` | none | `alt.agl`, `vel.enu` | `airborne`, `landed`, `armed`, `home` | |
+| `SafetySupervisor` | none | `pose.enu` | `geofence.inside` | |
+| `PeerStateProcessor` | `V_PEER` | — | `peer` (the `peer.<id>.*` subtree) | |
+
+* `AltitudeProcessor` prefers `V_RNG` for `alt.agl` and `V_BARO` for `alt.amsl`, and falls back to the `V_GEO` altitude, so a robot without a barometer (the stock Webots Mavic) still has altitude.
+* `AttitudeProcessor` takes `heading` from `V_MAG` when present and from the `V_ATT` yaw otherwise.
+* `GeoToLocalProcessor` comes before `LocalPositionProcessor`, so a robot with both GNSS and a local position source takes `pose.enu` from GNSS. Pass-through catalogs for ArduPilot (WP9) list their own processors in their own order.
 
 ## 6. Views
 

@@ -370,7 +370,7 @@ namespace MRS {
 					return code;
 				}
 
-				// Number, boolean, identifier or string (parameter values, spec 04 §2.1).
+				// Number, boolean, identifier, code or string (parameter values, spec 04 §2.1).
 				void Value() {
 					const Token* t = Peek();
 					if (!t) SlotError("missing value");
@@ -380,7 +380,8 @@ namespace MRS {
 					case Tok::Bool: Bool(); return;
 					case Tok::Ident: Id(); return;
 					case Tok::Str: IdOrStr(); return;
-					default: SlotError("expected a number, boolean, identifier or string");
+					case Tok::Code: Push(Field::MakeText(FieldType::Code, std::string(t->text))); return;
+					default: SlotError("expected a number, boolean, identifier, code or string");
 					}
 				}
 
@@ -612,10 +613,17 @@ namespace MRS {
 				if (code == "D_X") c.Labels("D");
 			}
 
-			void PortSlots(Cursor& c, const std::string&) {
-				c.IdIn({"GPIO", "PWM", "ADC", "UART", "I2C", "SPI", "CAN", "UDP", "TCP", "MAVLINK", "SIM"});
+			const std::set<std::string> kPortTypes = {"GPIO", "PWM", "ADC", "UART", "I2C", "SPI",
+			                                          "CAN",  "UDP", "TCP", "MAVLINK", "SIM"};
+
+			void PortSlots(Cursor& c, const std::string& code) {
+				if (code == "P_A") {
+					c.Id();  // node
+					c.Id();  // requirement
+				}
+				c.IdIn(kPortTypes);
 				c.IdOrStr();
-				c.Bool();
+				if (code == "P_R") c.Bool();
 				c.Params();
 			}
 
@@ -738,7 +746,7 @@ namespace MRS {
 					add({"V_GEO", "V_POS3", "V_VEL3", "V_ATT", "V_RATE", "V_ACC", "V_BARO", "V_MAG", "V_RNG", "V_BAT",
 					     "V_PEER", "V_REL3", "V_DET", "V_P2"}, ViewSlots);
 					add({"D_H", "D_J", "D_X", "D_S", "D_A", "D_C", "D_M"}, DeviceSlots);
-					add({"P_R"}, PortSlots);
+					add({"P_R", "P_A"}, PortSlots);
 					add({"K_A", "K_V", "K_M", "K_Q"}, CapabilitySlots);
 					add({"H_M"}, HeaderSlots);
 					add({"L_D"}, TimelineSlots);
@@ -777,6 +785,10 @@ namespace MRS {
 						if (!entries.insert({rec.fields[k].s, produced}).second)
 							fail_child(a, "A_MAP: two entries address the same target with the same code");
 					}
+				} else if (rec.code == "P_A") {
+					const Field& address = rec.fields.at(3);
+					if (address.type == FieldType::Id && address.s == "any")
+						Fail(ErrorClass::Slot, address.offset, header, "P_A: a port map entry needs a fixed address, not any");
 				} else if (rec.code == "T_A") {
 					std::function<void(const Record&)> no_fn = [&](const Record& r) {
 						if (r.code == "A_FN") fail_child(r, "T_A: actions must not include A_FN (use T_P)");

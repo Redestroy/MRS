@@ -42,3 +42,7 @@ Branch: `spatial-3d`. Status: **WP0**. The specification is written; the library
 2. **Expression functions (`F_E`):** not planned. Expression strings may be written in comments (spec 02 §7).
 3. **Units and logic codes:** `A_W` is in seconds and `C_T` in milliseconds (spec 03 §4). `C_L` uses the `LogicalOperation` enum: AND = 1, OR = 2, NOT = 3, XOR = 4, NAND = 5, NOR = 6, NXOR = 7 (spec 03 §4.1).
 4. **CI:** a GitHub Actions workflow builds and tests on Windows and Linux (spec 07 §3).
+
+## WP2 decisions (JB, 2026-10-06)
+
+1. **Ports are never picked because they are free.** Which device sits on which port is fixed by the wiring or the connection order. A port comes from the robot's port map (first-time setup, `.mrsp`), from an explicit address, or from a port scan that identifies the device (spec 04 §6).
