@@ -1,6 +1,7 @@
 #include "mrs/task/TaskExecutor.h"
 
 #include <algorithm>
+#include <set>
 
 namespace MRS {
 	namespace Task {
@@ -15,7 +16,9 @@ namespace MRS {
 
 			std::optional<double> context_start;  // first entry into STARTED or IN_PROGRESS
 			std::optional<double> unknown_since;  // start condition UNKNOWN since
-			int fulfil_attempts = 0;
+			int fulfil_attempts = 0;              // behaviours that ended SUCCEEDED with the start still FALSE
+			std::set<std::string> tried;          // behaviours that FAILED for the current start condition
+			FailReason behaviour_failure = FailReason::NONE;
 
 			std::size_t iterator = 0;             // leaf tasks and behaviour bases
 			std::optional<double> wait_start;     // A_W
@@ -76,9 +79,17 @@ namespace MRS {
 					if (below.task->State() == TaskState::IDLE) Emit(below, TaskState::QUEUED);  // resume (spec 03 §8.6)
 					break;
 				case Frame::Role::Fulfil:
-					// SUCCEEDED: the start condition is evaluated again on the next tick.
-					// FAILED: the task it was fulfilling fails for the same reason.
-					if (s == TaskState::FAILED) Finish(TaskState::FAILED, reason);
+					// The start condition is evaluated again on the next tick (spec 03 §8.4).
+					// SUCCEEDED counts as a fulfil attempt. FAILED marks the behaviour as tried, so
+					// the next lookup takes the next entry for the condition; the task fails only
+					// when every entry has failed.
+					if (s == TaskState::SUCCEEDED) {
+						++below.fulfil_attempts;
+						below.tried.clear();
+					} else {
+						below.tried.insert(done->label);
+						below.behaviour_failure = reason;
+					}
 					break;
 				case Frame::Role::Child: ChildEnded(below, s, reason); break;
 				}
@@ -160,10 +171,13 @@ namespace MRS {
 				if (f.fulfil_attempts >= ex.config_.max_fulfil_attempts) return Finish(TaskState::FAILED, FailReason::START_UNREACHABLE);
 				if (f.depth + 1 > ex.config_.max_behaviour_depth) return Finish(TaskState::FAILED, FailReason::NO_BEHAVIOUR);
 				const Condition& unmet = f.task->StartCondition();
-				const BehaviourEntry* entry = ex.library_.Find(unmet, ex.profile_);
-				if (!entry) return Finish(TaskState::FAILED, FailReason::NO_BEHAVIOUR);
+				const BehaviourEntry* entry = ex.library_.Find(unmet, ex.profile_, f.tried);
+				if (!entry) {
+					// Every entry for the condition failed: fail with the last behaviour's reason.
+					if (!f.tried.empty()) return Finish(TaskState::FAILED, f.behaviour_failure);
+					return Finish(TaskState::FAILED, FailReason::NO_BEHAVIOUR);
+				}
 				if (f.task->State() != TaskState::STARTED) Enter(f, TaskState::STARTED);
-				++f.fulfil_attempts;
 
 				auto b = std::make_unique<Frame>();
 				b->owned = entry->behaviour->Clone();
@@ -190,7 +204,12 @@ namespace MRS {
 					const EvalContext until_ctx = Context(f.until ? f.until_context : f.context_start.value_or(t));
 					const Condition& until = f.until ? *f.until : static_cast<const Behaviour&>(*f.task).Until();
 					if (until.Evaluate(until_ctx) == Truth::True) return EndWithCondition(f);
-					if (RunActions(f, static_cast<const Behaviour&>(*f.task).Base().Actions())) f.iterator = 0;  // again next tick
+					// A_N does not take a tick in a behaviour: the base starts again at once (JB, 2026-10-06).
+					const auto& base = static_cast<const Behaviour&>(*f.task).Base().Actions();
+					if (RunActions(f, base)) {
+						f.iterator = 0;
+						RunActions(f, base);  // at most once more, so a base of only A_N cannot loop
+					}
 					return;
 				}
 				default: return ProgressComplex(f);

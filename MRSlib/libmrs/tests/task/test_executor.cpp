@@ -239,7 +239,13 @@ TEST_CASE("behaviour depth and lookup failures") {
 		CHECK(HasEvent(r, "need_b", TaskState::QUEUED));
 		CHECK(HasEvent(r, "need_c", TaskState::QUEUED));
 		CHECK_FALSE(HasEvent(r, "need_d", TaskState::QUEUED));
-		const auto* end = Test::FinalEvent(r.events, "op.1");
+		// need_c fails; with no other entry, the failure moves down one level per tick.
+		std::vector<Task::TaskEvent> events = r.events;
+		for (int i = 0; i < 5 && !ex.Empty(); ++i) {
+			auto more = f.Tick(ex);
+			events.insert(events.end(), more.events.begin(), more.events.end());
+		}
+		const auto* end = Test::FinalEvent(events, "op.1");
 		REQUIRE(end);
 		CHECK(end->reason == FailReason::NO_BEHAVIOUR);
 		CHECK(ex.Empty());
@@ -431,4 +437,61 @@ TEST_CASE("the task source feeds an empty stack (spec 03 §8.1 step 1)") {
 	CHECK(HasEvent(r, "op.9", TaskState::QUEUED));
 	CHECK(HasEvent(r, "op.9", TaskState::SUCCEEDED));
 	CHECK_FALSE(f.Tick(ex).dispatched);
+}
+
+TEST_CASE("a failed library behaviour makes way for the next entry (JB, 2026-10-06)") {
+	Fixture f;
+	// Two ways to make `flag` TRUE: `a` (priority 2) is impossible, `b` (priority 1) works.
+	const std::string a = "B: B_E a C_? flag 2 T_1/ T_1: T_B 0 1 0 C_1..3 T_1/ C_1: C_N/ C_2: C_N/ C_3: C_N/"
+	                      "T_1: T_A 0 1 0 C_1 C_2 A_1/ C_1: C_N/ C_2: C_N/ A_1: A_I/\n";
+	const std::string b = "B: B_E b C_? flag 1 T_1/ T_1: T_B 0 1 0 C_1..3 T_1/ C_1: C_N/ C_2: C_N/ C_3: C_N/"
+	                      "T_1: T_A 0 1 0 C_1 C_2 A_1/ C_1: C_N/ C_2: C_N/ A_1: A_L 1 1/\n";
+	const std::string task = "T: T_A op.1 1 0 C_1 C_2 A_1/ C_1: C_? ?_1/ ?_1: flag T/ C_2: C_N/ A_1: A_N/";
+	auto run = [&](Task::TaskExecutor& ex) {
+		ex.Push(Test::OneTask(f.factory, task));
+		std::vector<Task::TaskEvent> events;
+		for (int i = 0; i < 20 && !ex.Empty(); ++i) {
+			f.w.SetBool("flag", !f.sink.log.empty(), f.t);  // `b` sets the flag through its LEDs
+			auto r = f.Tick(ex);
+			events.insert(events.end(), r.events.begin(), r.events.end());
+		}
+		return events;
+	};
+
+	SUBCASE("1..N: the second entry is tried and the task succeeds") {
+		f.library.Populate(a + b, f.factory);
+		Task::TaskExecutor ex(f.library, f.sink);
+		auto events = run(ex);
+		CHECK(Test::FinalEvent(events, "a")->state == TaskState::FAILED);
+		CHECK(Test::FinalEvent(events, "b")->state == TaskState::SUCCEEDED);
+		CHECK(Test::FinalEvent(events, "op.1")->state == TaskState::SUCCEEDED);
+	}
+	SUBCASE("1 to 1: the only entry fails, so the task fails with its reason") {
+		f.library.Populate(a, f.factory);
+		Task::TaskExecutor ex(f.library, f.sink);
+		auto events = run(ex);
+		const auto* end = Test::FinalEvent(events, "op.1");
+		REQUIRE(end);
+		CHECK(end->state == TaskState::FAILED);
+		CHECK(end->reason == FailReason::IMPOSSIBLE);
+	}
+}
+
+TEST_CASE("A_N does not take a tick in a behaviour: setpoints go out every tick") {
+	Fixture f;
+	f.LoadUavLibrary();
+	Test::ToyUav uav;
+	uav.armed = true;
+	uav.z = uav.sz = 20;
+	Task::TaskExecutor ex(f.library, uav);
+	ex.Push(Test::OneTask(f.factory, "T: T_A op.5 1 0 C_1 C_2 A_1/ C_1: C_P3 30 0 20 1 0.5 0 -1/ C_2: C_N/ A_1: A_N/"));
+	int ticks = 0, dispatched = 0;
+	for (int i = 0; i < 20; ++i) {
+		uav.Write(f.w, f.t);
+		auto r = f.Tick(ex, 0.1);
+		uav.Step(0.1);
+		++ticks;
+		if (r.dispatched) ++dispatched;
+	}
+	CHECK(dispatched == ticks);
 }

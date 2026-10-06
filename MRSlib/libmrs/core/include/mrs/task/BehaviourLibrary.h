@@ -2,6 +2,7 @@
 // The behaviour library (spec 03 §7): maps condition codes to the behaviour tasks that
 // make the condition true.
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -28,7 +29,9 @@ namespace MRS {
 			// The entry for an unmet condition: same code (and, for C_?, the predicate with the
 			// wanted value T), static requirements met when a profile is given, highest
 			// priority, and the first in file order on a tie. nullptr when there is none.
-			const BehaviourEntry* Find(const Condition& unmet, const CapabilityProfile* profile = nullptr) const;
+			// Entries named in `exclude` (already tried for this condition) are skipped.
+			const BehaviourEntry* Find(const Condition& unmet, const CapabilityProfile* profile = nullptr,
+			                           const std::set<std::string>& exclude = {}) const;
 
 			const std::vector<BehaviourEntry>& Entries() const { return entries_; }
 

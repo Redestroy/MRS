@@ -313,12 +313,14 @@ The **context start** of `C_W` is the tick at which the task (or behaviour) that
 ### 8.4 Behaviour tasks (`T_B`)
 
 * `until` is evaluated **every tick before** dispatching, while the behaviour is `IN_PROGRESS`. When it is TRUE, the behaviour stops at once, as if its base task reached `A_N`, and the end condition is evaluated.
-* When the base task reaches `A_N` and `until` is still FALSE, the base task's iterator is reset and it runs again from its first action on the next tick.
+* When the base task reaches `A_N` and `until` is still FALSE, the base task's iterator is reset and it runs again from its first action **in the same tick**: `A_N` does not take a tick in a behaviour (JB, 2026-10-06). If the first action is `A_N` again, nothing is dispatched that tick.
 * **Depth limit:** behaviours pushed to fulfil start conditions may nest at most `max_behaviour_depth` deep (default 2). Beyond that, the task fails with reason `NO_BEHAVIOUR`.
 * A behaviour that ends `SUCCEEDED` returns control to the task below. That task's start condition is evaluated again on the next tick. If it is still FALSE, the lookup runs again; after `max_fulfil_attempts` (default 3) the task fails with reason `START_UNREACHABLE`.
 * No behaviour for the condition code: the task fails with reason `NO_BEHAVIOUR`.
-* A behaviour that ends `FAILED` fails the task it was fulfilling, with the same reason. *(Default chosen in WP1; open for review.)*
-* The base task of a `T_B` is a `T_A` or `T_P` in version 0.1. Its own start and end conditions are not evaluated; the behaviour's are. *(Default chosen in WP1; open for review.)*
+* A **library** behaviour that ends `FAILED` is marked as tried for that task's start condition. On the next tick the start condition is evaluated again and, if it is still FALSE, the lookup takes the best entry not yet tried. The task fails only when every matching entry has failed, with the reason of the last one. A condition with a single entry therefore fails at once (JB, 2026-10-06). A failed behaviour does not count towards `max_fulfil_attempts`; a behaviour that ends `SUCCEEDED` does, and clears the tried list.
+* A `T_B` that is part of the task itself (the task, or a child in its tree) is not a library behaviour: when it fails, the task fails.
+* *Later (MRS layer, WP5):* a task that failed for a reason that may be due to chance, rather than a categorical one such as `IMPOSSIBLE` or another robot finishing it first, may instead get a lower priority and go back to the allocator.
+* The base task of a `T_B` is a `T_A` or `T_P` in version 0.1, and its own start and end conditions are not evaluated; the behaviour's are. Behaviours are meant to be simple loops (JB, 2026-10-06). *Future versions* may allow complex bases, and a start or end condition that differs from `until` (for example: scan until the area is covered, but succeed only if the object was found).
 
 ### 8.5 Runtime conditions
 

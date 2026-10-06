@@ -34,13 +34,14 @@ namespace MRS {
 			Populate(buffer.str(), factory);
 		}
 
-		const BehaviourEntry* BehaviourLibrary::Find(const Condition& unmet, const CapabilityProfile* profile) const {
+		const BehaviourEntry* BehaviourLibrary::Find(const Condition& unmet, const CapabilityProfile* profile,
+		                                             const std::set<std::string>& exclude) const {
 			const bool predicate = unmet.Code() == "C_?";
 			// A C_? that wants F has no behaviour in version 0.1 (spec 03 §7).
 			if (predicate && !unmet.WantedValue()) return nullptr;
 			const BehaviourEntry* best = nullptr;
 			for (const auto& e : entries_) {
-				if (e.fulfils != unmet.Code()) continue;
+				if (e.fulfils != unmet.Code() || exclude.count(e.name)) continue;
 				if (predicate && e.qualifier != unmet.Qualifier()) continue;
 				if (profile && !e.behaviour->MeetsStaticRequirements(*profile)) continue;
 				if (!best || e.priority > best->priority) best = &e;
