@@ -78,13 +78,13 @@ For every file in `spec/examples/*.mrs?`:
 
 1. **Parse** the file. It MUST parse without errors.
 2. **Write** it in canonical form (spec 01 §3.5).
-3. **Compare** with `spec/examples/canonical/<name>`: byte-identical.
+3. **Compare** with `spec/examples/canonical/<name>`: byte-identical. `.mrsm` message logs use the message form (spec 01 §3.5).
 4. **Parse** the canonical output and compare the object tree with step 1: structurally equal (same codes, slots, values, children).
 5. **Write** again: byte-identical to step 2.
 
 ### 5.2 Error tests
 
-`spec/examples/invalid/` holds one file per error class in spec 01 §5, with the expected error class and byte offset in its first comment line, for example `# expect: reference_error 42`. Each MUST fail with that class at that offset.
+`spec/examples/invalid/` holds one file per error class in spec 01 §5, with the expected error class and byte offset (spec 01 §5) in its first comment line, for example `# expect: reference_error 42`. The second line says what is wrong. The files are checked out with LF line endings on every platform (`.gitattributes`), so the offsets hold. Each MUST fail with that class at that offset.
 
 | File | Error |
 |---|---|
@@ -103,6 +103,9 @@ For every file in `spec/examples/*.mrs?`:
 | `trailing.mrst` | an unterminated record at the end |
 | `map_nested.mrst` | `A_MAP` inside `A_MAP` |
 | `fn_arity.mrst` | `A_FN A_PXY` with one function |
+| `slot_logic_op.mrst` | `C_L 8`, not a `LogicalOperation` |
+| `slot_view_match.mrst` | `C_V` with a view other than `V_DET` or `V_PEER` |
+| `slot_atomic_fn.mrst` | `A_FN` inside a `T_A` |
 
 ### 5.3 Action packing
 

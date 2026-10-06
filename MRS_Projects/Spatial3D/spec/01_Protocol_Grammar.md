@@ -156,6 +156,7 @@ A writer MUST produce the **canonical form**, so that write → parse → write 
 * Labels are numbered 1, 2, … per kind within each parent, in reference order. Consecutive labels of one kind are written as a range when there are three or more (`A_1..4`), and listed otherwise.
 * Numbers use the shortest round-trip form. Integers are written without a decimal point.
 * No comments and no blank lines, except one blank line between top-level records in a file.
+* **Message form** (spec 06 §2, and `.mrsm` message logs): each top-level record is written with all its sub-records on one line, separated by nothing, followed by a newline. There are no blank lines.
 
 A parser MUST accept any valid input, not only the canonical form.
 
@@ -212,6 +213,12 @@ A parser MUST report, with the byte offset and the record header:
 | Reference error | a sub-record is missing, out of order, or its header does not match; a label is used twice in one body |
 | Version error | an unsupported MAJOR version |
 | Trailing data | text after the last complete record that is not a comment or whitespace |
+
+The **offset** is the first byte of the offending token, counted from the start of the text, with these cases:
+* a missing slot: the closing `/` of the record;
+* a missing or misplaced sub-record: the header of the record found in its place, or the end of the text;
+* a check that needs a sub-record's code (for example a nested `A_MAP`): that sub-record's code;
+* trailing data: the start of the unterminated record.
 
 A parser MUST NOT guess or repair input. A runtime that receives a malformed message drops it and counts the error (spec 06 §2).
 

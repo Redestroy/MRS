@@ -1,0 +1,9 @@
+# expect: slot_error 132
+# A_MAP inside A_MAP
+@: MRS 0.1/
+T: T_A op.1 1 0 C_1 C_2 A_1/
+C_1: C_N/
+C_2: C_N/
+A_1: A_MAP any A_1/
+A_1: A_MAP any A_1/
+A_1: A_PXY 1 2/

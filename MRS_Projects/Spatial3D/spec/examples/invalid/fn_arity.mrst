@@ -1,0 +1,8 @@
+# expect: slot_error 152
+# A_FN A_PXY needs 2 functions, this one has 1
+@: MRS 0.1/
+T: T_P op.1 1 0 C_1 C_2 A_1/
+C_1: C_N/
+C_2: C_N/
+A_1: A_FN A_PXY F_1/
+F_1: F_K 1/

@@ -1,0 +1,7 @@
+# expect: lexical_error 99
+# nan is not a number
+@: MRS 0.1/
+T: T_A op.1 1 0 C_1 C_2 A_1/
+C_1: C_W nan/
+C_2: C_N/
+A_1: A_N/

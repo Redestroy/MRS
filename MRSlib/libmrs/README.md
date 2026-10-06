@@ -2,7 +2,7 @@
 
 The new MRS library (C++17, CMake, no Boost). It is specified by [`MRS_Projects/Spatial3D/spec`](../../MRS_Projects/Spatial3D/spec). The legacy 2021 code stays in [`../MRS`](../MRS) and is ported piece by piece from WP1 on.
 
-Status: **WP0 skeleton**, for review. It contains the protocol layer only:
+Status: **WP0**. It contains the protocol layer only:
 
 | Path | What it is |
 |---|---|
@@ -11,7 +11,7 @@ Status: **WP0 skeleton**, for review. It contains the protocol layer only:
 | `core/include/mrs/protocol/Writer.h` | Writer for the canonical form (spec 01 §3.5) |
 | `core/include/mrs/device/Action.h` | Action registry and 64-bit argument packing (spec 02 §2, §4) |
 | `tools/mrs_fmt.cpp` | `mrs_fmt <file>`: checks a file and prints its canonical form |
-| `tests/` | doctest smoke tests. The full suite of spec 07 §5 follows after the review |
+| `tests/protocol/` | The WP0 suite of spec 07 §5: round trip against `spec/examples/canonical/`, one file per error class in `spec/examples/invalid/`, action packing vectors, and parser rule tests |
 
 Build and test:
 

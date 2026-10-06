@@ -1,0 +1,7 @@
+# expect: slot_error 112
+# a label where a number is expected
+@: MRS 0.1/
+T: T_A op.1 1 0 C_1 C_2 A_1/
+C_1: C_H C_1 0.5/
+C_2: C_N/
+A_1: A_N/

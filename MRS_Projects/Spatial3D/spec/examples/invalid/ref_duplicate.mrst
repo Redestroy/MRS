@@ -1,0 +1,7 @@
+# expect: reference_error 93
+# C_1 is used twice in one body
+@: MRS 0.1/
+T: T_A op.1 1 0 C_1 C_1 A_1/
+C_1: C_N/
+C_1: C_N/
+A_1: A_N/

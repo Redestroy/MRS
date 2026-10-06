@@ -1,8 +1,10 @@
 // mrs_fmt: checks a protocol file and prints its canonical form (spec 01 §3.5).
 // Usage: mrs_fmt <file>     Exit code 0 when the file is valid, 1 otherwise.
+// A .mrsm message log is written in the message form, one message per line.
 #include <fstream>
 #include <iostream>
 #include <sstream>
+#include <string>
 
 #include "mrs/protocol/Parser.h"
 #include "mrs/protocol/Writer.h"
@@ -27,6 +29,9 @@ int main(int argc, char** argv) {
 		std::cerr << ": " << e.message << "\n";
 		return 1;
 	}
-	std::cout << MRS::Protocol::Write(result.document);
+	MRS::Protocol::WriteOptions options;
+	const std::string path = argv[1];
+	options.compact = path.size() >= 5 && path.compare(path.size() - 5, 5, ".mrsm") == 0;
+	std::cout << MRS::Protocol::Write(result.document, options);
 	return 0;
 }

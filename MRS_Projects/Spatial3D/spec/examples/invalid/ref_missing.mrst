@@ -1,0 +1,12 @@
+# expect: reference_error 168
+# A_2 is referenced but absent; the next record is a new task
+@: MRS 0.1/
+T: T_A op.1 1 0 C_1 C_2 A_1 A_2/
+C_1: C_N/
+C_2: C_N/
+A_1: A_N/
+
+T: T_A op.2 1 0 C_1 C_2 A_1/
+C_1: C_N/
+C_2: C_N/
+A_1: A_N/

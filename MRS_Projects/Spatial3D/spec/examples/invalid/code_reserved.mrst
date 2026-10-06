@@ -1,0 +1,7 @@
+# expect: code_error 57
+# T_G is reserved
+@: MRS 0.1/
+T: T_G op.1 1 0 C_1 C_2 A_1/
+C_1: C_N/
+C_2: C_N/
+A_1: A_N/

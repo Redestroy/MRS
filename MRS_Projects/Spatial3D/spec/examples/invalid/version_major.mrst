@@ -1,0 +1,7 @@
+# expect: version_error 69
+# major version 1 is not supported
+@: MRS 1.0/
+T: T_A op.1 1 0 C_1 C_2 A_1/
+C_1: C_N/
+C_2: C_N/
+A_1: A_N/

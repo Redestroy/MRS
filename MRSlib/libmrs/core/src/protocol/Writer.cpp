@@ -89,7 +89,12 @@ namespace MRS {
 		std::string Write(const Document& document, const WriteOptions& options) {
 			std::string out;
 			for (std::size_t i = 0; i < document.records.size(); ++i) {
-				if (i > 0 && !options.compact) out += '\n';
+				if (options.compact) {
+					out += Write(document.records[i], options);
+					out += '\n';
+					continue;
+				}
+				if (i > 0) out += '\n';
 				out += Write(document.records[i], options);
 			}
 			return out;

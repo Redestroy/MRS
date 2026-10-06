@@ -1,0 +1,7 @@
+# expect: slot_error 130
+# C_P3 needs 7 values, this one has 5
+@: MRS 0.1/
+T: T_A op.1 1 0 C_1 C_2 A_1/
+C_1: C_P3 120 -40 15 1 0.5/
+C_2: C_N/
+A_1: A_N/

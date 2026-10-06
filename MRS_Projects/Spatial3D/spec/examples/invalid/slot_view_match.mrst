@@ -1,0 +1,8 @@
+# expect: slot_error 137
+# C_V can only match V_DET or V_PEER in version 0.1
+@: MRS 0.1/
+T: T_A op.1 1 0 C_1 C_2 A_1/
+C_1: C_V V_1/
+V_1: V_GEO 0 56.9 24.1 10/
+C_2: C_N/
+A_1: A_N/

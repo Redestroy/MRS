@@ -1,0 +1,7 @@
+# expect: lexical_error 123
+# a character outside the token rules ($)
+@: MRS 0.1/
+T: T_A op.1 1 0 C_1 C_2 A_1/
+C_1: C_H 15 $0.5/
+C_2: C_N/
+A_1: A_N/

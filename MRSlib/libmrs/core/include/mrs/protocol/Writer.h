@@ -6,7 +6,9 @@
 namespace MRS {
 	namespace Protocol {
 		struct WriteOptions {
-			// Messages (spec 06 §2): all records on one line, separated by nothing.
+			// Message form (spec 06 §2): a top-level record and its sub-records on one
+			// line, separated by nothing. A document in this form (a .mrsm message log)
+			// has one top-level record per line and no blank lines.
 			bool compact = false;
 		};
 
