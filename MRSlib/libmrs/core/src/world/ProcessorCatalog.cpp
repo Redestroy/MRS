@@ -2,22 +2,28 @@
 
 #include <algorithm>
 
+#include "mrs/world/Processor.h"
+#include "mrs/world/UavProcessors.h"
+
 namespace MRS {
 	namespace Environment {
+		ProcessorCatalog ProcessorCatalog::FromProcessors(const std::vector<const IViewProcessor*>& processors) {
+			ProcessorCatalog catalog;
+			for (const IViewProcessor* p : processors) {
+				ProcessorDescriptor d{p->Name(), p->Subscriptions(), p->Needs(), p->Provides(), p->Optional(), {}};
+				for (const auto& o : p->Offers()) d.offers.emplace_back(o.field, o.source);
+				catalog.Add(std::move(d));
+			}
+			return catalog;
+		}
+
 		const ProcessorCatalog& ProcessorCatalog::Default() {
-			static const ProcessorCatalog catalog({
-				{"Clock", {}, {}, {"time"}, {}},
-				{"GnssProcessor", {"V_GEO"}, {}, {"geo.position"}, {}},
-				{"GeoToLocalProcessor", {}, {"geo.position"}, {"pose.enu"}, {}},
-				{"LocalPositionProcessor", {"V_POS3"}, {}, {"pose.enu"}, {}},
-				{"AltitudeProcessor", {"V_BARO", "V_GEO", "V_RNG"}, {}, {"alt.amsl", "alt.agl"}, {}},
-				{"AttitudeProcessor", {"V_ATT"}, {}, {"att", "heading"}, {{"V_RATE", "rate.body"}}},
-				{"KinematicsEstimator", {}, {"pose.enu"}, {"vel.enu", "acc.enu"}, {}},
-				{"BatteryProcessor", {"V_BAT"}, {}, {"battery", "battery.low", "battery.critical"}, {}},
-				{"FlightStateProcessor", {}, {"alt.agl", "vel.enu"}, {"airborne", "landed", "armed", "home"}, {}},
-				{"SafetySupervisor", {}, {"pose.enu"}, {"geofence.inside"}, {}},
-				{"PeerStateProcessor", {"V_PEER"}, {}, {"peer"}, {}},
-			});
+			static const ProcessorCatalog catalog = [] {
+				const auto processors = MakeUavProcessors();
+				std::vector<const IViewProcessor*> view;
+				for (const auto& p : processors) view.push_back(p.get());
+				return FromProcessors(view);
+			}();
 			return catalog;
 		}
 
@@ -37,11 +43,9 @@ namespace MRS {
 					                                   [&](const std::string& f) { return r.fields.count(f) != 0; });
 					if (!subscribed || !needs_met) continue;
 					done[k] = true;
-					const bool duplicate = std::any_of(d.provides.begin(), d.provides.end(),
-					                                   [&](const std::string& f) { return r.fields.count(f) != 0; });
-					if (duplicate) continue;  // another processor already provides it
 					r.active.push_back(d.name);
 					r.fields.insert(d.provides.begin(), d.provides.end());
+					for (const auto& o : d.offers) r.fields.insert(o.first);
 					for (const auto& opt : d.optional)
 						if (views.count(opt.first)) r.fields.insert(opt.second);
 					changed = true;

@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "mrs/protocol/Record.h"
+#include "mrs/world/View.h"
 
 namespace MRS {
 	namespace Device {
@@ -32,12 +33,7 @@ namespace MRS {
 
 		const char* CapabilityCode(CapabilityKind kind);  // "K_A", ...
 
-		// One piece of raw information from a sensor (spec 05 §6).
-		struct View {
-			std::string code;            // "V_GEO"
-			double stamp = 0.0;          // mission time of the information
-			std::vector<double> values;  // the numeric slots after the stamp, in slot order
-			std::string text;            // V_DET class, V_PEER task id
-		};
+		// Views are worldview input (spec 05 §6); devices produce them.
+		using View = Environment::View;
 	}
 }

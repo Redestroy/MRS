@@ -265,6 +265,9 @@ namespace MRS {
 
 			// ---------------------------------------------------------------- slot cursor
 
+			// A code of the version 0.1 schema (defined after the schema).
+			bool IsSchemaCode(const std::string& code);
+
 			class Cursor {
 			public:
 				// Ranges are expanded into single labels first, because a canonical range
@@ -380,7 +383,13 @@ namespace MRS {
 					case Tok::Bool: Bool(); return;
 					case Tok::Ident: Id(); return;
 					case Tok::Str: IdOrStr(); return;
-					case Tok::Code: Push(Field::MakeText(FieldType::Code, std::string(t->text))); return;
+					case Tok::Code: {
+						// A code value names an object code, so it must be one (spec 01 §2, spec 04 §2.1).
+						std::string code(t->text);
+						if (!IsSchemaCode(code)) Fail(ErrorClass::Code, t->offset, raw_.header, "unknown code " + code + " as a value");
+						Push(Field::MakeText(FieldType::Code, code));
+						return;
+					}
 					default: SlotError("expected a number, boolean, identifier, code or string");
 					}
 				}
@@ -761,6 +770,11 @@ namespace MRS {
 					return s;
 				}();
 				return schema;
+			}
+
+			bool IsSchemaCode(const std::string& code) {
+				const Schema& s = GetSchema();
+				return s.codes.count(code) != 0 && s.reserved.count(code) == 0;
 			}
 
 			const std::string kKindsWithCode = "TCRAFVDPKMHLJB";

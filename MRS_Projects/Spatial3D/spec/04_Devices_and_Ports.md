@@ -126,7 +126,7 @@ Parameters of `quadrotor.webots`, all optional, with the Webots Mavic 2 Pro devi
 | `battery.webots` | `D_M` | `capacity_wh` (required), `voltage` (nominal, 11.55 V) | `K_Q energy_wh`, view `V_BAT` | `battery` (address `battery`, the `Robot.battery` field) |
 | `radio.webots` | `D_C` | `channel` (1), `range_m`, `emitter` (`"emitter"`), `receiver` (`"receiver"`) | `K_M broadcast` | `tx`, `rx` |
 
-The stock Mavic has neither a barometer nor a GNSS altitude filter; without `baro.webots` the altitude comes from `V_GEO` (spec 05 §5.1).
+The stock Mavic has no barometer; without `baro.webots` the worldview takes `alt.amsl` from GNSS (spec 05 §5.1).
 
 Compass heading: Webots returns the north direction in the body frame, `(n_x, n_y, n_z)`. The heading is `atan2(n_y, n_x)` wrapped to `[0, 2π)`.
 
@@ -232,9 +232,9 @@ The head builds the self model after port assignment. It contains:
 * `robot_type`, `id` and `role` list;
 * every capability of every **available** node (`K_A`, `K_V`, `K_M`, `K_Q`), with the node name that provides it;
 * the views the robot produces: every `K_V`, plus `V_PEER` when it has any `K_M` (peer `STATE` messages decode to `V_PEER`);
-* the worldview fields the robot can provide, from the processor catalog (spec 05 §5.1).
+* the worldview fields the robot can provide, from the processor catalog (spec 05 §5.2).
 
-The field list is computed to a fixed point: start with `time`; a catalog processor is **active** when at least one of its subscribed views is produced (or it subscribes to none) and every field in its `Needs()` is already provided; an active processor adds its `Provides()` and those of its optional outputs whose view is produced. Repeat until nothing changes. A processor that would provide a field another active processor already provides is skipped (spec 05 §5: two processors never provide the same field); catalog order decides.
+The field list is computed to a fixed point: start with `time`; a catalog processor is **active** when at least one of its subscribed views is produced (or it subscribes to none) and every field in its `Needs()` is already provided; an active processor adds its `Provides()`, its `Offers()` fields, and those of its optional outputs whose view is produced. Repeat until nothing changes. An offered field is provided when any of its sources is active; the worldview picks among them at run time (spec 05 §5.1).
 
 `ToProfile()` gives the task layer's capability profile: action codes, fields and roles.
 

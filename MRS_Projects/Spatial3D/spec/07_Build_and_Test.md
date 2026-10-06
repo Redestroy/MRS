@@ -16,7 +16,8 @@ MRSlib/
       include/mrs/...      public headers; device/uav/ holds the UAV device classes (WP2)
       src/
     algorithms/            MRS::Algorithms
-    platforms/webots/      WebotsPlatform (mrs_webots), built only when WEBOTS_HOME is set
+    platforms/webots/      WebotsPlatform (mrs_webots), built only when WEBOTS_HOME is set;
+                           controllers/mrs_worldview_check: the WP3 ground-truth check
     platforms/ardupilot/   later (WP10)
     behaviours/            .mrsb files
     tools/                 mrs_fmt (check a file, print its canonical form)
@@ -25,6 +26,7 @@ MRSlib/
       protocol/            round-trip and error tests
       task/                conditions and executor (WP1)
       device/              device tree, ports, blocks, self model, with a mock platform (WP2)
+      world/               worldview pipeline, source selection, processors (WP3)
 MRS_Projects/Spatial3D/
   README.md
   docs/                    plan and design notes
@@ -108,6 +110,7 @@ For every file in `spec/examples/*.mrs?`:
 | `slot_view_match.mrst` | `C_V` with a view other than `V_DET` or `V_PEER` |
 | `slot_atomic_fn.mrst` | `A_FN` inside a `T_A` |
 | `slot_port_any.mrsp` | `P_A` with address `any` |
+| `code_param_value.mrsd` | A parameter value `D_Q` that is not a known code |
 
 ### 5.3 Action packing
 
@@ -135,6 +138,17 @@ Plus: unpacking each `arg` gives back the values; `A_PXY 1e39 0` fails (outside 
 * A missing or unopened device makes its node unavailable (a fault, not an error), and the fcu follows its motors.
 * Dispatch rules of spec 04 §4.2, sensor views through ports, and definition errors.
 
-### 5.5 Out of scope for WP0
+### 5.5 Worldview tests (WP3)
+
+* A synthetic flight (a climbing circle) through the full UAV chain: `pose.enu` and `alt.agl` match the truth of the last GNSS sample within 1e-4 m, `heading` within 0.03 rad, `vel.enu` within 0.1 m/s.
+* Source selection: the heading falls back from the compass to the attitude when the compass goes stale, and back; the source order is per robot; a rangefinder and a barometer are preferred when present; without GNSS, `pose.enu` and what depends on it go stale.
+* Removing or adding a processor changes nothing else; a robot without GNSS loses the processors that need it.
+* Chain rules: order by needs, a field provided twice, provided and offered, and a cycle.
+* The self model's processor list equals the chain built for the same views; device views from the mock platform reach the worldview.
+* Peers, detections, `landed`, `airborne`, `home`, time series and worldview requirements.
+
+In Webots, `platforms/webots/controllers/mrs_worldview_check` compares the same fields with supervisor ground truth (its README has the steps).
+
+### 5.6 Out of scope for WP0
 
 Condition evaluation, the executor, devices and the worldview get their own tests in WP1–WP3. WP0 only checks that every object can be read and written exactly.

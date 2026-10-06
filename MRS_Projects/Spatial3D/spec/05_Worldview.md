@@ -1,6 +1,6 @@
 # 05 Worldview
 
-Status: **draft for WP0, updated in WP2**, spec version `0.1`. Conventions (units, frames, time): [00](00_Conventions.md). Plan reference: §6.
+Status: **draft for WP0, updated in WP2 and WP3**, spec version `0.1`. Conventions (units, frames, time): [00](00_Conventions.md). Plan reference: §6.
 
 ## 1. Model
 
@@ -11,7 +11,7 @@ namespace MRS::Environment {
   template <class T> struct WorldField {
     T value;
     double stamp;        // mission time of the information (not of the write)
-    SourceId source;     // processor, sensor or peer that produced it
+    SourceId source;     // processor, sensor, peer, or the selected source of an offered field (§5.1)
     bool valid;
   };
 }
@@ -73,11 +73,11 @@ Every UAV MUST provide these fields to take spatial tasks (JB's worldview minimu
 
 | Path | TRUE when | Written by |
 |---|---|---|
-| `airborne` | `alt.agl` > 0.3 m and the motors are running | `FlightStateProcessor` |
+| `airborne` | `alt.agl` > 0.3 m and the motors are running (`armed`, when known) | `FlightStateProcessor` |
 | `landed` | `alt.agl` < 0.15 m and `|vel.enu|` < 0.1 m/s for 1 s | `FlightStateProcessor` |
-| `armed` | motors armed | `FlightStateProcessor` |
+| `armed` | motors armed | the flight control unit (WP4) |
 | `home` | within 1 m horizontally of `home.enu`, at any altitude | `FlightStateProcessor` |
-| `geofence.inside` | inside the mission geofence | `SafetySupervisor` |
+| `geofence.inside` | inside the mission geofence | `GeofenceProcessor` |
 | `battery.low` | `battery.remaining` < `battery_low` (default 0.3) | `BatteryProcessor` |
 | `battery.critical` | `battery.remaining` < `battery_critical` (default 0.15) | `BatteryProcessor` |
 
@@ -111,44 +111,91 @@ The thresholds are configuration, not spec.
 
 ```cpp
 namespace MRS::Environment {
+  struct Offer { std::string field; std::string source; };   // a field this processor offers as one source
+
   class IViewProcessor {
   public:
-    virtual std::vector<ViewCode> Subscriptions() const = 0;
-    virtual std::vector<std::string> Provides() const = 0;      // field paths
-    virtual std::vector<std::string> Needs() const { return {}; }  // fields read
-    virtual void Process(const View& v, Worldview& w, double t) = 0;
+    virtual std::string Name() const = 0;
+    virtual std::vector<std::string> Subscriptions() const = 0;   // view codes
+    virtual std::vector<std::string> Provides() const { return {}; }  // fields only this processor writes
+    virtual std::vector<Offer> Offers() const { return {}; }          // fields offered as a source (§5.1)
+    virtual std::vector<std::string> Needs() const { return {}; }     // fields read
+    virtual std::vector<std::pair<std::string, std::string>> Optional() const { return {}; }  // (view, field)
+    virtual void Process(const View& v, Worldview& w, double t) {}
     virtual void Tick(Worldview& w, double t) {}
   };
 }
 ```
 
-* `ProcessorChain` orders processors once at start so that every processor runs after the processors that provide its `Needs()`. A cycle is a build error.
-* A processor writes only the fields in its `Provides()` list. Two processors MUST NOT provide the same field. Pass-through processors for ArduPilot and fusing processors for Webots therefore replace each other; they are never both loaded.
-* The self model's field list (spec 04 §7) is the union of `Provides()` over the processors whose subscriptions the robot's sensors can satisfy.
+* Processors are **simple**: each turns one kind of input into one kind of output. Where a field can come from more than one input (altitude, heading, position), each input has its own small processor that **offers** the field as a named source, and the worldview decides which source to use (§5.1, JB 2026-10-06).
+* `ProcessorChain` orders processors once at start, so that every processor runs after the processors that provide or offer its `Needs()`. A cycle is a build error.
+* A field in `Provides()` is written by that processor only. Two processors MUST NOT provide the same field, and a field MUST NOT be both provided and offered. Either is a build error.
+* Adding or removing a processor needs no change to any other processor: the chain is re-ordered and the source selection uses whatever sources remain.
 
-Per tick (plan §6.3): views are routed, `Process` runs per view, then `Tick` runs per processor in chain order, then predicates are recomputed.
+Per tick (plan §6.3): views are routed to their subscribers and `Process` runs per view; then `Tick` runs per processor in chain order; then the worldview re-selects every offered field (§5.1), so a source that went stale during the tick is replaced. Predicates are written by their processors' `Tick`, which runs after the fields they read.
 
-### 5.1 Processor catalog (version 0.1)
+### 5.1 Source selection
 
-The catalog describes each processor without instantiating it. The self model (spec 04 §7) resolves it to a fixed point to learn which fields a robot can provide. Entries are in preference order.
+For every offered field the worldview keeps the latest value of each source and writes the field itself from the **best fresh source**:
 
-| Processor | Subscriptions (any one) | Needs | Provides | Optional outputs |
+* A source is fresh when its latest value is at most the field's `max_age` old.
+* Sources are ranked by the field's **source order**, a per-robot setting. Sources missing from the order rank after it, by name.
+* The field is re-selected whenever a source offers a new value, and at the end of every tick. When no source is fresh, the newest value is kept, so the field reads as stale.
+* The field records which source it came from (`WorldField::source`), and the change of source is visible to logs.
+
+Default source orders (version 0.1, UAV):
+
+| Field | Sources, best first | Offered by |
+|---|---|---|
+| `pose.enu` | `gnss`, `local` | `GeoToLocalProcessor` (from `geo.position`), `LocalPositionProcessor` (`V_POS3`) |
+| `alt.amsl` | `baro`, `gnss`, `local` | `BaroAltitudeProcessor` (`V_BARO`), `GnssAltitudeProcessor` (`geo.position.alt`), `LocalAltitudeProcessor` (`V_POS3` z + `alt0`) |
+| `alt.agl` | `range`, `amsl` | `RangeAltitudeProcessor` (`V_RNG`), `AglFromAmslProcessor` (`alt.amsl` − ground) |
+| `heading` | `compass`, `attitude` | `CompassHeadingProcessor` (`V_MAG`), `AttitudeHeadingProcessor` (`V_ATT` yaw, converted, spec 00 §3) |
+
+* Ground altitude in version 0.1 is flat ground at the robot's home: `alt0 + home.enu.z`, or `alt0` before the mission header arrives.
+* A robot without a barometer (the stock Webots Mavic) gets `alt.amsl` from GNSS; one with a rangefinder gets `alt.agl` from it. Nothing else changes.
+
+### 5.2 Processor catalog (version 0.1)
+
+The self model (spec 04 §7) works out which fields a robot can provide from descriptions of the processors (`Name`, `Subscriptions`, `Needs`, `Provides`, `Offers`, `Optional`), taken from the processor classes themselves, without running them. Entries are in chain-registration order.
+
+| Processor | Subscriptions | Needs | Provides | Offers (field/source) |
 |---|---|---|---|---|
-| `Clock` | none | — | `time` | |
+| `Clock` | — | — | `time` | |
 | `GnssProcessor` | `V_GEO` | — | `geo.position` | |
-| `GeoToLocalProcessor` | none | `geo.position` | `pose.enu` | |
-| `LocalPositionProcessor` | `V_POS3` | — | `pose.enu` | |
-| `AltitudeProcessor` | `V_BARO`, `V_GEO`, `V_RNG` | — | `alt.amsl`, `alt.agl` | |
-| `AttitudeProcessor` | `V_ATT` | — | `att`, `heading` | `rate.body` with `V_RATE` |
-| `KinematicsEstimator` | none | `pose.enu` | `vel.enu`, `acc.enu` | |
+| `GeoToLocalProcessor` | — | `geo.position` | | `pose.enu`/`gnss` |
+| `LocalPositionProcessor` | `V_POS3` | — | | `pose.enu`/`local` |
+| `BaroAltitudeProcessor` | `V_BARO` | — | | `alt.amsl`/`baro` |
+| `GnssAltitudeProcessor` | — | `geo.position` | | `alt.amsl`/`gnss` |
+| `LocalAltitudeProcessor` | `V_POS3` | — | | `alt.amsl`/`local` |
+| `RangeAltitudeProcessor` | `V_RNG` | — | | `alt.agl`/`range` |
+| `AglFromAmslProcessor` | — | `alt.amsl` | | `alt.agl`/`amsl` |
+| `AttitudeProcessor` | `V_ATT` | — | `att` | |
+| `RateProcessor` | `V_RATE` | — | `rate.body` | |
+| `CompassHeadingProcessor` | `V_MAG` | — | | `heading`/`compass` |
+| `AttitudeHeadingProcessor` | `V_ATT` | — | | `heading`/`attitude` |
+| `KinematicsEstimator` | — | `pose.enu` | `vel.enu`, `acc.enu` | |
 | `BatteryProcessor` | `V_BAT` | — | `battery`, `battery.low`, `battery.critical` | |
-| `FlightStateProcessor` | none | `alt.agl`, `vel.enu` | `airborne`, `landed`, `armed`, `home` | |
-| `SafetySupervisor` | none | `pose.enu` | `geofence.inside` | |
+| `FlightStateProcessor` | — | `alt.agl`, `vel.enu` | `airborne`, `landed`, `home` | |
+| `GeofenceProcessor` | — | `pose.enu` | `geofence.inside` | |
 | `PeerStateProcessor` | `V_PEER` | — | `peer` (the `peer.<id>.*` subtree) | |
+| `DetectionProcessor` | `V_DET` | — | `det` (the `det.<class>.<n>.*` subtree) | |
 
-* `AltitudeProcessor` prefers `V_RNG` for `alt.agl` and `V_BARO` for `alt.amsl`, and falls back to the `V_GEO` altitude, so a robot without a barometer (the stock Webots Mavic) still has altitude.
-* `AttitudeProcessor` takes `heading` from `V_MAG` when present and from the `V_ATT` yaw otherwise.
-* `GeoToLocalProcessor` comes before `LocalPositionProcessor`, so a robot with both GNSS and a local position source takes `pose.enu` from GNSS. Pass-through catalogs for ArduPilot (WP9) list their own processors in their own order.
+A processor is in the robot's chain when at least one of its subscriptions is produced (or it has none) and its needs are met; this is the same fixed point as spec 04 §7. Processors whose inputs never appear are left out, so they cost nothing.
+
+### 5.3 Processor rules (version 0.1)
+
+* `KinematicsEstimator`: an alpha-beta filter per axis over `pose.enu` (α = 0.85, β = 0.3 by default), run once per new `pose.enu` stamp. `vel.enu` is valid from the second sample; `acc.enu` is the low-pass filtered difference of `vel.enu` (γ = 0.3), valid from the third.
+* `FlightStateProcessor`: `airborne` and `landed` as in §4.2, with `armed` treated as unknown. `armed` itself comes from the flight control unit's state in WP4. `home` reads `home.enu` and is invalid while `home.enu` is missing.
+* `GeofenceProcessor`: the box of the mission header (spec 06 §6), stored as the mission fields `geofence.xmin`, `.xmax`, `.ymin`, `.ymax` and `.zmax`. `geofence.inside` is invalid while they are missing.
+* `PeerStateProcessor`: a `V_PEER` view from robot `N` writes `peer.rN.pose.enu`, `peer.rN.vel.enu`, `peer.rN.battery.remaining` and `peer.rN.task`, stamped with the view's stamp, and the peer's semantic object.
+* `DetectionProcessor`: a `V_DET` of class `c` updates the detection of class `c` within 2 m of it, or starts the next number `n`; it writes `det.c.n.enu` and `det.c.n.confidence`.
+* Mission fields (`home.enu`, `layer.alt`, `geofence.*`) and the geo reference are written from the mission header by `ApplyMissionHeader` (spec 06 §6).
+
+### 5.4 Time series and semantic objects
+
+* Every scalar field and component keeps a `TimeSeries` (§1) with `Latest()`, `At(t)` (linear interpolation between samples, nothing outside them) and `Window(t0, t1)`. A sample older than the newest is ignored; one with the same stamp replaces it.
+* `SemanticObject` is something in the world: `id`, `class` (`self`, `peer`, `target`, `obstacle`, `detection`), ENU position and velocity, last-seen stamp, source and confidence. Peers and detections are kept both as fields (for conditions) and as objects (for allocators and logs).
 
 ## 6. Views
 

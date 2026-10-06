@@ -17,6 +17,10 @@ add_library(mrs_core STATIC
 	src/world/Worldview.cpp
 	src/world/GeoReference.cpp
 	src/world/ProcessorCatalog.cpp
+	src/world/View.cpp
+	src/world/Processor.cpp
+	src/world/UavProcessors.cpp
+	src/world/WorldviewRequirements.cpp
 	src/task/Condition.cpp
 	src/task/Function.cpp
 	src/task/TaskAction.cpp

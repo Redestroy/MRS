@@ -8,12 +8,15 @@
 
 namespace MRS {
 	namespace Environment {
+		class IViewProcessor;
+
 		struct ProcessorDescriptor {
 			std::string name;
 			std::vector<std::string> subscriptions;  // view codes; any one is enough. Empty: none needed
 			std::vector<std::string> needs;          // fields read
-			std::vector<std::string> provides;       // fields written
+			std::vector<std::string> provides;       // fields written by this processor only
 			std::vector<std::pair<std::string, std::string>> optional;  // (view code, field) written when the view exists
+			std::vector<std::pair<std::string, std::string>> offers;    // (field, source), spec 05 §5.1
 		};
 
 		struct CatalogResolution {
@@ -26,15 +29,16 @@ namespace MRS {
 			ProcessorCatalog() = default;
 			explicit ProcessorCatalog(std::vector<ProcessorDescriptor> entries) : entries_(std::move(entries)) {}
 
-			// The version 0.1 catalog of spec 05 §5.1.
+			// The version 0.1 UAV catalog of spec 05 §5.2, described by the processor classes themselves.
 			static const ProcessorCatalog& Default();
+			static ProcessorCatalog FromProcessors(const std::vector<const IViewProcessor*>& processors);
 
 			void Add(ProcessorDescriptor d) { entries_.push_back(std::move(d)); }
 			const std::vector<ProcessorDescriptor>& Entries() const { return entries_; }
 
 			// Fixed point (spec 04 §7): a processor is active when one of its views is produced (or it
-			// subscribes to none) and all its needs are provided. A processor that would provide a field
-			// already provided is skipped; catalog order decides.
+			// subscribes to none) and all its needs are provided or offered. Its provides, offers and
+			// optional outputs become available.
 			CatalogResolution Resolve(const std::set<std::string>& views) const;
 
 		private:

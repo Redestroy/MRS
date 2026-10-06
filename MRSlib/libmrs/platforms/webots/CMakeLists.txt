@@ -15,3 +15,8 @@ add_library(mrs_webots STATIC src/WebotsPlatform.cpp)
 target_include_directories(mrs_webots PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_include_directories(mrs_webots SYSTEM PUBLIC "${MRS_WEBOTS_INCLUDE}/c" "${MRS_WEBOTS_INCLUDE}/cpp")
 target_link_libraries(mrs_webots PUBLIC mrs_core ${MRS_WEBOTS_CPP_CONTROLLER} ${MRS_WEBOTS_C_CONTROLLER} PRIVATE mrs_warnings)
+
+option(MRS_BUILD_WEBOTS_CONTROLLERS "Build the Webots check controllers" ON)
+if(MRS_BUILD_WEBOTS_CONTROLLERS)
+	add_subdirectory(controllers/mrs_worldview_check)
+endif()

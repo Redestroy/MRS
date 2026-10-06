@@ -1,0 +1,6 @@
+# expect: code_error 168
+# a parameter value that is a code must be a known code
+@: MRS 0.1/
+D: D_H uav head.default 2 robot_type t id 1 D_1/
+D_1: D_J j mech 1 accepts D_Q D_1/
+D_1: D_S g gnss.webots 0/

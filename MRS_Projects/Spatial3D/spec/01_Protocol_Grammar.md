@@ -68,6 +68,13 @@ Disambiguation, applied in this order to a whitespace-separated token:
 
 Anything else is a lexical error.
 
+*Codes as values (WP3 check).* A code may also appear as a parameter value, for example `accepts D_S` (spec 04 §2.1). This needs no separator:
+* the token classes are disjoint by the rules above: a label's subcode is all digits, a code's starts with a letter or `?`, and an identifier with an upper-case kind letter followed by `_` and a letter is always read as a code;
+* parameter lists are counted (`n` pairs), so a value can never be taken for a sub-record reference, and a label in a value position is a slot error;
+* a code value MUST be a known, non-reserved code of version 0.1, otherwise it is a code error. A misspelt code therefore fails instead of turning into an identifier.
+
+A writer that needs an identifier that looks like a code (`D_Q`) writes it as a string (`"D_Q"`).
+
 *Note:* `C_1` is a label and `C_N` is a code because a subcode never starts with a digit. `m_fl` is an identifier, not a code, because a kind is never lower case. Identifiers SHOULD start with a lower-case letter so they never look like a code or a label.
 
 Numbers:
