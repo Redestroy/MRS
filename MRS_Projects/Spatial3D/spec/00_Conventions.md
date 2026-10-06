@@ -33,6 +33,7 @@ All quantities use SI units unless the field or argument name says otherwise.
 ## 3. Frames
 
 * **Local frame: ENU** (x = East, y = North, z = Up). The origin is the mission's geo reference point (spec 06 §6). Every position in a task, condition, view or message is in ENU unless the code says geodetic.
+* Geodetic to ENU conversion is exact: WGS-84 geodetic to ECEF, then rotation into the ENU frame at the geo reference point. *(Chosen in WP1.)*
 * **Body frame: FLU** (x = Forward, y = Left, z = Up), right-handed.
 * **Yaw:** the ENU yaw. 0 points East, and counter-clockwise is positive. Range (−π, π].
 * **Heading:** navigation heading. 0 points North, and clockwise is positive. Range [0, 2π). `heading = wrap_2pi(π/2 − yaw)`.

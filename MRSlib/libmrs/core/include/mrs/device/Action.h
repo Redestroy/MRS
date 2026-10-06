@@ -34,6 +34,21 @@ namespace MRS {
 			double SecondHalfAsDouble() const;
 		};
 
+		// A combined action: target -> action, all dispatched in the same tick (spec 02 §5).
+		// A single action is a map with one entry whose target is "any".
+		struct ActionMapEntry {
+			std::string target;  // a device node name, or "any" (route by action code)
+			Action action;
+		};
+
+		struct ActionMap {
+			std::vector<ActionMapEntry> entries;
+			bool combined = false;  // written as A_MAP
+		};
+
+		// What an actuator reports for a dispatched action (spec 03 §8.2).
+		enum class ActionStatus { DONE, RUNNING, REJECTED, FAILED };
+
 		// Packs text values by the layout rules. Returns nullopt if the layout takes the
 		// other value type, the count is wrong, or a value is outside the layout's range
 		// (binary32 range for F32X2, int32 for I32X2, uint32 for U32X2).

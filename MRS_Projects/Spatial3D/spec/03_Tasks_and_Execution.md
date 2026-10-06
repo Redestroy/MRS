@@ -317,6 +317,8 @@ The **context start** of `C_W` is the tick at which the task (or behaviour) that
 * **Depth limit:** behaviours pushed to fulfil start conditions may nest at most `max_behaviour_depth` deep (default 2). Beyond that, the task fails with reason `NO_BEHAVIOUR`.
 * A behaviour that ends `SUCCEEDED` returns control to the task below. That task's start condition is evaluated again on the next tick. If it is still FALSE, the lookup runs again; after `max_fulfil_attempts` (default 3) the task fails with reason `START_UNREACHABLE`.
 * No behaviour for the condition code: the task fails with reason `NO_BEHAVIOUR`.
+* A behaviour that ends `FAILED` fails the task it was fulfilling, with the same reason. *(Default chosen in WP1; open for review.)*
+* The base task of a `T_B` is a `T_A` or `T_P` in version 0.1. Its own start and end conditions are not evaluated; the behaviour's are. *(Default chosen in WP1; open for review.)*
 
 ### 8.5 Runtime conditions
 
