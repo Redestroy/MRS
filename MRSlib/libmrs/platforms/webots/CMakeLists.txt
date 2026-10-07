@@ -1,5 +1,6 @@
 # WebotsPlatform: built only when WEBOTS_HOME points at a Webots installation (spec 07).
-set(WEBOTS_HOME "$ENV{WEBOTS_HOME}")
+# Forward slashes: a Windows path such as C:\Program Files\Webots breaks CMake string escapes.
+file(TO_CMAKE_PATH "$ENV{WEBOTS_HOME}" WEBOTS_HOME)
 if(APPLE)
 	set(MRS_WEBOTS_LIB "${WEBOTS_HOME}/Contents/lib/controller")
 	set(MRS_WEBOTS_INCLUDE "${WEBOTS_HOME}/Contents/include/controller")
@@ -12,7 +13,7 @@ find_library(MRS_WEBOTS_C_CONTROLLER NAMES Controller PATHS "${MRS_WEBOTS_LIB}" 
 if(MSVC)
 	# Webots ships its C++ API for Windows only as a MinGW build, which MSVC and clang-cl cannot link.
 	# Compile the C++ wrapper sources instead, as the Webots guide says for Visual Studio.
-	file(GLOB MRS_WEBOTS_CPP_SOURCES CONFIGURE_DEPENDS "${WEBOTS_HOME}/src/controller/cpp/*.cpp")
+	file(GLOB MRS_WEBOTS_CPP_SOURCES "${WEBOTS_HOME}/src/controller/cpp/*.cpp")
 	if(NOT MRS_WEBOTS_CPP_SOURCES)
 		message(FATAL_ERROR "No Webots C++ API sources in ${WEBOTS_HOME}/src/controller/cpp")
 	endif()
