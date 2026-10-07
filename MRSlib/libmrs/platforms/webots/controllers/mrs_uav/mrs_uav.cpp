@@ -39,6 +39,7 @@ int main(int argc, char** argv) {
 		std::fprintf(stderr, "usage: mrs_uav <robot id> [rta|rta-x] [definition.mrsd] [ports.mrsp] [behaviours.mrsb]\n");
 		return 2;
 	}
+	std::setvbuf(stdout, nullptr, _IONBF, 0);  // Webots shows a controller's output only as it is flushed
 	const int id = std::atoi(argv[1]);
 	const std::string mode = argc > 2 ? argv[2] : "rta";
 	const std::string definition_path = argc > 3 ? argv[3] : "mavic_webots.mrsd";
@@ -74,9 +75,17 @@ int main(int argc, char** argv) {
 		Algorithms::MrsLayer layer(controller, transport, functions, std::make_unique<Algorithms::RtaAllocator>(rta));
 
 		std::string last;
+		double next_status = 0.0;
 		while (platform.Step()) {
 			const double t = platform.Time();
 			layer.Tick(t);
+			if (t >= next_status) {  // a status line every 5 s, to see what the robot hears
+				next_status = t + 5.0;
+				const auto& m = layer.Messages().Stats();
+				std::printf("%8.2f r%d mission '%s' received %ld (bad %ld, other mission %ld) tasks %ld blocked %d stopped %d\n", t, id,
+				            layer.Messages().Mission().c_str(), m.received, m.dropped_parse, m.dropped_mission, layer.Stats().tasks_received,
+				            static_cast<int>(controller.TasksBlocked()), static_cast<int>(controller.Stopped()));
+			}
 			if (layer.Assigned() != last) {
 				last = layer.Assigned();
 				std::printf("%8.2f r%d task %s\n", t, id, last.empty() ? "-" : last.c_str());

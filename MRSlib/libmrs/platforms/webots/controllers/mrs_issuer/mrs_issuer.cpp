@@ -60,6 +60,7 @@ int main(int argc, char** argv) {
 		std::fprintf(stderr, "usage: mrs_issuer <mission header> <timeline.mrsl> [results.csv] [channel]\n");
 		return 2;
 	}
+	std::setvbuf(stdout, nullptr, _IONBF, 0);  // Webots shows a controller's output only as it is flushed
 	const std::string results_path = argc > 3 ? argv[3] : "mrs_issuer_results.csv";
 	const int channel = argc > 4 ? std::atoi(argv[4]) : 1;
 
