@@ -103,9 +103,16 @@ namespace MRS {
 					if (!Due()) return false;
 					const double joules = robot_.batterySensorGetValue();
 					if (!std::isfinite(joules) || joules < 0) return false;
+					// Webots reports 0 from enabling until the first sample arrives; read as an empty
+					// battery, that would raise BATTERY_CRITICAL on the ground and stop the robot.
+					if (joules == 0.0 && !sampled_) return false;
+					sampled_ = true;
 					values = {joules / 3600.0};
 					return true;
 				}
+
+			private:
+				bool sampled_ = false;
 			};
 
 			class MotorPort : public P::Port {
