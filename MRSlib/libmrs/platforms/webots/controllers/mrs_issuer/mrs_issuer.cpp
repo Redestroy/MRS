@@ -34,7 +34,7 @@ namespace {
 	public:
 		RadioTransport(webots::Emitter* tx, webots::Receiver* rx) : tx_(tx), rx_(rx) {}
 		bool Send(const std::string& text, const std::string&) override {
-			return tx_->send(text.c_str(), static_cast<int>(text.size()) + 1) == 1;
+			return tx_->send(text.data(), static_cast<int>(text.size())) == 1;
 		}
 		std::vector<std::string> Poll() override {
 			std::vector<std::string> out;

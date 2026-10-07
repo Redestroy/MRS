@@ -167,6 +167,8 @@ namespace MRS {
 					if (receiver_->getQueueLength() <= 0) return std::nullopt;
 					std::string data(static_cast<const char*>(receiver_->getData()), static_cast<std::size_t>(receiver_->getDataSize()));
 					receiver_->nextPacket();
+					// Senders that pass C strings include the terminating NUL; the parser would reject it.
+					while (!data.empty() && data.back() == '\0') data.pop_back();
 					return data;
 				}
 
