@@ -8,6 +8,7 @@
 
 #include "mrs/device/DeviceNode.h"
 #include "mrs/device/DeviceRegistry.h"
+#include "mrs/device/uav/FlightControlUnit.h"
 
 namespace MRS {
 	namespace Device {
@@ -23,31 +24,6 @@ namespace MRS {
 
 			private:
 				double speed_ = 0.0;
-			};
-
-			// The flight control unit: takes the flight actions and drives the four motors.
-			// In WP2 it keeps the setpoints; the control law that turns them into an A_MAP of
-			// A_MOT commands is WP4.
-			class FlightControlUnit : public Actuator {
-			public:
-				ActionStatus Apply(const Action& action, double t) override;
-				std::vector<const DeviceNode*> DependsOn() const override;
-
-				void SetMotors(std::array<RotorMotor*, 4> motors) { motors_ = motors; }
-				const std::array<RotorMotor*, 4>& Motors() const { return motors_; }
-				// The last values of each flight action code (two halves each).
-				const std::map<std::string, std::vector<double>>& Setpoints() const { return setpoints_; }
-				const std::string& LastCode() const { return last_code_; }
-
-			protected:
-				void OnConfigure() override;
-
-			private:
-				std::array<RotorMotor*, 4> motors_{};
-				std::map<std::string, std::vector<double>> setpoints_;
-				std::string last_code_;
-				double hold_until_ = -1.0;
-				std::uint64_t hold_arg_ = 0;
 			};
 
 			// Attitude (V_ATT) and body rates (V_RATE); V_ACC when an accelerometer is named.

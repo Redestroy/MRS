@@ -62,6 +62,11 @@ namespace MRS {
 			// The task (or behaviour) at the top of the stack, or nullptr.
 			const Task* Top() const;
 			std::size_t TopIterator() const;
+			// Labels on the stack, bottom to top. Behaviours pushed to fulfil a start condition
+			// are left out unless asked for.
+			std::vector<std::string> StackLabels(bool with_behaviours = false) const;
+			// The action iterator of the frame with this label, or 0.
+			std::size_t IteratorOf(const std::string& label) const;
 
 		private:
 			struct Frame;

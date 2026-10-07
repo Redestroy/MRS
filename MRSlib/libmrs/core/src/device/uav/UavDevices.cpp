@@ -49,43 +49,6 @@ namespace MRS {
 				return ActionStatus::DONE;
 			}
 
-			// --- FlightControlUnit -----------------------------------------------------------
-
-			void FlightControlUnit::OnConfigure() {
-				const double climb = GetParams().Num("max_climb", 2.0);
-				const double speed = GetParams().Num("max_speed_xy", 8.0);
-				for (const char* code : {"A_TO", "A_LD", "A_HD", "A_PXY", "A_PZY", "A_VXY", "A_VZY"})
-					Declare(Capability::Act(code, {{"max_climb", climb}, {"max_speed_xy", speed}}));
-			}
-
-			std::vector<const DeviceNode*> FlightControlUnit::DependsOn() const {
-				std::vector<const DeviceNode*> deps;
-				for (RotorMotor* m : motors_)
-					if (m) deps.push_back(m);
-				return deps;
-			}
-
-			ActionStatus FlightControlUnit::Apply(const Action& action, double t) {
-				if (!HasCapability(CapabilityKind::Action, action.code)) return ActionStatus::REJECTED;
-				setpoints_[action.code] = UnpackReals(ArgLayout::F32X2, action.arg);
-				last_code_ = action.code;
-				if (action.code == "A_HD") {
-					const double duration = setpoints_[action.code][0];
-					if (duration <= 0.0) return ActionStatus::DONE;
-					if (hold_until_ < 0.0 || hold_arg_ != action.arg) {
-						hold_until_ = t + duration;
-						hold_arg_ = action.arg;
-					}
-					if (t + 1e-9 < hold_until_) return ActionStatus::RUNNING;
-					hold_until_ = -1.0;
-					return ActionStatus::DONE;
-				}
-				hold_until_ = -1.0;
-				// Takeoff and landing finish when the flight controller (WP4) says so.
-				if (action.code == "A_TO" || action.code == "A_LD") return ActionStatus::RUNNING;
-				return ActionStatus::DONE;  // a setpoint is taken at once
-			}
-
 			// --- Sensors ---------------------------------------------------------------------
 
 			void Imu::OnConfigure() {
@@ -255,7 +218,8 @@ namespace MRS {
 				}
 
 				Params fp;
-				Pass(p, fp, {"max_climb", "max_speed_xy"});
+				Pass(p, fp, {"max_climb", "max_speed_xy", "hover_speed", "max_motor", "max_tilt", "max_yaw_rate", "kp_pos", "kp_vel",
+				             "ki_vel", "kv", "ki_z", "kp_yaw", "kr", "kp_att", "kd_att", "setpoint_timeout", "takeoff_tol", "state_timeout"});
 				auto* fcu = dynamic_cast<FlightControlUnit*>(&AddVirtual(registry, "fcu.default", "fcu", fp));
 				if (!fcu) throw BuildError("fcu.default is not a flight control unit");
 				fcu->SetMotors(motors);

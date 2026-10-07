@@ -8,6 +8,7 @@ add_executable(mrs_tests
 	task/test_executor.cpp
 	device/test_devices.cpp
 	world/test_worldview.cpp
+	flight/test_flight.cpp
 )
 target_include_directories(mrs_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
 # Include the std headers instead of doctest forward-declaring std::tuple (MSVC warning C5285).

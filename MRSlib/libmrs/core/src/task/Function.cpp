@@ -46,6 +46,16 @@ namespace MRS {
 				};
 			}
 
+			// cruise_x / cruise_y (spec 08 §8): like layered_*, at a fixed cruise altitude, or at the
+			// target's altitude when that is higher.
+			RegistryFunction Cruise(const char* axis_target, const char* axis_pose) {
+				return [axis_target, axis_pose](const Environment::Worldview& w, double t, const std::vector<double>& k) {
+					const double cruise = std::max(k.at(0), Get(w, "target.z", t)), alt_tol = k.at(1), switch_radius = k.at(2);
+					const bool at_cruise = std::fabs(Get(w, "pose.enu.z", t) - cruise) <= alt_tol;
+					return (at_cruise || HorizontalDistance(w, t) <= switch_radius) ? Get(w, axis_target, t) : Get(w, axis_pose, t);
+				};
+			}
+
 			RegistryFunction VelocityTo(const char* axis_target, const char* axis_pose) {
 				return [axis_target, axis_pose](const Environment::Worldview& w, double t, const std::vector<double>& k) {
 					const double gain = k.at(0), limit = k.at(1);
@@ -85,6 +95,15 @@ namespace MRS {
 				    return HorizontalDistance(w, t) > k.at(0) ? Get(w, "layer.alt", t) : Get(w, "target.z", t);
 			    },
 			    1, {"pose.enu", "target.x", "target.y", "target.z", "layer.alt"});
+			r.Register("cruise_x", Cruise("target.x", "pose.enu.x"), 3, pose_target);
+			r.Register("cruise_y", Cruise("target.y", "pose.enu.y"), 3, pose_target);
+			r.Register(
+			    "cruise_z",
+			    [](const Environment::Worldview& w, double t, const std::vector<double>& k) {
+				    const double cruise = std::max(k.at(0), Get(w, "target.z", t));
+				    return HorizontalDistance(w, t) > k.at(1) ? cruise : Get(w, "target.z", t);
+			    },
+			    2, pose_target);
 		}
 
 		LinearFunction::LinearFunction(std::vector<double> k, double c, std::vector<std::string> fields)

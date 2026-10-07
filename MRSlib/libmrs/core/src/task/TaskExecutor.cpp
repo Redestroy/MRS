@@ -320,5 +320,18 @@ namespace MRS {
 		std::size_t TaskExecutor::Depth() const { return stack_.size(); }
 		const Task* TaskExecutor::Top() const { return stack_.empty() ? nullptr : stack_.back()->task; }
 		std::size_t TaskExecutor::TopIterator() const { return stack_.empty() ? 0 : stack_.back()->iterator; }
+
+		std::vector<std::string> TaskExecutor::StackLabels(bool with_behaviours) const {
+			std::vector<std::string> out;
+			for (const auto& f : stack_)
+				if (with_behaviours || f->role != Frame::Role::Fulfil) out.push_back(f->label);
+			return out;
+		}
+
+		std::size_t TaskExecutor::IteratorOf(const std::string& label) const {
+			for (const auto& f : stack_)
+				if (f->label == label) return f->iterator;
+			return 0;
+		}
 	}
 }

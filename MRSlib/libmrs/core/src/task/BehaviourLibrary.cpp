@@ -34,6 +34,22 @@ namespace MRS {
 			Populate(buffer.str(), factory);
 		}
 
+		const BehaviourEntry* BehaviourLibrary::ByName(const std::string& name) const {
+			for (const auto& e : entries_)
+				if (e.name == name) return &e;
+			return nullptr;
+		}
+
+		bool BehaviourLibrary::SetPriority(const std::string& name, double priority) {
+			bool found = false;
+			for (auto& e : entries_)
+				if (e.name == name) {
+					e.priority = priority;
+					found = true;
+				}
+			return found;
+		}
+
 		const BehaviourEntry* BehaviourLibrary::Find(const Condition& unmet, const CapabilityProfile* profile,
 		                                             const std::set<std::string>& exclude) const {
 			const bool predicate = unmet.Code() == "C_?";

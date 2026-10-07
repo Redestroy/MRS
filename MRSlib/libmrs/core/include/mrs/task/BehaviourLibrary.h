@@ -33,6 +33,12 @@ namespace MRS {
 			const BehaviourEntry* Find(const Condition& unmet, const CapabilityProfile* profile = nullptr,
 			                           const std::set<std::string>& exclude = {}) const;
 
+			// The entry with this name, or nullptr.
+			const BehaviourEntry* ByName(const std::string& name) const;
+			// Changes one entry's priority, for this robot's copy of the library (spec 08 §8).
+			// Returns false when there is no entry with that name.
+			bool SetPriority(const std::string& name, double priority);
+
 			const std::vector<BehaviourEntry>& Entries() const { return entries_; }
 
 		private:

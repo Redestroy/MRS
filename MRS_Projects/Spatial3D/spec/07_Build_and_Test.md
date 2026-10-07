@@ -12,8 +12,10 @@ MRSlib/
   libmrs/                  the new library (WP0 creates the skeleton)
     CMakeLists.txt
     .clang-format
-    core/                  MRS::Port, MRS::Device, MRS::Environment, MRS::Task, MRS::Comm, MRS::Protocol
-      include/mrs/...      public headers; device/uav/ holds the UAV device classes (WP2)
+    core/                  MRS::Port, MRS::Device, MRS::Environment, MRS::Task, MRS::Robot, MRS::Comm, MRS::Protocol
+      include/mrs/...      public headers; device/uav/ holds the UAV device classes (WP2) and the
+                           flight control unit (WP4); robot/ the robot controller, safety
+                           supervisor, resources and journal (WP4)
       src/
     algorithms/            MRS::Algorithms
     platforms/webots/      WebotsPlatform (mrs_webots), built only when WEBOTS_HOME is set;
@@ -27,6 +29,7 @@ MRSlib/
       task/                conditions and executor (WP1)
       device/              device tree, ports, blocks, self model, with a mock platform (WP2)
       world/               worldview pipeline, source selection, processors (WP3)
+      flight/              QuadSim (a rigid-body test platform) and the single-UAV flight tests (WP4)
 MRS_Projects/Spatial3D/
   README.md
   docs/                    plan and design notes
@@ -149,6 +152,19 @@ Plus: unpacking each `arg` gives back the values; `A_PXY 1e39 0` fails (outside 
 
 In Webots, `platforms/webots/controllers/mrs_worldview_check` compares the same fields with supervisor ground truth (its README has the steps).
 
-### 5.6 Out of scope for WP0
+### 5.6 Flight tests (WP4)
+
+`tests/flight/` flies one UAV in `QuadSim` (spec 08 §9) through the robot controller, with the Mavic definition and port map of the examples and the behaviour library:
+
+* [`uav_single_flight.mrst`](examples/uav_single_flight.mrst): liftoff, fly-to (by `flyto.layered`), an LED flash and a landing all succeed; the UAV lands within 1.5 m of the target without a crash; the journal is valid protocol text with `start`, `J_T`, `J_K` and `end`.
+* Each fly-to variant (`layered`, `direct`, `altitude_first`, `velocity`), made the highest priority with `SetPriority`, reaches its target.
+* The safety supervisor clamps positions, take-off altitude and velocities; a task target outside the shrunk fence fails as `IMPOSSIBLE` and the next task runs.
+* Wind pushes the UAV out of a fence: GEOFENCE, return home, land at home, then the task resumes and the list finishes.
+* Low battery with enough energy: the current task finishes, the next is blocked, the UAV lands at home and journals `swap_land`, above the reserve.
+* Low battery without enough energy: return at once with the task preempted; a new controller on a full battery reads the journal (with a partly written last record), lifts off and finishes the unfinished tasks. A journal of another mission is refused.
+* Critical battery: emergency landing where the UAV is, no return home.
+* Energy: after a calibration flight, the estimate for an out-and-back leg with a hold is within 15 % of the battery drop; RLS recovers known model parameters.
+
+### 5.7 Out of scope for WP0
 
 Condition evaluation, the executor, devices and the worldview get their own tests in WP1–WP3. WP0 only checks that every object can be read and written exactly.

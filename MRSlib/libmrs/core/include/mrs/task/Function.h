@@ -36,7 +36,7 @@ namespace MRS {
 		};
 
 		// Registers the UAV functions of spec 02 §8: dist_to_target, dist_to_target_xy,
-		// yaw_to_target, vel_to_target_x/_y/_z, layered_x/_y/_z.
+		// yaw_to_target, vel_to_target_x/_y/_z, layered_x/_y/_z, and cruise_x/_y/_z (spec 08 §8).
 		void RegisterUavFunctions(FunctionRegistry& registry);
 
 		class Function {

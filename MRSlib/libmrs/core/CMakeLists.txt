@@ -12,6 +12,7 @@ add_library(mrs_core STATIC
 	src/device/SelfModel.cpp
 	src/device/Robot.cpp
 	src/device/uav/UavDevices.cpp
+	src/device/uav/FlightControlUnit.cpp
 	src/port/Port.cpp
 	src/port/PortManager.cpp
 	src/world/Worldview.cpp
@@ -28,6 +29,10 @@ add_library(mrs_core STATIC
 	src/task/TaskFactory.cpp
 	src/task/BehaviourLibrary.cpp
 	src/task/TaskExecutor.cpp
+	src/robot/Resources.cpp
+	src/robot/SafetySupervisor.cpp
+	src/robot/TaskJournal.cpp
+	src/robot/RobotController.cpp
 )
 target_include_directories(mrs_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(mrs_core PRIVATE mrs_warnings)
