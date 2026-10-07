@@ -298,6 +298,18 @@ namespace MRS {
 			stack_.push_back(std::move(f));
 		}
 
+		bool TaskExecutor::Withdraw(const std::string& label, Environment::Worldview& w) {
+			auto it = std::find_if(stack_.begin(), stack_.end(), [&](const auto& f) { return f->label == label; });
+			if (it == stack_.end()) return false;
+			stack_.erase(it, stack_.end());
+			for (const auto& p : w.PathsWithPrefix("target.")) w.Erase(p);
+			if (!stack_.empty()) {
+				Frame& top = *stack_.back();
+				if (top.task->State() == TaskState::IDLE) top.task->SetState(TaskState::QUEUED);
+			}
+			return true;
+		}
+
 		TickResult TaskExecutor::Tick(Environment::Worldview& w, double t) {
 			Run run{*this, w, t, {}};
 			if (stack_.empty() && source_) {

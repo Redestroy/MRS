@@ -19,4 +19,6 @@ target_link_libraries(mrs_webots PUBLIC mrs_core ${MRS_WEBOTS_CPP_CONTROLLER} ${
 option(MRS_BUILD_WEBOTS_CONTROLLERS "Build the Webots check controllers" ON)
 if(MRS_BUILD_WEBOTS_CONTROLLERS)
 	add_subdirectory(controllers/mrs_worldview_check)
+	add_subdirectory(controllers/mrs_uav)
+	add_subdirectory(controllers/mrs_issuer)
 endif()

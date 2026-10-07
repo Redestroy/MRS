@@ -2,6 +2,7 @@
 // The robot controller (spec 08 §3): the agent loop of one robot, its events (§4), safety
 // supervisor (§5), resources (§6), journal (§7) and, in WP4, a local task list.
 #include <deque>
+#include <functional>
 #include <map>
 #include <memory>
 #include <optional>
@@ -57,6 +58,8 @@ namespace MRS {
 			// The mission header (H_M, spec 06 §6): geo reference, home, layer and geofence.
 			void SetMission(const Protocol::Record& header, double t = 0.0);
 			void SetJournal(std::ostream* out) { journal_.SetStream(out); }
+			bool HasMission() const { return header_.has_value(); }
+			const std::string& MissionId() const { return mission_; }
 
 			// Adds every top-level task of a .mrst text to the end of the list. Throws TaskLoadError.
 			std::size_t AddTasks(const std::string& text);
@@ -66,6 +69,25 @@ namespace MRS {
 			// lifts off at the next tick. False, with the reason in `why`, for another mission or
 			// an unreadable journal; nothing is restored then.
 			bool Resume(const std::string& journal_text, std::string* why = nullptr);
+
+			// Takes a list task back (spec 09 §5): from the list, or off the executor's stack.
+			// Its state goes back to IDLE; no task event is reported. False when it is not there,
+			// or while a safety behaviour (return, landing) runs above it.
+			bool CancelTask(const std::string& id, double t);
+			// The list task on the executor's stack, or empty.
+			const std::string& CurrentTask() const { return current_id_; }
+			// No task waiting or running, and new tasks are not blocked.
+			bool Idle() const { return pending_.empty() && executor_.Empty() && !blocked_ && !stopped_; }
+			// Called for every task event of a list task (not behaviours), after the journal.
+			void SetTaskListener(std::function<void(const Task::TaskEvent&, double)> f) { listener_ = std::move(f); }
+			// Called for every controller event (FAULT, BATTERY_*, GEOFENCE) when it is raised.
+			void SetEventListener(std::function<void(const RaisedEvent&)> f) { event_listener_ = std::move(f); }
+			// Views from outside the robot's sensors (peer states, spec 09 §2.3), used at the next tick.
+			void InjectViews(std::vector<Environment::View> views);
+			// Whether to journal J_E end when the list runs empty (off when an allocator feeds it).
+			void SetJournalEnd(bool on) { journal_end_ = on; }
+			// The capability profile tasks are checked against.
+			const Task::CapabilityProfile& Profile() const { return profile_; }
 
 			// One tick of spec 08 §3.1 at time t; the platform owns the outer loop.
 			void Tick(double t);
@@ -111,6 +133,7 @@ namespace MRS {
 			bool FlightCritical() const;
 			bool Airborne() const;
 			bool Landing() const;
+			bool SafetyAbove(const std::string& id) const;
 			void HandleEvents(double t);
 			void HandleTaskEvents(const std::vector<Task::TaskEvent>& events, double t);
 			void Raise(ControllerEvent e, double t, std::string detail = {});
@@ -152,6 +175,10 @@ namespace MRS {
 			bool crit_prev_ = false, low_prev_ = false, fence_prev_ = true, failsafe_prev_ = false;
 			std::vector<RaisedEvent> events_;
 			std::vector<LoggedTaskEvent> task_log_;
+			std::function<void(const Task::TaskEvent&, double)> listener_;
+			std::function<void(const RaisedEvent&)> event_listener_;
+			std::vector<Environment::View> injected_;
+			bool journal_end_ = true;
 		};
 	}
 }

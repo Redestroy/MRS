@@ -85,6 +85,36 @@ namespace MRS {
 			mission_ = header.fields.empty() ? std::string() : header.fields[0].s;
 			Environment::ApplyMissionHeader(header, c_.robot_id, model_.world, t);
 			executor_.SetGeoReference(model_.world.Geo());
+			if (started_) journal_.Header(t, c_.robot, header);
+		}
+
+		bool RobotController::SafetyAbove(const std::string& id) const {
+			// A safety behaviour pushed over the task stays: a return or landing is not cut short.
+			const auto labels = executor_.StackLabels(true);
+			auto it = std::find(labels.begin(), labels.end(), id);
+			return it != labels.end() && std::any_of(it + 1, labels.end(), [](const std::string& l) { return IsSafety(l); });
+		}
+
+		void RobotController::InjectViews(std::vector<Environment::View> views) {
+			for (auto& v : views) injected_.push_back(std::move(v));
+		}
+
+		bool RobotController::CancelTask(const std::string& id, double t) {
+			auto it = std::find_if(pending_.begin(), pending_.end(), [&](const auto& p) { return p->Id() == id; });
+			bool found = false;
+			if (it != pending_.end()) {
+				pending_.erase(it);
+				found = true;
+			} else if (current_id_ == id && !SafetyAbove(id) && executor_.Withdraw(id, model_.world)) {
+				current_ = nullptr;
+				current_id_.clear();
+				found = true;
+			}
+			if (!found) return false;
+			states_[id] = {Task::TaskState::IDLE, Task::FailReason::NONE};
+			Journal(id, "AVAILABLE", Task::TaskState::IDLE, t);
+			JournalStack(t);
+			return true;
 		}
 
 		std::size_t RobotController::AddTasks(const std::string& text) {
@@ -185,7 +215,10 @@ namespace MRS {
 
 			// 1. The fcu's armed state, then the views (spec 08 §3.1 steps 1-2).
 			if (fcu_) model_.world.SetBool("armed", fcu_->Armed(), t, "fcu");
-			model_.Update(robot_.blocks.sensors.Sample(t), t);
+			auto views = robot_.blocks.sensors.Sample(t);
+			for (auto& v : injected_) views.push_back(std::move(v));
+			injected_.clear();
+			model_.Update(views, t);
 
 			if (!stopped_) {
 				// 3. Events.
@@ -207,7 +240,7 @@ namespace MRS {
 					}
 					if (!list_done_ && any_task_ && !blocked_ && pending_.empty() && executor_.Empty()) {
 						list_done_ = true;
-						journal_.Event(t, "end");
+						if (journal_end_) journal_.Event(t, "end");
 					}
 				}
 			}
@@ -237,6 +270,7 @@ namespace MRS {
 					states_[id] = {Task::TaskState::FAILED, Task::FailReason::IMPOSSIBLE};
 					task_log_.push_back({now_, {id, Task::TaskState::FAILED, Task::FailReason::IMPOSSIBLE, false}});
 					Journal(id, "FAILED", Task::TaskState::FAILED, now_);
+					if (listener_) listener_(task_log_.back().event, now_);
 					continue;
 				}
 				current_ = task.get();
@@ -271,7 +305,10 @@ namespace MRS {
 
 		// --- events ----------------------------------------------------------------------------
 
-		void RobotController::Raise(ControllerEvent e, double t, std::string detail) { events_.push_back({e, t, std::move(detail)}); }
+		void RobotController::Raise(ControllerEvent e, double t, std::string detail) {
+			events_.push_back({e, t, std::move(detail)});
+			if (event_listener_) event_listener_(events_.back());
+		}
 
 		void RobotController::PushSafety(const std::string& name) {
 			const Task::BehaviourEntry* entry = library_.ByName(name);
@@ -365,6 +402,7 @@ namespace MRS {
 					current_ = nullptr;
 					current_id_.clear();
 				}
+				if (listener_) listener_(e, t);
 			}
 		}
 

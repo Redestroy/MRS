@@ -15,14 +15,18 @@ MRSlib/
     core/                  MRS::Port, MRS::Device, MRS::Environment, MRS::Task, MRS::Robot, MRS::Comm, MRS::Protocol
       include/mrs/...      public headers; device/uav/ holds the UAV device classes (WP2) and the
                            flight control unit (WP4); robot/ the robot controller, safety
-                           supervisor, resources and journal (WP4)
+                           supervisor, resources and journal (WP4); comm/ messages,
+                           transports and the messenger (WP5)
       src/
-    algorithms/            MRS::Algorithms
+    algorithms/            MRS::Algorithms: task pool, peer table, allocators, the MRS layer
+                           and the task issuer (WP5)
     platforms/webots/      WebotsPlatform (mrs_webots), built only when WEBOTS_HOME is set;
-                           controllers/mrs_worldview_check: the WP3 ground-truth check
+                           controllers/mrs_worldview_check: the WP3 ground-truth check;
+                           controllers/mrs_uav and mrs_issuer: the WP5 team controllers
     platforms/ardupilot/   later (WP10)
     behaviours/            .mrsb files
-    tools/                 mrs_fmt (check a file, print its canonical form)
+    tools/                 mrs_fmt (check a file, print its canonical form);
+                           mrs_port2021 (convert a 2021 task set, WP5)
     tests/
       third_party/doctest.h
       protocol/            round-trip and error tests
@@ -30,12 +34,14 @@ MRSlib/
       device/              device tree, ports, blocks, self model, with a mock platform (WP2)
       world/               worldview pipeline, source selection, processors (WP3)
       flight/              QuadSim (a rigid-body test platform) and the single-UAV flight tests (WP4)
+      team/                several UAVs over a simulated radio: messages, claims, RTA, dumps (WP5)
 MRS_Projects/Spatial3D/
   README.md
   docs/                    plan and design notes
   spec/                    this specification
     examples/              example protocol files (also test inputs)
-  experiments/uav_spatial/ worlds, task sets, batch runner, analysis (WP6)
+  experiments/uav_spatial/ ported 2021 task sets and the 5-UAV mission (WP5); worlds,
+                           batch runner, analysis (WP6)
 .github/workflows/spatial3d.yml
 ```
 
@@ -165,6 +171,18 @@ In Webots, `platforms/webots/controllers/mrs_worldview_check` compares the same 
 * Critical battery: emergency landing where the UAV is, no return home.
 * Energy: after a calibration flight, the estimate for an out-and-back leg with a hold is within 15 % of the battery drop; RLS recovers known model parameters.
 
-### 5.7 Out of scope for WP0
+### 5.7 Team tests (WP5)
+
+`tests/team/` runs several QuadSim UAVs, each with its own MRS layer, over a simulated broadcast medium, with a task issuer as the operator (spec 09 §9):
+
+* Messages encode and decode; the messenger drops its own, duplicate, foreign-mission and wrongly addressed messages.
+* Claims: the better score wins, ties go to the lower robot number, expired claims are dropped.
+* The 2021 port gives the expected ids, positions and order; the issuer sends each task once at its time.
+* Open RTA: 5 UAVs finish ported task set 1 with no stalls, at least 4 of them do tasks, and the mission file equals the issuer's header.
+* Exclusive RTA: every task is done exactly once.
+* A UAV built without LEDs dumps the LED tasks as static and does none of them; the others do them. With two such UAVs and no LED-capable UAV left for a task, the task becomes `IMPOSSIBLE`.
+* A task whose robot went silent is taken back by another robot.
+
+### 5.8 Out of scope for WP0
 
 Condition evaluation, the executor, devices and the worldview get their own tests in WP1–WP3. WP0 only checks that every object can be read and written exactly.

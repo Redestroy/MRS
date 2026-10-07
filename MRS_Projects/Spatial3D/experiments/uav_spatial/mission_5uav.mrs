@@ -1,0 +1,5 @@
+# Mission header for five UAVs (spec 06 §6): geo reference, fence ±100 m and 60 m high,
+# layers from 20 m every 5 m, claim grace 120 s, homes 4 m apart on y = -5.
+@: MRS 0.1/
+
+H: H_M m1 56.9496 24.1052 10 -100 100 -100 100 60 20 5 120 5 1 -8 -5 0 2 -4 -5 0 3 0 -5 0 4 4 -5 0 5 8 -5 0/

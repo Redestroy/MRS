@@ -33,6 +33,7 @@ add_library(mrs_core STATIC
 	src/robot/SafetySupervisor.cpp
 	src/robot/TaskJournal.cpp
 	src/robot/RobotController.cpp
+	src/comm/Messenger.cpp
 )
 target_include_directories(mrs_core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(mrs_core PRIVATE mrs_warnings)

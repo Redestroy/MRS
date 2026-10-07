@@ -30,6 +30,7 @@ else()
 endif()
 
 add_subdirectory(core)
+add_subdirectory(algorithms)
 
 if(MRS_BUILD_WEBOTS)
 	add_subdirectory(platforms/webots)

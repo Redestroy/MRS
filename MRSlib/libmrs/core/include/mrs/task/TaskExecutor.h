@@ -54,6 +54,10 @@ namespace MRS {
 
 			// Starts a task when the stack is empty, or preempts the top task (spec 03 §8.6).
 			void Push(std::unique_ptr<Task> task);
+			// Removes the frame with this label and everything above it, without events (the
+			// caller withdraws the task, spec 09 §5). Clears target.* when anything was removed.
+			// Returns false when no frame has the label.
+			bool Withdraw(const std::string& label, Environment::Worldview& w);
 
 			TickResult Tick(Environment::Worldview& w, double t);
 

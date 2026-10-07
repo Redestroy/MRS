@@ -25,6 +25,7 @@ Branch: `spatial-3d`. Status: **WP0**. The specification is written; the library
 | 06 | [Messages](spec/06_Messages.md) | The message envelope, task ids, message types and payloads, the mission header, the task journal |
 | 07 | [Build and test](spec/07_Build_and_Test.md) | Repository layout, CMake and compiler rules, test framework, the WP0 round-trip test suite |
 | 08 | [Robot layer and flight](spec/08_Robot_and_Flight.md) | The flight control unit, the robot controller and its events, the safety supervisor, energy, journal and resume (WP4) |
+| 09 | [MRS layer](spec/09_MRS_Layer.md) | Messages and transports, the task pool, allocation (MRS-RTA), the dump rule and the task issuer (WP5) |
 
 ## WP0 acceptance (from the plan)
 
