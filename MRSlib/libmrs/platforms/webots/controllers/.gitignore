@@ -1,0 +1,8 @@
+# Written by the build: the controller binaries and the robot files copied from the spec examples.
+*.mrsd
+*.mrsp
+*.mrsb
+*.exe
+*.pdb
+*.ilk
+*.csv
