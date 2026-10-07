@@ -61,6 +61,7 @@ taskid = issuer "." seq { "." child }
 | `M_INFOREQ` | `int n`, `n × id topic` | P2P | Ask a peer for information. Topics: `mission`, `tasks`, `profile`, or a field path |
 | `M_INFO` | any records | P2P | Answer to `M_INFOREQ`: `H`, `T`, `K` or `V` records |
 | `M_CMD` | `id command`, `tid task` | broadcast or P2P, from the issuer | `abort`, `recall`, `pause`, `resume`, `cancel` (with a task id; `0` for commands about the whole mission) |
+| `M_PLAN` | `int revision`, `int n`, `n × tid task` | P2P, from the issuer | The recipient's route from the central planner (G-C, spec 10 §2.3), in order. A higher revision replaces the route; a lower or equal one is ignored |
 
 Example: `r2` claims task `op.17` for 30 s.
 

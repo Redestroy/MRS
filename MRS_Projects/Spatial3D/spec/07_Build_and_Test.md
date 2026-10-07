@@ -19,29 +19,35 @@ MRSlib/
                            transports and the messenger (WP5)
       src/
     algorithms/            MRS::Algorithms: task pool, peer table, allocators, the MRS layer
-                           and the task issuer (WP5)
+                           and the task issuer (WP5); the route planner, PlannerAllocator,
+                           CentralPlanner and PlanFollowerAllocator (WP6)
+    sim/                   MRS::Sim (mrs_sim): QuadSim, the team harness, task-set generators,
+                           the oracle form and evaluation runs (WP6, spec 10)
     platforms/webots/      WebotsPlatform (mrs_webots), built only when WEBOTS_HOME is set;
                            controllers/mrs_worldview_check: the WP3 ground-truth check;
-                           controllers/mrs_uav and mrs_issuer: the WP5 team controllers
+                           controllers/mrs_uav and mrs_issuer: the WP5 team controllers;
+                           worlds/mavic_team.wbt: three Mavics and the issuer
     platforms/ardupilot/   later (WP10)
     behaviours/            .mrsb files
     tools/                 mrs_fmt (check a file, print its canonical form);
-                           mrs_port2021 (convert a 2021 task set, WP5)
+                           mrs_port2021 (convert a 2021 task set, WP5);
+                           mrs_experiment (the WP6 batch runner, spec 10 §6)
     tests/
       third_party/doctest.h
       protocol/            round-trip and error tests
       task/                conditions and executor (WP1)
       device/              device tree, ports, blocks, self model, with a mock platform (WP2)
       world/               worldview pipeline, source selection, processors (WP3)
-      flight/              QuadSim (a rigid-body test platform) and the single-UAV flight tests (WP4)
+      flight/              the single-UAV flight tests on QuadSim (WP4)
       team/                several UAVs over a simulated radio: messages, claims, RTA, dumps (WP5)
+      sim/                 planner, generators, oracle form, M_PLAN, one run per condition (WP6)
 MRS_Projects/Spatial3D/
   README.md
   docs/                    plan and design notes
   spec/                    this specification
     examples/              example protocol files (also test inputs)
-  experiments/uav_spatial/ ported 2021 task sets and the 5-UAV mission (WP5); worlds,
-                           batch runner, analysis (WP6)
+  experiments/uav_spatial/ ported 2021 task sets and the 5-UAV mission (WP5); analyze.py
+                           and the WP6 results (spec 10)
 .github/workflows/spatial3d.yml
 ```
 
@@ -183,6 +189,21 @@ In Webots, `platforms/webots/controllers/mrs_worldview_check` compares the same 
 * A UAV built without LEDs dumps the LED tasks as static and does none of them; the others do them. With two such UAVs and no LED-capable UAV left for a task, the task becomes `IMPOSSIBLE`.
 * A task whose robot went silent is taken back by another robot.
 
-### 5.8 Out of scope for WP0
+### 5.8 Evaluation tests (WP6)
+
+`tests/sim/` checks the parts of the evaluation (spec 10):
+
+* The travel model gives the layered, altitude-first and direct leg times of spec 10 §2.1.
+* Task geometry: the first `C_P3`, the latest `C_T` and the sum of the waits.
+* The planner orders a line, splits two clusters between two robots, waits for releases, skips
+  excluded robots, keeps a fixed task first, and gives equal plans for equal inputs. The two
+  objectives pick different routes on a case built for it.
+* Generated sets are the same for a seed, parse, keep their targets in the area and altitude band,
+  and follow their dispatch; the oracle form sends every task at 0 and keeps its release and target.
+* `M_PLAN` round-trips, and a count that disagrees with the ids is an error.
+* Ported task set 1 under every condition: every task done, nothing crashed or outside the fence,
+  S1* no slower than S1, every group under 0.6 × S1, no duplicates under G-C and G-RTA-X.
+
+### 5.9 Out of scope for WP0
 
 Condition evaluation, the executor, devices and the worldview get their own tests in WP1–WP3. WP0 only checks that every object can be read and written exactly.

@@ -131,12 +131,18 @@ def main():
     speed_table("Speed-up by source", [(s, (lambda s: lambda r: r["source"] == s)(s)) for s in sources])
     gen = [r for r in rows if r["source"] == "gen"]
     if gen:
+        # Family and dispatch at the most common task count, so other sizes do not mix in.
+        main_size = statistics.mode(r["tasks"] for r in gen)
         fams = sorted({r["family"] for r in gen})
         disps = sorted({r["dispatch"] for r in gen})
-        speed_table("Speed-up by family (generated sets)",
-                    [(f, (lambda f: lambda r: r["source"] == "gen" and r["family"] == f)(f)) for f in fams])
-        speed_table("Speed-up by dispatch (generated sets)",
-                    [(d, (lambda d: lambda r: r["source"] == "gen" and r["dispatch"] == d)(d)) for d in disps])
+        speed_table(f"Speed-up by family (generated sets, {main_size} tasks)",
+                    [(f, (lambda f: lambda r: r["source"] == "gen" and r["tasks"] == main_size and r["family"] == f)(f)) for f in fams])
+        speed_table(f"Speed-up by dispatch (generated sets, {main_size} tasks)",
+                    [(d, (lambda d: lambda r: r["source"] == "gen" and r["tasks"] == main_size and r["dispatch"] == d)(d)) for d in disps])
+        sizes = sorted({r["tasks"] for r in gen})
+        if len(sizes) > 1:
+            speed_table("Speed-up by task count (generated sets)",
+                        [(f"{t} tasks", (lambda t: lambda r: r["source"] == "gen" and r["tasks"] == t)(t)) for t in sizes])
 
     # 3. The oracle against the online single UAV.
     w("## S1* against S1\n")
