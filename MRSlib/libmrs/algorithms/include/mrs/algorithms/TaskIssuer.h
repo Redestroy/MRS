@@ -2,10 +2,12 @@
 // The operator side (plan §9, spec 09 §6): the task issuer that sends the mission header and
 // dispatches a timeline, and the converter for the 2021 E-puck task sets.
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
 
+#include "mrs/algorithms/Planner.h"
 #include "mrs/comm/Messenger.h"
 #include "mrs/protocol/Record.h"
 
@@ -45,6 +47,11 @@ namespace MRS {
 			std::optional<double> Makespan() const;
 			// Sends M_CMD cancel for a task.
 			void Cancel(const std::string& task, double t);
+			// G-C (spec 10 §2.3): the issuer plans every open task and sends each robot its route
+			// in M_PLAN, again whenever tasks arrive or a robot dumps one for good.
+			void SetPlanner(std::unique_ptr<CentralPlanner> planner) { planner_ = std::move(planner); }
+			long PlansSent() const { return plans_sent_; }
+			const CentralPlanner* Planner() const { return planner_.get(); }
 
 			const std::map<std::string, IssuedTask>& Tasks() const { return issued_; }
 			const Comm::Messenger& Messages() const { return messenger_; }
@@ -63,6 +70,11 @@ namespace MRS {
 			std::map<std::string, IssuedTask> issued_;
 			std::map<std::string, Protocol::Record> records_;
 			std::optional<double> first_dispatch_;
+			std::vector<std::string> order_;  // ids in dispatch order
+			std::unique_ptr<CentralPlanner> planner_;
+			long plans_sent_ = 0;
+
+			void SendPlans(double t);
 		};
 
 		// How a 2021 E-puck task set maps to a flying area (spec 09 §7).

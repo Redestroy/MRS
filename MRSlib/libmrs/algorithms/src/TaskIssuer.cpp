@@ -48,6 +48,7 @@ namespace MRS {
 				r.children.push_back(header_);
 				messenger_.Post(r);
 			}
+			bool replan = false;
 			while (next_ < timeline_.size() && timeline_[next_].t <= t) {
 				const Entry& e = timeline_[next_++];
 				// One message per task, so each fits the link (spec 06 §2).
@@ -58,6 +59,8 @@ namespace MRS {
 					messenger_.Post(r);
 					const std::string id = task.fields.at(0).s;
 					records_[id] = task;
+					if (!issued_.count(id)) order_.push_back(id);
+					replan = true;
 					IssuedTask& it = issued_[id];
 					it.id = id;
 					it.dispatch = t;
@@ -75,6 +78,10 @@ namespace MRS {
 				}
 			}
 			for (const auto& m : messenger_.Receive()) {
+				if (planner_) {
+					planner_->OnMessage(m, t);
+					if (m.code == "M_DUMP" && m.SlotCount() >= 3 && m.Slot(2).b) replan = true;
+				}
 				if (m.SlotCount() == 0 || m.Slot(0).type != FieldType::TaskId) continue;
 				auto it = issued_.find(m.Slot(0).s);
 				if (it == issued_.end()) continue;
@@ -83,12 +90,34 @@ namespace MRS {
 					if (!it->second.done) {
 						it->second.done = m.stamp;
 						it->second.done_by = m.sender;
+						replan = true;  // the robot is free: plan with where it is now
 					}
 				} else if (m.code == "M_FAIL") {
-					if (!it->second.failed && !it->second.done) it->second.failed = m.Slot(1).s;
+					if (!it->second.failed && !it->second.done) {
+						it->second.failed = m.Slot(1).s;
+						replan = true;
+					}
 				} else if (m.code == "M_DUMP" && m.Slot(2).b) {
 					it->second.dumped_by.push_back(m.sender);
 				}
+			}
+			if (planner_ && replan) SendPlans(t);
+		}
+
+		void TaskIssuer::SendPlans(double t) {
+			std::vector<Record> open;
+			for (const auto& id : order_) {
+				const IssuedTask& it = issued_.at(id);
+				if (!it.done && !it.failed) open.push_back(records_.at(id));
+			}
+			const Plan plan = planner_->Replan(open, t);
+			for (const auto& [robot, route] : plan.routes) {
+				auto r = messenger_.Begin("M_PLAN", robot, t);
+				r.fields.push_back(Field::MakeInt(planner_->Revision()));
+				r.fields.push_back(Field::MakeInt(static_cast<std::int64_t>(route.size())));
+				for (const auto& id : route) r.fields.push_back(Field::MakeText(FieldType::TaskId, id));
+				messenger_.Post(r);
+				++plans_sent_;
 			}
 		}
 

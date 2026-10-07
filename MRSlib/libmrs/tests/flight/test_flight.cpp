@@ -7,7 +7,7 @@
 #include <string>
 #include "doctest.h"
 #include "../protocol/TestFiles.h"
-#include "QuadSim.h"
+#include "mrs/sim/QuadSim.h"
 #include "mrs/device/Robot.h"
 #include "mrs/device/uav/UavDevices.h"
 #include "mrs/protocol/Parser.h"
@@ -44,7 +44,7 @@ namespace {
 	std::string Land(const std::string& id) { return "T: T_A " + id + " 1 0 C_1 C_2 A_1/\nC_1: C_? ?_1/\n?_1: landed T/\nC_2: C_N/\nA_1: A_N/\n"; }
 
 	struct Flight {
-		explicit Flight(Test::QuadParams params = {}) : sim(params) {
+		explicit Flight(Sim::QuadParams params = {}) : sim(params) {
 			Device::Uav::RegisterUavDevices(devices);
 			Task::RegisterUavFunctions(functions);
 			Task::TaskFactory factory(functions);
@@ -92,7 +92,7 @@ namespace {
 
 		double DistanceXY(double x, double y) const { return std::hypot(sim.pos[0] - x, sim.pos[1] - y); }
 
-		Test::QuadSim sim;
+		Sim::QuadSim sim;
 		Device::DeviceRegistry devices;
 		Task::FunctionRegistry functions;
 		Task::BehaviourLibrary library;

@@ -64,6 +64,9 @@ namespace MRS {
 
 		std::vector<Message> Messenger::Receive() {
 			std::vector<Message> out;
+			// Before a mission is known, the messages that follow an M_MISSION in the same poll
+			// belong to it (tasks sent in the issuer's first tick); they pass with it.
+			std::string arriving;
 			for (const auto& text : transport_.Poll()) {
 				auto m = Decode(text);
 				if (!m) {
@@ -82,7 +85,9 @@ namespace MRS {
 					++stats_.not_for_us;
 					continue;
 				}
-				const bool mission_ok = mission_.empty() ? m->code == "M_MISSION" : m->mission == mission_;
+				if (mission_.empty() && arriving.empty() && m->code == "M_MISSION") arriving = m->mission;
+				const bool mission_ok = mission_.empty() ? (m->code == "M_MISSION" || (!arriving.empty() && m->mission == arriving))
+				                                         : m->mission == mission_;
 				if (!mission_ok) {
 					++stats_.dropped_mission;
 					continue;

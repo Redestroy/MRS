@@ -9,162 +9,44 @@
 #include <string>
 #include <vector>
 #include "doctest.h"
-#include "../flight/QuadSim.h"
 #include "../protocol/TestFiles.h"
 #include "mrs/algorithms/MrsLayer.h"
 #include "mrs/algorithms/TaskIssuer.h"
 #include "mrs/device/Robot.h"
 #include "mrs/device/uav/UavDevices.h"
 #include "mrs/protocol/Parser.h"
+#include "mrs/sim/Team.h"
 
 using namespace MRS;
 
 namespace {
 	std::filesystem::path TaskSets2021() { return Test::ExamplesDir() / ".." / ".." / "experiments" / "uav_spatial" / "tasksets_2021"; }
 
-	// Five homes in a row; fence ±100 m, 60 m high; layers from 20 m every 5 m; claim grace 120 s.
-	std::string MissionText(int n) {
-		std::ostringstream s;
-		s << "H: H_M m1 56.9496 24.1052 10 -100 100 -100 100 60 20 5 120 " << n;
-		for (int k = 1; k <= n; ++k) s << " " << k << " " << (k - 1) * 4.0 - 8.0 << " -5 0";
-		s << "/";
-		return s.str();
-	}
-
-	Protocol::Record Header(int n) {
-		auto parsed = Protocol::Parse(MissionText(n));
-		REQUIRE(parsed.Ok());
-		return parsed.document.records.at(0);
-	}
-
-	// The Mavic of the examples as robot `id`, optionally without its LEDs.
-	std::string Definition(int id, bool leds) {
-		std::string d = Test::ReadFile(Test::ExamplesDir() / "mavic_webots.mrsd");
-		d = std::regex_replace(d, std::regex(" id 1 "), " id " + std::to_string(id) + " ");
-		if (!leds) {
-			d = std::regex_replace(d, std::regex("D_4: D_A leds[^\n]*\n"), "");
-			d = std::regex_replace(d, std::regex("K_1: K_A A_L[^\n]*\n"), "");
-			d = std::regex_replace(d, std::regex("D_5: D_M"), "D_4: D_M");
-			d = std::regex_replace(d, std::regex("D_6: D_C"), "D_5: D_C");
-			d = std::regex_replace(d, std::regex("D_1\\.\\.6"), "D_1..5");
-		}
-		return d;
-	}
-
-	std::string PortMap(bool leds) {
-		std::string m = Test::ReadFile(Test::ExamplesDir() / "mavic_webots.mrsp");
-		if (!leds) m = std::regex_replace(m, std::regex("P: P_A leds[^\n]*\n"), "");
+	Sim::MissionSpec Mission(int n) {
+		Sim::MissionSpec m;  // fence ±100 m, 60 m high; layers from 20 m every 5 m; claim grace 120 s
+		m.homes = Sim::RowHomes(n);
 		return m;
 	}
 
-	// One radio channel: every message reaches everyone else at the next tick.
-	class Air {
-	public:
-		class Link : public Comm::ITransport {
-		public:
-			explicit Link(Air& air) : air_(air) {}
-			bool Send(const std::string& text, const std::string&) override {
-				air_.outbox_.push_back(text);
-				return true;
-			}
-			std::vector<std::string> Poll() override {
-				std::vector<std::string> out(inbox.begin(), inbox.end());
-				inbox.clear();
-				return out;
-			}
-			std::deque<std::string> inbox;
+	Protocol::Record Header(int n) { return Mission(n).Header(); }
 
-		private:
-			Air& air_;
-		};
+	Sim::RobotFiles Files() {
+		return {Test::ReadFile(Test::ExamplesDir() / "mavic_webots.mrsd"), Test::ReadFile(Test::ExamplesDir() / "mavic_webots.mrsp"),
+		        (Test::ExamplesDir() / "uav_behaviours.mrsb").string()};
+	}
 
-		Link& Operator() { return op_; }
-		void Add(Test::QuadSim* sim) { sims_.push_back(sim); }
+	Sim::TeamConfig Config(int n, Algorithms::RtaConfig rta, std::set<int> without_leds) {
+		Sim::TeamConfig c;
+		c.mission = Mission(n);
+		c.without_leds = std::move(without_leds);
+		c.allocator = [rta](int) { return std::make_unique<Algorithms::RtaAllocator>(rta); };
+		return c;
+	}
 
-		void Deliver() {
-			std::vector<std::pair<const void*, std::string>> all;
-			for (auto& text : outbox_) all.push_back({&op_, text});
-			outbox_.clear();
-			for (auto* s : sims_) {
-				for (auto& text : s->sent) all.push_back({s, text});
-				s->sent.clear();
-			}
-			for (const auto& [from, text] : all) {
-				if (from != &op_) op_.inbox.push_back(text);
-				for (auto* s : sims_)
-					if (s != from) s->inbox.push_back(text);
-				++messages;
-				bytes += static_cast<long>(text.size());
-			}
-		}
-		long messages = 0, bytes = 0;
-
-	private:
-		Link op_{*this};
-		std::vector<std::string> outbox_;
-		std::vector<Test::QuadSim*> sims_;
-	};
-
-	struct TeamRobot {
-		TeamRobot(int id, std::array<double, 2> home, bool leds, Algorithms::RtaConfig rta) {
-			sim.pos = {home[0], home[1], 0.0};
-			Device::Uav::RegisterUavDevices(devices);
-			Task::RegisterUavFunctions(functions);
-			Task::TaskFactory factory(functions);
-			Task::BehaviourLibrary library;
-			library.PopulateFromFile((Test::ExamplesDir() / "uav_behaviours.mrsb").string(), factory);
-			const auto map = Port::PortMap::Parse(PortMap(leds));
-			robot = Device::BuildRobot(Definition(id, leds), devices, sim, &map);
-			Robot::ControllerConfig c;
-			c.robot = "r" + std::to_string(id);
-			c.robot_id = id;
-			ctl = std::make_unique<Robot::RobotController>(robot, library, functions, c);
-			transport = std::make_unique<Comm::CommBlockTransport>(robot.blocks.comms);
-			layer = std::make_unique<Algorithms::MrsLayer>(*ctl, *transport, functions, std::make_unique<Algorithms::RtaAllocator>(rta));
-		}
-
-		Test::QuadSim sim;
-		Device::DeviceRegistry devices;
-		Task::FunctionRegistry functions;
-		Device::Robot robot;
-		std::unique_ptr<Robot::RobotController> ctl;
-		std::unique_ptr<Comm::CommBlockTransport> transport;
-		std::unique_ptr<Algorithms::MrsLayer> layer;
-	};
-
-	struct Team {
-		Team(int n, Algorithms::RtaConfig rta = {}, std::set<int> without_leds = {}) : issuer(air.Operator(), Header(n)) {
-			for (int k = 1; k <= n; ++k) {
-				robots.push_back(std::make_unique<TeamRobot>(k, std::array<double, 2>{(k - 1) * 4.0 - 8.0, -5.0}, !without_leds.count(k), rta));
-				air.Add(&robots.back()->sim);
-			}
-		}
-
-		double Time() const { return robots.front()->sim.Time(); }
-
-		// Ticks everyone until the issuer is done or `seconds` pass.
-		bool Run(double seconds, bool stop_when_done = true) {
-			const double end = Time() + seconds;
-			while (Time() < end) {
-				const double t = Time();
-				issuer.Tick(t);
-				for (auto& r : robots) r->layer->Tick(t);
-				air.Deliver();
-				if (stop_when_done && issuer.Done()) return true;
-				for (auto& r : robots) r->sim.Step();
-			}
-			return false;
-		}
-
-		int DoneBy(const std::string& name) const {
-			int n = 0;
-			for (const auto& [id, it] : issuer.Tasks()) n += it.done_by == name;
-			return n;
-		}
-
-		Air air;
-		Algorithms::TaskIssuer issuer;
-		std::vector<std::unique_ptr<TeamRobot>> robots;
+	// Five UAVs in a row at y = -5, 4 m apart, by default with open MRS-RTA.
+	struct Team : Sim::Team {
+		explicit Team(int n, Algorithms::RtaConfig rta = {}, std::set<int> without_leds = {})
+		    : Sim::Team(Files(), Config(n, rta, std::move(without_leds))) {}
 	};
 
 	// One end of a two-way link: what one end sends, the other polls.

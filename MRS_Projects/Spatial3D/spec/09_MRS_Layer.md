@@ -23,7 +23,7 @@ Code: `MRS::Comm` in `core/comm/`; `MRS::Algorithms` in the new `algorithms/` li
 
 * `Begin(code, recipient, t)` returns an `M` record with the envelope of spec 06 §2 filled in: version 0.1, mission, sender, recipient, the next `seq`, and `stamp` rounded to the millisecond. The caller appends the type's slots.
 * `Post(record)` writes the message form (one line, canonical) and sends it. A message larger than the transport's `MaxPayload` is not sent and is counted.
-* `Receive()` returns every new message for this agent and drops, with a counter each: text that does not parse as one `M` record, another MAJOR version, the agent's own messages, unicasts to someone else, messages of another mission, and repeated `(sender, seq)` pairs. Until a mission is set, only `M_MISSION` passes.
+* `Receive()` returns every new message for this agent and drops, with a counter each: text that does not parse as one `M` record, another MAJOR version, the agent's own messages, unicasts to someone else, messages of another mission, and repeated `(sender, seq)` pairs. Until a mission is set, only `M_MISSION` passes, together with the messages of its mission that follow it in the same poll (tasks the issuer sends in its first tick; found in WP6).
 
 ### 2.2 Transports
 

@@ -1,5 +1,6 @@
 #pragma once
-// Rigid-body quadrotor platform for the WP4 tests (spec 08 §9). Not part of the library.
+// Rigid-body quadrotor test platform (spec 08 §9): the WP4 and WP5 tests and the WP6 batch
+// runner (spec 10) fly on it. Not a model of any real airframe.
 #include <algorithm>
 #include <array>
 #include <cmath>
@@ -14,7 +15,7 @@
 #include "mrs/world/GeoReference.h"
 
 namespace MRS {
-	namespace Test {
+	namespace Sim {
 		struct QuadParams {
 			double mass = 0.55;
 			double ixx = 0.010, iyy = 0.012, izz = 0.020;
@@ -24,6 +25,7 @@ namespace MRS {
 			double p0 = 5.0, kp = 3.0e-5;  // battery power model: P = p0 + kp * sum |w|^3 (W)
 			double capacity_wh = 50.0;
 			double gps_noise = 0.0;  // m, uniform
+			unsigned long long seed = 42;  // of the GPS noise
 		};
 
 		class QuadSim : public Port::IPlatform {
@@ -31,6 +33,7 @@ namespace MRS {
 			explicit QuadSim(QuadParams p = {}, Environment::GeoReference geo = Environment::GeoReference(56.9496, 24.1052, 10))
 			    : p_(p), geo_(geo) {
 				energy_wh_ = p_.capacity_wh;
+				seed_ = p_.seed;
 				R_ = {1, 0, 0, 0, 1, 0, 0, 0, 1};
 			}
 
@@ -43,6 +46,7 @@ namespace MRS {
 			bool crashed = false;
 			double max_tilt_seen = 0.0;
 			double energy_used_wh = 0.0;
+			double distance_flown = 0.0;  // m, path length while airborne
 			std::array<double, 3> wind{0, 0, 0};  // N, a constant disturbance force
 
 			double Energy() const { return energy_wh_; }
@@ -115,6 +119,7 @@ namespace MRS {
 					vel[k] += f[k] / p_.mass * dt;
 					pos[k] += vel[k] * dt;
 				}
+				distance_flown += std::sqrt(vel[0] * vel[0] + vel[1] * vel[1] + vel[2] * vel[2]) * dt;
 				if (pos[2] < 0) {
 					if (vel[2] < -3.0) crashed = true;
 					pos[2] = 0;
