@@ -12,6 +12,9 @@ else()
 endif()
 option(MRS_BUILD_WEBOTS "Build the Webots platform (needs WEBOTS_HOME)" ${MRS_WEBOTS_DEFAULT})
 
+# Spec examples: test data and the robot files the Webots controllers copy (spec 07 §4).
+get_filename_component(MRS_SPEC_EXAMPLES "${CMAKE_CURRENT_SOURCE_DIR}/../../MRS_Projects/Spatial3D/spec/examples" ABSOLUTE)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)

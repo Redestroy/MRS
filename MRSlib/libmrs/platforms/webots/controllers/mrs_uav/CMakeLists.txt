@@ -5,5 +5,5 @@ set_target_properties(mrs_uav PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRE
                       RUNTIME_OUTPUT_DIRECTORY_DEBUG "${CMAKE_CURRENT_SOURCE_DIR}" RUNTIME_OUTPUT_DIRECTORY_RELEASE "${CMAKE_CURRENT_SOURCE_DIR}")
 # The robot definition, port map and behaviour library from the spec examples.
 foreach(f mavic_webots.mrsd mavic_webots.mrsp uav_behaviours.mrsb)
-	configure_file("${CMAKE_CURRENT_SOURCE_DIR}/../../../../../MRS_Projects/Spatial3D/spec/examples/${f}" "${CMAKE_CURRENT_SOURCE_DIR}/${f}" COPYONLY)
+	configure_file("${MRS_SPEC_EXAMPLES}/${f}" "${CMAKE_CURRENT_SOURCE_DIR}/${f}" COPYONLY)
 endforeach()
