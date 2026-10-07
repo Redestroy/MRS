@@ -1,0 +1,116 @@
+#VRML_SIM R2025a utf8
+# The WP5 team world (spec 09 §8): three Mavic 2 Pro running mrs_uav and a supervisor running
+# mrs_issuer with the 2021 task set 1. Battery: 180000 J = 50 Wh, as in mavic_webots.mrsd.
+# The mission header homes match the Mavic translations.
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/Floor.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/dji/mavic/protos/Mavic2Pro.proto"
+
+WorldInfo {
+  info [
+    "MRS WP5 team: 3 UAVs with MRS-RTA, task issuer as supervisor"
+  ]
+  title "mavic_team"
+  basicTimeStep 8
+  gpsCoordinateSystem "WGS84"
+  gpsReference 56.9496 24.1052 10
+}
+Viewpoint {
+  orientation -0.3 0.3 0.9 1.7
+  position 0 -60 45
+  follow "r2"
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+Floor {
+  size 220 220
+  tileSize 4 4
+}
+Mavic2Pro {
+  translation -4 -5 0.1
+  name "r1"
+  controller "mrs_uav"
+  controllerArgs [
+    "1"
+  ]
+  battery [
+    180000, 180000, 0
+  ]
+  bodySlot [
+    Emitter {
+      name "emitter"
+      channel 1
+    }
+    Receiver {
+      name "receiver"
+      channel 1
+    }
+  ]
+}
+Mavic2Pro {
+  translation 0 -5 0.1
+  name "r2"
+  controller "mrs_uav"
+  controllerArgs [
+    "2"
+  ]
+  battery [
+    180000, 180000, 0
+  ]
+  bodySlot [
+    Emitter {
+      name "emitter"
+      channel 1
+    }
+    Receiver {
+      name "receiver"
+      channel 1
+    }
+  ]
+}
+Mavic2Pro {
+  translation 4 -5 0.1
+  name "r3"
+  controller "mrs_uav"
+  controllerArgs [
+    "3"
+  ]
+  battery [
+    180000, 180000, 0
+  ]
+  bodySlot [
+    Emitter {
+      name "emitter"
+      channel 1
+    }
+    Receiver {
+      name "receiver"
+      channel 1
+    }
+  ]
+}
+Robot {
+  translation 0 -12 0.5
+  name "issuer"
+  controller "mrs_issuer"
+  controllerArgs [
+    "../../worlds/mission_3uav.mrs"
+    "../../worlds/taskset1.mrsl"
+    "../../worlds/mavic_team_results.csv"
+  ]
+  supervisor TRUE
+  children [
+    Emitter {
+      name "emitter"
+      channel 1
+    }
+    Receiver {
+      name "receiver"
+      channel 1
+    }
+  ]
+}

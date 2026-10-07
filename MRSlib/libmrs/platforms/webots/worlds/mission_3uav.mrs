@@ -1,0 +1,6 @@
+# Mission header for mavic_team.wbt (spec 06 §6): geo reference = the world's gpsReference,
+# fence ±100 m and 60 m high, layers from 20 m every 5 m, claim grace 120 s, homes 4 m apart on
+# y = -5 (the Mavic translations in the world).
+@: MRS 0.1/
+
+H: H_M m1 56.9496 24.1052 10 -100 100 -100 100 60 20 5 120 3 1 -4 -5 0 2 0 -5 0 3 4 -5 0/

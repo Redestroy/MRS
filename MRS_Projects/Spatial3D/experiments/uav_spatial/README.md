@@ -10,3 +10,6 @@ Inputs for the group-versus-single evaluation (plan §10, WP6). WP5 adds:
 
 In Webots: the supervisor runs `mrs_issuer mission_5uav.mrs tasksets_2021/taskset1.mrsl`, and each
 Mavic runs `mrs_uav <id>` (spec 09 §8).
+
+A ready three-UAV world with task set 1 is `MRSlib/libmrs/platforms/webots/worlds/mavic_team.wbt`; its
+README lists what a team world needs (WGS84 GPS, battery, radio, homes).
