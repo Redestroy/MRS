@@ -29,6 +29,7 @@ Branch: `spatial-3d`. Status: **WP8 done** (WP0–WP8). Library code is in [`MRS
 | 10 | [Evaluation harness](spec/10_Evaluation.md) | The route planner (S1, S1*, G-C), task-set generators and the oracle form, the team harness, the batch runner and the analysis (WP6) |
 | 11 | [Tree tasks and generators](spec/11_Trees_and_Generators.md) | Tree tasks split across robots, the point, path, coverage, perimeter and spiral search generators, GeoJSON input and `mrs_generate` (WP7) |
 | 12 | [Splittable trees and MRS-STA](spec/12_STA.md) | Units (trees split only where they can be split), MRS-STA with the active-task stack, tree-task sets and evaluation v2 (WP8) |
+| 13 | [CBBA, LDTA² and the communication budget](spec/13_CBBA_LDTA2.md) | CBBA, LDTA², the bitrate-limited channel and message pacing, evaluation v3 (WP9) |
 
 ## WP0 acceptance (from the plan)
 

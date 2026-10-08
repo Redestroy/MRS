@@ -27,6 +27,11 @@ namespace MRS {
 			// Tree tasks are split into leaves that any robot may take (spec 11 §2). Off: the robot
 			// runs each tree itself as one complex task (spec 03 §6.1), as a lone robot may.
 			bool split_trees = true;
+			// The shared channel's bitrate, bit/s; 0: no limit known (spec 13 §3). Each agent's share
+			// is bitrate / (live peers + this robot + the issuer); heartbeats take at most
+			// state_share of it, so M_STATE slows down on a slow link.
+			double bitrate_bps = 0.0;
+			double state_share = 0.25;
 		};
 
 		struct MrsStats {
@@ -72,6 +77,8 @@ namespace MRS {
 			void Unassign(double t);
 			void AfterRobot(double t);
 			void SendState(double t);
+			double Budget(double t) const;
+			void Redone(const std::string& id, double t);  // M_DONE again for a repeated task we did  // this robot's share of the channel, bit/s; 0: no limit
 			void SendProfile(double t);
 			void SendDump(const std::string& id, const std::string& reason, bool is_static, long progress, double t);
 			void CheckImpossible(PoolEntry& e, double t);

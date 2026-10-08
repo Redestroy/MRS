@@ -71,6 +71,10 @@ namespace MRS {
 			std::function<bool(const PoolEntry& entry, double t)> runnable;
 			// The tree a unit belongs to, or nullptr (spec 12 §2); may be empty.
 			std::function<const TaskTree*(const std::string& id)> tree_of;
+			// Sends a broadcast message with these slots after the envelope (CBBA's M_BID); may be empty.
+			std::function<void(const std::string& code, const std::vector<Protocol::Field>& slots)> send;
+			// This robot's share of the channel, bit/s; 0 when the link reports no limit (spec 13 §3).
+			std::function<double(double t)> budget_bps;
 		};
 
 		struct Decision {
@@ -129,6 +133,8 @@ namespace MRS {
 		protected:
 			// What Select ranks tasks by: base_priority × size_est here.
 			virtual double Score(const PoolEntry& e, const Environment::Worldview& w, double t) const { return Priority(e, w, t); }
+			// Whether Select may pick this task at all (LDTA² narrows it to one task type).
+			virtual bool Allowed(const PoolEntry& e) const { (void)e; return true; }
 
 		private:
 			// Whether another robot's claim beats ours at this priority.

@@ -69,9 +69,9 @@ namespace MRS {
 						try {
 							auto tree = std::make_unique<IssuedTree>(Decompose(task));
 							for (const auto& [node, n] : tree->tree.nodes) root_of_[node] = id;
-							for (const auto& leaf : tree->tree.leaves) leaves_[leaf] = IssuedTask{leaf, t, {}, {}, 0, {}, {}};
+							for (const auto& leaf : tree->tree.leaves) leaves_[leaf] = IssuedTask{leaf, t, {}, {}, 0, {}, {}, {}};
 							for (const auto& u : tree->tree.units)
-								if (!tree->tree.Node(u).leaf && u != id) units_[u] = IssuedTask{u, t, {}, {}, 0, {}, {}};
+								if (!tree->tree.Node(u).leaf && u != id) units_[u] = IssuedTask{u, t, {}, {}, 0, {}, {}, {}};
 							trees_[id] = std::move(tree);
 						} catch (const DecomposeError& err) {
 							it.failed = std::string("DECOMPOSE: ") + err.what();
@@ -102,7 +102,8 @@ namespace MRS {
 				auto it = issued_.find(m.Slot(0).s);
 				if (it == issued_.end()) continue;
 				if (m.code == "M_DONE") {
-					++it->second.done_count;
+					it->second.done_robots.insert(m.sender);
+					it->second.done_count = static_cast<int>(it->second.done_robots.size());
 					if (!it->second.done) {
 						it->second.done = m.stamp;
 						it->second.done_by = m.sender;
@@ -118,6 +119,11 @@ namespace MRS {
 				}
 			}
 			if (planner_ && replan) SendPlans(t);
+			// The last plans again, unchanged, for links that lose messages (spec 13 §3.3).
+			if (planner_ && !replan && c_.task_period > 0 && t - last_plans_ >= c_.task_period) {
+				last_plans_ = t;
+				for (const auto& r : plans_) messenger_.Post(r);
+			}
 		}
 
 		const TaskTree* TaskIssuer::Tree(const std::string& root) const {
@@ -134,7 +140,8 @@ namespace MRS {
 			if (found) {
 				IssuedTask& it = *found;
 				if (m.code == "M_DONE") {
-					++it.done_count;
+					it.done_robots.insert(m.sender);
+					it.done_count = static_cast<int>(it.done_robots.size());
 					if (!it.done) {
 						it.done = m.stamp;
 						it.done_by = m.sender;
@@ -161,6 +168,7 @@ namespace MRS {
 			if (s == PoolState::DONE) {
 				top.done = m.stamp;
 				top.done_by = m.sender;
+				top.done_robots = {m.sender};
 				top.done_count = 1;
 			} else if (Finished(s)) {
 				top.failed = "TREE";
@@ -174,6 +182,8 @@ namespace MRS {
 				// The central planner plans atomic tasks only; tree tasks are out of its scope (spec 11 §2.5).
 				if (!it.done && !it.failed && !trees_.count(id)) open.push_back(records_.at(id));
 			}
+			last_plans_ = t;
+			plans_.clear();
 			const Plan plan = planner_->Replan(open, t);
 			for (const auto& [robot, route] : plan.routes) {
 				auto r = messenger_.Begin("M_PLAN", robot, t);
@@ -181,6 +191,7 @@ namespace MRS {
 				r.fields.push_back(Field::MakeInt(static_cast<std::int64_t>(route.size())));
 				for (const auto& id : route) r.fields.push_back(Field::MakeText(FieldType::TaskId, id));
 				messenger_.Post(r);
+				plans_.push_back(r);
 				++plans_sent_;
 			}
 		}

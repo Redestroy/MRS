@@ -3,6 +3,7 @@
 // (spec 10 §4). The team tests and the batch runner fly on it.
 #include <array>
 #include <chrono>
+#include <deque>
 #include <functional>
 #include <map>
 #include <memory>
@@ -19,7 +20,8 @@
 
 namespace MRS {
 	namespace Sim {
-		// One radio channel: every message reaches everyone else at the next tick.
+		// One radio channel: every message reaches everyone else at the next tick, or, with a
+		// bitrate, when the channel has carried the messages ahead of it (spec 13 §3).
 		class Air {
 		public:
 			class Link : public Comm::ITransport {
@@ -35,12 +37,25 @@ namespace MRS {
 
 			Link& Operator() { return op_; }
 			void Add(QuadSim* sim) { sims_.push_back(sim); }
-			void Deliver();
-			long messages = 0, bytes = 0;
+			void Deliver(double t = 0.0);
+			long messages = 0, bytes = 0;  // delivered
+			double bitrate_bps = 0.0;      // 0: no limit
+			double max_delay = 5.0;        // s: a message queued longer, before it goes on the air, is lost
+			long dropped = 0;
+			double delay_sum = 0.0, delay_max = 0.0;  // s, over delivered messages
 
 		private:
+			struct Queued {
+				const void* from;
+				std::string text;
+				double t;
+				bool sending = false;  // at the head of the queue and on the air
+			};
+			void Send(const Queued& q, double t);
 			Link op_{*this};
 			std::vector<std::string> outbox_;
+			std::deque<Queued> queue_;
+			double credit_ = 0.0, last_t_ = 0.0;
 			std::vector<QuadSim*> sims_;
 		};
 
@@ -78,6 +93,7 @@ namespace MRS {
 			Algorithms::IssuerConfig issuer;
 			QuadParams quad;                               // seed is offset by the robot id
 			double separation = 1.0;                       // m: closer than this is a breach
+			double bitrate_bps = 0.0;                      // the channel's bitrate; 0: no limit (spec 13 §3)
 		};
 
 		// Times Select of the allocator it wraps (the decision time of spec 10 §5).

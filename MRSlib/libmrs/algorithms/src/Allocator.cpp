@@ -90,7 +90,7 @@ namespace MRS {
 			const PoolEntry* best = nullptr;
 			double best_p = 0.0;
 			for (const PoolEntry* e : ctx_.pool->Entries()) {
-				if (!Eligible(*e, t)) continue;
+				if (!Eligible(*e, t) || !Allowed(*e)) continue;
 				const double p = Score(*e, w, t);
 				if (Outclaimed(*e, p)) continue;
 				if (!best || p > best_p) {
@@ -100,7 +100,7 @@ namespace MRS {
 			}
 
 			const PoolEntry* cur = current.id.empty() ? nullptr : ctx_.pool->Find(current.id);
-			const bool cur_ok = cur && Eligible(*cur, t);
+			const bool cur_ok = cur && Eligible(*cur, t) && (Allowed(*cur) || current.started);
 			const double cur_p = cur_ok ? Score(*cur, w, t) : 0.0;
 			// The stronger claim keeps a task, until its actions run: a started task stays with its
 			// robot, whose claim does not weaken as it works away from the task's first target

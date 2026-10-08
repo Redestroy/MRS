@@ -4,6 +4,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -25,7 +26,8 @@ namespace MRS {
 			double dispatch = 0.0;              // when it was sent
 			std::optional<double> done;         // first M_DONE
 			std::string done_by;
-			int done_count = 0;                 // M_DONE messages: more than one means duplicate arrivals
+			int done_count = 0;                 // robots that sent M_DONE: more than one means the task was done twice
+			std::set<std::string> done_robots;  // a robot re-sends M_DONE on a lossy link (spec 13 §3.3); that is no duplicate
 			std::optional<std::string> failed;  // M_FAIL reason
 			std::vector<std::string> dumped_by; // robots that sent M_DUMP static
 		};
@@ -80,6 +82,8 @@ namespace MRS {
 			std::vector<std::string> order_;  // ids in dispatch order
 			std::unique_ptr<CentralPlanner> planner_;
 			long plans_sent_ = 0;
+			double last_plans_ = -1e9;
+			std::vector<Protocol::Record> plans_;  // the M_PLAN of the last replan
 			struct IssuedTree {
 				TaskTree tree;
 				TreeState state;

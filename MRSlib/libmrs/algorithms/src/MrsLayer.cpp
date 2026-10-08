@@ -80,6 +80,12 @@ namespace MRS {
 				return true;
 			};
 			ctx.tree_of = [this](const std::string& id) { return TreeOf(id); };
+			ctx.send = [this](const std::string& code, const std::vector<Field>& slots) {
+				auto r = messenger_.Begin(code, "all", now_);
+				r.fields.insert(r.fields.end(), slots.begin(), slots.end());
+				messenger_.Post(r);
+			};
+			ctx.budget_bps = [this](double t) { return Budget(t); };
 			allocator_->Bind(ctx);
 		}
 
@@ -93,7 +99,10 @@ namespace MRS {
 			AfterRobot(t);
 			if (robot_.HasMission()) {
 				if (t - last_profile_ >= c_.profile_period) SendProfile(t);
-				if (t - last_state_ >= c_.state_period) SendState(t);
+				// A heartbeat is about 200 bytes; on a slow link it takes at most state_share of our share.
+				double period = c_.state_period;
+				if (const double b = Budget(t); b > 0.0) period = std::max(period, 200.0 * 8.0 / (c_.state_share * b));
+				if (t - last_state_ >= period) SendState(t);
 			}
 		}
 
@@ -173,6 +182,9 @@ namespace MRS {
 			for (std::size_t k = 0; k < m.SlotCount(); ++k) {
 				if (m.Slot(k).type != FieldType::Ref) continue;
 				const Record& r = m.Child(k);
+				// A task repeated by the issuer that this robot already did: the M_DONE was lost on
+				// the way (a limited channel drops messages, spec 13 §3), so say it again.
+				if (!r.fields.empty()) Redone(r.fields[0].s, t);
 				if (c_.split_trees && IsComplexTask(r)) {
 					AddTree(r, t);
 					continue;
@@ -471,6 +483,23 @@ namespace MRS {
 			messenger_.Post(r);
 			if (is_static) ++stats_.dumps_static;
 			else ++stats_.dumps_dynamic;
+		}
+
+		void MrsLayer::Redone(const std::string& id, double t) {
+			std::vector<std::string> ids{id};
+			if (auto it = trees_.find(id); it != trees_.end()) ids = it->second->tree.units;
+			for (const auto& u : ids) {
+				const PoolEntry* e = pool_.Find(u);
+				if (!e || e->state != PoolState::DONE || e->done_by != self_) continue;
+				auto r = messenger_.Begin("M_DONE", "all", t);
+				r.fields.push_back(Tid(u));
+				messenger_.Post(r);
+			}
+		}
+
+		double MrsLayer::Budget(double t) const {
+			if (c_.bitrate_bps <= 0.0) return 0.0;
+			return c_.bitrate_bps / static_cast<double>(peers_.Alive(t, c_.peer_timeout).size() + 2);
 		}
 
 		void MrsLayer::SendState(double t) {

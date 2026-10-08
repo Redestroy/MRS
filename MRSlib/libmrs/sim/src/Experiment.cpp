@@ -19,12 +19,14 @@ namespace MRS {
 			case Condition::G_RTA_X: return "G-RTA-X";
 			case Condition::G_C: return "G-C";
 			case Condition::G_STA: return "G-STA";
+			case Condition::G_CBBA: return "G-CBBA";
+			case Condition::G_LDTA2: return "G-LDTA2";
 			}
 			return "?";
 		}
 
 		bool ParseCondition(const std::string& s, Condition& c) {
-			for (Condition x : {Condition::S1, Condition::S1_ORACLE, Condition::G_RTA, Condition::G_RTA_X, Condition::G_C, Condition::G_STA})
+			for (Condition x : {Condition::S1, Condition::S1_ORACLE, Condition::G_RTA, Condition::G_RTA_X, Condition::G_C, Condition::G_STA, Condition::G_CBBA, Condition::G_LDTA2})
 				if (s == ConditionName(x)) {
 					c = x;
 					return true;
@@ -64,6 +66,9 @@ namespace MRS {
 			c.quad.gps_noise = spec.gps_noise;
 			c.quad.capacity_wh = spec.battery_wh;
 			c.quad.seed = Mix(spec.seed) & 0xFFFFFFFFULL;
+			c.bitrate_bps = spec.bitrate_bps;
+			// A limited channel loses messages, so the issuer repeats open tasks (spec 13 §3).
+			if (spec.bitrate_bps > 0.0) c.issuer.task_period = 15.0;
 			Algorithms::TravelModel travel = spec.travel;
 			travel.mode = IsSingle(spec.condition) ? Algorithms::FlightMode::ALTITUDE_FIRST : Algorithms::FlightMode::LAYERED;
 			Algorithms::PlannerConfig pc;
@@ -88,6 +93,18 @@ namespace MRS {
 				Algorithms::StaConfig sta = spec.sta;
 				sta.rta = spec.rta;
 				c.allocator = [sta](int) { return std::make_unique<Algorithms::StaAllocator>(sta); };
+				break;
+			}
+			case Condition::G_CBBA: {
+				Algorithms::CbbaConfig cb = spec.cbba;
+				cb.travel = travel;
+				c.allocator = [cb](int) { return std::make_unique<Algorithms::CbbaAllocator>(cb); };
+				break;
+			}
+			case Condition::G_LDTA2: {
+				Algorithms::Ldta2Config lc;
+				lc.rta = spec.rta;
+				c.allocator = [lc](int) { return std::make_unique<Algorithms::Ldta2Allocator>(lc); };
 				break;
 			}
 			}
@@ -149,6 +166,9 @@ namespace MRS {
 				r.plan_calls = planner->calls;
 				r.plan_worst_ms = planner->worst_s * 1e3;
 			}
+			r.dropped = team.air.dropped;
+			if (team.air.messages > 0) r.delay_mean = team.air.delay_sum / static_cast<double>(team.air.messages);
+			r.delay_max = team.air.delay_max;
 			r.messages = team.air.messages;
 			r.bytes = team.air.bytes;
 			r.separation_breaches = team.metrics.separation_breaches;
@@ -161,7 +181,7 @@ namespace MRS {
 		std::string CsvHeader() {
 			return "set,family,dispatch,tasks,seed,condition,n,completed,done,failed,makespan_s,latency_mean_s,latency_max_s,"
 			       "distance_m,energy_wh,duplicates,busy_robots,messages,bytes,decision_mean_us,decision_worst_us,plan_calls,"
-			       "plan_worst_ms,separation_breaches,min_separation_m,fence_exits,crashed,sim_time_s,wall_s,leaves,leaf_duplicates";
+			       "plan_worst_ms,separation_breaches,min_separation_m,fence_exits,crashed,sim_time_s,wall_s,leaves,leaf_duplicates,bitrate_bps,dropped,delay_mean_s,delay_max_s";
 		}
 
 		std::string CsvRow(const RunSpec& s, const RunResult& r) {
@@ -172,7 +192,8 @@ namespace MRS {
 			  << "," << r.latency_mean << "," << r.latency_max << "," << r.distance_m << "," << r.energy_wh << "," << r.duplicates << ","
 			  << r.busy_robots << "," << r.messages << "," << r.bytes << "," << r.decision_mean_us << "," << r.decision_worst_us << ","
 			  << r.plan_calls << "," << r.plan_worst_ms << "," << r.separation_breaches << "," << r.min_separation_m << "," << r.fence_exits
-			  << "," << (r.crashed ? 1 : 0) << "," << r.sim_time << "," << r.wall_s << "," << r.leaves << "," << r.leaf_duplicates;
+			  << "," << (r.crashed ? 1 : 0) << "," << r.sim_time << "," << r.wall_s << "," << r.leaves << "," << r.leaf_duplicates << "," << s.bitrate_bps << "," << r.dropped
+			  << "," << r.delay_mean << "," << r.delay_max;
 			return o.str();
 		}
 	}

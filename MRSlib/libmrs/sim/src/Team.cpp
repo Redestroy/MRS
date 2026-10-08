@@ -1,5 +1,7 @@
 #include "mrs/sim/Team.h"
 
+#include <algorithm>
+
 #include <cmath>
 #include <regex>
 #include <sstream>
@@ -24,20 +26,49 @@ namespace MRS {
 			return out;
 		}
 
-		void Air::Deliver() {
-			std::vector<std::pair<const void*, std::string>> all;
-			for (auto& text : outbox_) all.push_back({&op_, text});
+		void Air::Send(const Queued& q, double t) {
+			if (q.from != &op_) op_.inbox.push_back(q.text);
+			for (auto* s : sims_)
+				if (s != q.from) s->inbox.push_back(q.text);
+			++messages;
+			bytes += static_cast<long>(q.text.size());
+			delay_sum += t - q.t;
+			delay_max = std::max(delay_max, t - q.t);
+		}
+
+		void Air::Deliver(double t) {
+			for (auto& text : outbox_) queue_.push_back({&op_, std::move(text), t});
 			outbox_.clear();
 			for (auto* s : sims_) {
-				for (auto& text : s->sent) all.push_back({s, text});
+				for (auto& text : s->sent) queue_.push_back({s, std::move(text), t});
 				s->sent.clear();
 			}
-			for (const auto& [from, text] : all) {
-				if (from != &op_) op_.inbox.push_back(text);
-				for (auto* s : sims_)
-					if (s != from) s->inbox.push_back(text);
-				++messages;
-				bytes += static_cast<long>(text.size());
+			if (bitrate_bps <= 0.0) {
+				for (const auto& q : queue_) Send(q, t);
+				queue_.clear();
+				return;
+			}
+			// One shared channel, first come first served. Unused time is saved for 0.1 s, or for as
+			// long as the message at the head needs.
+			const double head = queue_.empty() ? 0.0 : static_cast<double>(queue_.front().text.size());
+			credit_ = std::min(credit_ + bitrate_bps / 8.0 * std::max(0.0, t - last_t_), std::max(bitrate_bps / 8.0 * 0.1, head));
+			last_t_ = t;
+			while (!queue_.empty()) {
+				Queued& q = queue_.front();
+				// A message on the air is not dropped, however long it takes; one still waiting
+				// behind others is, once it has waited max_delay.
+				if (!q.sending && t - q.t > max_delay) {
+					++dropped;
+					queue_.pop_front();
+					continue;
+				}
+				if (static_cast<double>(q.text.size()) > credit_) {
+					q.sending = true;
+					break;
+				}
+				credit_ -= static_cast<double>(q.text.size());
+				Send(q, t);
+				queue_.pop_front();
 			}
 		}
 
@@ -123,10 +154,15 @@ namespace MRS {
 			auto inner = c.allocator ? c.allocator(id) : std::make_unique<Algorithms::RtaAllocator>();
 			auto timed = std::make_unique<TimedAllocator>(std::move(inner));
 			timing = timed.get();
-			layer = std::make_unique<Algorithms::MrsLayer>(*ctl, *transport, functions, std::move(timed), c.mrs);
+			layer = std::make_unique<Algorithms::MrsLayer>(*ctl, *transport, functions, std::move(timed), [&c] {
+				Algorithms::MrsConfig m = c.mrs;
+				if (c.bitrate_bps > 0.0) m.bitrate_bps = c.bitrate_bps;
+				return m;
+			}());
 		}
 
 		Team::Team(const RobotFiles& files, const TeamConfig& c) : issuer(air.Operator(), c.mission.Header(), c.issuer), c_(c) {
+			air.bitrate_bps = c.bitrate_bps;
 			for (std::size_t k = 0; k < c.mission.homes.size(); ++k) {
 				const int id = static_cast<int>(k + 1);
 				robots.push_back(std::make_unique<TeamRobot>(id, c.mission.homes[k], !c.without_leds.count(id), files, c));
@@ -140,7 +176,7 @@ namespace MRS {
 				const double t = Time();
 				issuer.Tick(t);
 				for (auto& r : robots) r->layer->Tick(t);
-				air.Deliver();
+				air.Deliver(t);
 				if (stop_when_done && issuer.Done()) return true;
 				for (auto& r : robots) r->sim.Step();
 				Watch();

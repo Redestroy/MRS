@@ -219,6 +219,10 @@ In Webots, `platforms/webots/controllers/mrs_worldview_check` compares the same 
 
 `tests/sta/` checks spec 12; the cases are listed in spec 12 §5.
 
-### 5.11 Out of scope for WP0
+### 5.11 CBBA, LDTA² and channel tests (WP9)
+
+`tests/cbba/` checks spec 13; the cases are listed in spec 13 §7.
+
+### 5.12 Out of scope for WP0
 
 Condition evaluation, the executor, devices and the worldview get their own tests in WP1–WP3. WP0 only checks that every object can be read and written exactly.

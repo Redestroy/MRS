@@ -167,7 +167,7 @@ All 25 sets are ported in [`experiments/uav_spatial/tasksets_2021/`](../experime
 
 Built with the Webots platform (spec 07 §1); checked against the Webots headers but not yet run in Webots.
 
-* `mrs_uav <id> [rta|rta-x|sta] [definition] [ports] [behaviours]` builds the robot from the definition with its head node id replaced by `<id>`, runs the robot controller under the MRS layer with open or exclusive MRS-RTA or MRS-STA (spec 12 §3), and appends its journal to `r<id>.mrsj`. The Mavic needs an Emitter `emitter` and a Receiver `receiver` in a body slot.
+* `mrs_uav <id> [rta|rta-x|sta|cbba|ldta2] [definition] [ports] [behaviours]` builds the robot from the definition with its head node id replaced by `<id>`, runs the robot controller under the MRS layer with open or exclusive MRS-RTA, MRS-STA (spec 12 §3), CBBA or LDTA² (spec 13), and appends its journal to `r<id>.mrsj`. The Mavic needs an Emitter `emitter` and a Receiver `receiver` in a body slot.
 * `mrs_issuer <mission header> <timeline> [results.csv] [channel]` runs on a supervisor with its own Emitter and Receiver. It writes `task, dispatch, done, done_by, done_count, failed` per task when every task has ended, and pauses the simulation.
 
 ## 9. Tests

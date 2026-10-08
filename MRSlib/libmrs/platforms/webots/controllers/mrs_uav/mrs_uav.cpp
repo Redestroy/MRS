@@ -1,6 +1,6 @@
 // A UAV of the team (spec 09): the robot controller of spec 08 under the MRS layer with MRS-RTA.
 //
-// Usage (controllerArgs): <robot id> [rta|rta-x|sta] [definition.mrsd] [ports.mrsp] [behaviours.mrsb]
+// Usage (controllerArgs): <robot id> [rta|rta-x|sta|cbba|ldta2] [definition.mrsd] [ports.mrsp] [behaviours.mrsb]
 // Defaults: open MRS-RTA and mavic_webots.mrsd, mavic_webots.mrsp, uav_behaviours.mrsb next to the
 // controller. The definition's head node id is replaced by <robot id>. The mission header and the
 // tasks come from the issuer (mrs_issuer) over the radio; the robot waits on the ground until the
@@ -16,6 +16,8 @@
 
 #include <webots/Robot.hpp>
 
+#include "mrs/algorithms/Cbba.h"
+#include "mrs/algorithms/Ldta2.h"
 #include "mrs/algorithms/MrsLayer.h"
 #include "mrs/device/Robot.h"
 #include "mrs/device/uav/UavDevices.h"
@@ -36,7 +38,7 @@ namespace {
 
 int main(int argc, char** argv) {
 	if (argc < 2) {
-		std::fprintf(stderr, "usage: mrs_uav <robot id> [rta|rta-x|sta] [definition.mrsd] [ports.mrsp] [behaviours.mrsb]\n");
+		std::fprintf(stderr, "usage: mrs_uav <robot id> [rta|rta-x|sta|cbba|ldta2] [definition.mrsd] [ports.mrsp] [behaviours.mrsb]\n");
 		return 2;
 	}
 	std::setvbuf(stdout, nullptr, _IONBF, 0);  // Webots shows a controller's output only as it is flushed
@@ -73,6 +75,10 @@ int main(int argc, char** argv) {
 		std::unique_ptr<Algorithms::IAllocator> allocator;
 		if (mode == "sta") {
 			allocator = std::make_unique<Algorithms::StaAllocator>();
+		} else if (mode == "cbba") {
+			allocator = std::make_unique<Algorithms::CbbaAllocator>();
+		} else if (mode == "ldta2") {
+			allocator = std::make_unique<Algorithms::Ldta2Allocator>();
 		} else {
 			Algorithms::RtaConfig rta;
 			rta.exclusive = mode == "rta-x";

@@ -16,7 +16,7 @@ import statistics
 import sys
 from collections import defaultdict
 
-GROUPS = ["G-RTA", "G-RTA-X", "G-STA", "G-C"]
+GROUPS = ["G-RTA", "G-RTA-X", "G-STA", "G-CBBA", "G-LDTA2", "G-C"]
 
 
 def load(path):
@@ -29,8 +29,10 @@ def load(path):
             for k in ("makespan_s", "latency_mean_s", "latency_max_s", "distance_m", "energy_wh", "decision_mean_us",
                       "decision_worst_us", "plan_worst_ms", "min_separation_m", "sim_time_s", "wall_s"):
                 r[k] = float(r[k])
-            for k in ("leaves", "leaf_duplicates"):  # WP8 columns; absent in WP6 files
+            for k in ("leaves", "leaf_duplicates", "dropped"):  # WP8 and WP9 columns; absent in older files
                 r[k] = int(r.get(k) or 0)
+            for k in ("delay_mean_s", "delay_max_s"):
+                r[k] = float(r.get(k) or 0)
             r["source"] = r["set"].split("/")[0]
             r["tree_set"] = r["set"].split("/")[1] if r["source"] == "tree" else ""
             rows.append(r)
@@ -68,8 +70,11 @@ def main():
     ap.add_argument("csv")
     ap.add_argument("--out")
     ap.add_argument("--boot", type=int, default=2000)
+    ap.add_argument("--bitrate", type=float, help="only runs at this channel bitrate (WP9; 0: no limit)")
     a = ap.parse_args()
     rows = load(a.csv)
+    if a.bitrate is not None:
+        rows = [r for r in rows if float(r.get("bitrate_bps") or 0) == a.bitrate]
     rng = random.Random(20261007)
     by_run = {}
     for r in rows:
@@ -204,7 +209,7 @@ def main():
       "own replans (S1, S1*).\n")
     hdr = ["Condition", "Latency mean (s)", "Latency max (s)", "Distance (m)", "Energy (Wh)", "Duplicates",
            "Busy robots", "Messages", "kB", "Decision mean (µs)", "Decision worst (µs)", "Plan worst (ms)",
-           "Sep. breaches", "Min sep. (m)", "Fence exits", "Stalled", "Crashed", "Leaf duplicates"]
+           "Sep. breaches", "Min sep. (m)", "Fence exits", "Stalled", "Crashed", "Leaf duplicates", "Dropped", "Delay mean (s)"]
     body = []
     for k in conds:
         v = [r for r in rows if cond_key(r) == k]
@@ -216,7 +221,7 @@ def main():
                      fmt(max(r["plan_worst_ms"] for r in v), 1), sum(r["separation_breaches"] for r in v),
                      fmt(min(seps), 2) if seps else "–", sum(r["fence_exits"] for r in v),
                      sum(1 for r in v if not r["completed"]), sum(r["crashed"] for r in v),
-                     fmt(m("leaf_duplicates"), 2)])
+                     fmt(m("leaf_duplicates"), 2), fmt(m("dropped"), 1), fmt(m("delay_mean_s"), 2)])
     w(table(hdr, body) + "\n")
 
     # 5. The best group condition per N.
