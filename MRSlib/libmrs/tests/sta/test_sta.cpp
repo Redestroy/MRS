@@ -87,6 +87,16 @@ TEST_CASE("a T_S splits unless every later child is bound to the one before it")
 	                                             BoundLeaf("T_2", "op.4.1")));
 	CHECK_FALSE(Algorithms::Splittable(bound, "op.4"));
 	CHECK(bound.units == std::vector<std::string>{"op.4"});
+	// Take a package, go to x, place it (JB): each step bound to the one before is one unit, so
+	// the robot that took the package places it.
+	auto carry = Algorithms::Decompose(FirstTask("@: MRS 0.1/\nT: T_S op.8 1 0 C_1 C_2 T_1 T_2 T_3/\nC_1: C_N/\nC_2: C_N/\n" + Leaf("T_1") +
+	                                             BoundLeaf("T_2", "op.8.1") + BoundLeaf("T_3", "op.8.2")));
+	CHECK_FALSE(Algorithms::Splittable(carry, "op.8"));
+	CHECK(carry.units == std::vector<std::string>{"op.8"});
+	// Unbound, the same three steps would go to anyone, one after the other.
+	auto loose_carry = Algorithms::Decompose(FirstTask("@: MRS 0.1/\nT: T_S op.9 1 0 C_1 C_2 T_1 T_2 T_3/\nC_1: C_N/\nC_2: C_N/\n" + Leaf("T_1") +
+	                                                   Leaf("T_2") + BoundLeaf("T_3", "op.9.2")));
+	CHECK(loose_carry.units.size() == 3);
 	// Bound to a leaf that is not the previous child: splittable.
 	auto loose = Algorithms::Decompose(FirstTask("@: MRS 0.1/\nT: T_S op.5 1 0 C_1 C_2 T_1 T_2 T_3/\nC_1: C_N/\nC_2: C_N/\n" + Leaf("T_1") +
 	                                             Leaf("T_2") + BoundLeaf("T_3", "op.5.1")));

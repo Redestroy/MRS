@@ -34,6 +34,8 @@ A `T_S` child is *bound to the child before it* when each of its first leaves (s
 * a search (§3.5): a `T_L` of spiral chains, so each spiral is a unit;
 * `ThenLand` (§3.6): a `T_S` of the tree and the landings `T_L`, which can be split.
 
+**The binding is physical, not only a scheduling choice** (JB, 2026-10-08). Some sequences cannot be decomposed because their steps act on the same physical thing. Example: "take a package, go to x, place the package down". Split into "take", "go to x" and "place" for any robot, a robot could place a different package at x, or none, and the task would be done wrongly. Such a task MUST be written so that every step after the first is bound to the step before it (`R_K`): "go to x" to "take", "place" to "go to x". Then it is one unit, and the robot that took the package is the one that places it. Whoever writes a complex task (an operator, a generator or a converter) is responsible for writing these bindings; the decomposer splits everything that is not bound.
+
 A `T_S` whose later children are free (no `R_K`, or an `R_K` to a leaf that is not under the previous child) can be split: its children become separate units, with precedence (`after`) between them as in WP7.
 
 `Splittable(tree, id)` gives the rule. `Decompose` marks the units top-down from the root: a node that cannot be split is a unit, and the decomposer does not go below it. `TaskTree::units` lists them in depth-first order; `unit_of` maps every leaf to its unit. A tree whose root cannot be split is one unit, the root itself.
@@ -80,6 +82,8 @@ Subtask states are shared through the messages the MRS layer already sends: clai
 
 ### 3.2 Started tasks keep their claim (amends spec 09 §4.3)
 
+JB (2026-10-08) accepted this. Whether exclusive mode fits depends on the task definitions and the environment, so it stays a choice per run.
+
 In exclusive mode, the stronger claim keeps a task, until the task's actions run. A robot whose task has started keeps it even when another robot now scores higher, and while it works, the score it claims with does not drop below the score it claimed with when it started. Before WP8, the started task was dropped: a robot flying a cell moved away from the cell's first waypoint, its distance term fell, and a robot waiting near the start outclaimed it, so the cell was started again from its first leg. On a mixed tree set this took one G-STA run from 129 s to 281 s. The change applies to MRS-RTA-X too. For atomic tasks it makes no measurable difference, because a robot whose actions run is at the target and already has the top score: re-flying 45 WP6 runs (cluster, random and multicluster sets, G-RTA-X at N = 3 and 8, G-RTA at N = 5) gave 40 identical runs; the other 5 (all G-RTA-X at N = 8) moved by −2.5% to +2.5%, and the condition means by at most 0.5%.
 
 ### 3.3 Where it runs
@@ -117,12 +121,14 @@ Five sets (coverage, perimeter, search and mixed with 3 trees of 6 parts, 20 s a
 
 G-STA is level with or 1–5% slower than G-RTA-X (paired ratio 0.99 to 1.05 per set and N). Units are already one robot's work, the size estimate already sends a robot to the nearest unit, and the generated trees are one level deep, so the stack and kinship have little to add. Splitting itself is what pays: search sets reach 3.7–3.8 at N = 5, perimeters 2.3–2.5.
 
+JB (2026-10-08): this is expected for simple trees. STA may help more on complex tasks, and it should also be compared on other metrics, such as safety (separation), energy and distance flown, not only makespan.
+
 ## 5. Tests (WP8)
 
 `tests/sta/test_sta.cpp` (spec 07 §5.10):
 
 * a waypoint chain is one unit; a coverage `T_L` splits into its cells; a cell unit's record carries the tree ids at every level;
-* a `T_S` of free leaves splits; land-then-release (bound) does not; an `R_K` to a leaf that is not under the previous child splits;
+* a `T_S` of free leaves splits; land-then-release (bound) does not; take-package, go-to-x, place-package (bound step by step) is one unit; an `R_K` to a leaf that is not under the previous child splits;
 * a complex unit's priority product, `after`, gates and affinity; a leaf inside a unit asks the caller for its state;
 * kinship values;
 * a chain flown by one of two robots: every leaf reported once, all by the robot that did the root;

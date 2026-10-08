@@ -61,3 +61,6 @@ Branch: `spatial-3d`. Status: **WP8 done** (WP0–WP8). Library code is in [`MRS
 ## WP8 decisions (JB, 2026-10-08)
 
 1. **Split only what can be split.** A tree is decomposed down to units, the parts one robot takes; a sequence whose steps are bound to each other by affinity (a waypoint chain, land then release) is one unit (spec 12 §2.1).
+2. **The binding is physical.** "Take a package, go to x, place the package" must not be decomposed: the package placed must be the one taken. Such tasks are written with each step bound to the previous one by `R_K`, so they stay whole (spec 12 §2.1).
+3. **Exclusive mode** depends on the task definitions and the environment; the started-task claim rule is accepted (spec 12 §3.2).
+4. **STA level with RTA-X** is expected for simple trees; it should later be compared on complex tasks and on safety, energy and distance too.
