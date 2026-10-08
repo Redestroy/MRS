@@ -2,7 +2,7 @@
 
 This project builds a group of flight-capable UAVs on the MRS framework. The UAVs allocate and execute 3D spatial tasks. The project also answers one question: **does a group of N UAVs finish a set of spatial tasks faster than one UAV flying a planned mission?**
 
-Branch: `spatial-3d`. Status: **WP0**. The specification is written; the library skeleton goes in [`MRSlib/libmrs`](../../MRSlib/libmrs).
+Branch: `spatial-3d`. Status: **WP6 done** (WP0–WP6). Library code is in [`MRSlib/libmrs`](../../MRSlib/libmrs); the WP6 findings are in [`experiments/uav_spatial/results/wp6`](experiments/uav_spatial/results/wp6/README.md).
 
 ## Contents
 
@@ -26,6 +26,7 @@ Branch: `spatial-3d`. Status: **WP0**. The specification is written; the library
 | 07 | [Build and test](spec/07_Build_and_Test.md) | Repository layout, CMake and compiler rules, test framework, the WP0 round-trip test suite |
 | 08 | [Robot layer and flight](spec/08_Robot_and_Flight.md) | The flight control unit, the robot controller and its events, the safety supervisor, energy, journal and resume (WP4) |
 | 09 | [MRS layer](spec/09_MRS_Layer.md) | Messages and transports, the task pool, allocation (MRS-RTA), the dump rule and the task issuer (WP5) |
+| 10 | [Evaluation harness](spec/10_Evaluation.md) | The route planner (S1, S1*, G-C), task-set generators and the oracle form, the team harness, the batch runner and the analysis (WP6) |
 
 ## WP0 acceptance (from the plan)
 

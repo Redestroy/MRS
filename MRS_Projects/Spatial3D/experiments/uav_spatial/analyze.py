@@ -141,8 +141,12 @@ def main():
                     [(d, (lambda d: lambda r: r["source"] == "gen" and r["tasks"] == main_size and r["dispatch"] == d)(d)) for d in disps])
         sizes = sorted({r["tasks"] for r in gen})
         if len(sizes) > 1:
-            speed_table("Speed-up by task count (generated sets)",
-                        [(f"{t} tasks", (lambda t: lambda r: r["source"] == "gen" and r["tasks"] == t)(t)) for t in sizes])
+            # Only the family and dispatch pairs run at every size, so the rows compare like with like.
+            pairs = set.intersection(*({(r["family"], r["dispatch"]) for r in gen if r["tasks"] == t} for t in sizes))
+            names = ", ".join(f"{f}/{d}" for f, d in sorted(pairs))
+            speed_table(f"Speed-up by task count (generated sets: {names})",
+                        [(f"{t} tasks", (lambda t: lambda r: r["source"] == "gen" and r["tasks"] == t and
+                                         (r["family"], r["dispatch"]) in pairs)(t)) for t in sizes])
 
     # 3. The oracle against the online single UAV.
     w("## S1* against S1\n")
