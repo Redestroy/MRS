@@ -72,6 +72,8 @@ A child "has failed" when it is `FAILED`, `IMPOSSIBLE` or `CANCELLED`. Otherwise
 
 An allocator does not select an entry whose runtime condition (`R_C`, spec 03 §5) is FALSE on the robot's worldview now; UNKNOWN does not rule it out. Before WP7 a runtime condition was checked only from `STARTED` (spec 03 §8.5), so a robot carrying another package flew to a release point and failed there. The check is `AllocatorContext::runnable` and applies to every allocator.
 
+JB (2026-10-08) confirmed this for now: a robot skips a task whose runtime condition is FALSE as long as no behaviour could make it TRUE. *Later:* when a behaviour can fulfil the condition (for example, fetch the package first), the task stays eligible, and its size estimate includes the cost of that behaviour.
+
 ### 2.5 The issuer
 
 When the issuer dispatches a tree root it decomposes it too, and follows each leaf as an `IssuedTask` (`Leaves()`). The root's entry in `Tasks()` is `done` (with the stamp) when the tree is `DONE`, and `failed` with reason `TREE` when it fails. A root is never part of an `M_PLAN` (spec 10 §2.3); G-C does not plan tree leaves in version 0.1.
