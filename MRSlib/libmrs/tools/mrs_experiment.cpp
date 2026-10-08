@@ -29,10 +29,11 @@ namespace {
 	    "  mrs_experiment run [--ported DIR] [--gen FAMILY:DISPATCH:TASKS]... [--seeds A-B]\n"
 	    "                     [--cond S1|S1*|G-RTA:N,..|G-RTA-X:N,..|G-C:N,..]... [--jobs J]\n"
 	    "                     [--out results.csv] [--limit SECONDS] [--sets-out DIR] [--examples DIR]\n"
-	    "                     [--commit HASH]\n"
+	    "                     [--commit HASH] [--trees FAMILY:TREES:PARTS[:INTERVAL]]... [--cond G-STA:N,..]\n"
 	    "  mrs_experiment gen FAMILY DISPATCH TASKS SEED\n"
 	    "  mrs_experiment oracle FILE\n"
-	    "families: grid radial cluster multicluster random; dispatch: static even clustered random\n";
+	    "families: grid radial cluster multicluster random; dispatch: static even clustered random\n"
+	    "tree families (spec 12 §4): coverage perimeter search mixed\n";
 
 	std::string ReadFile(const fs::path& p) {
 		std::ifstream in(p, std::ios::binary);
@@ -46,6 +47,12 @@ namespace {
 		Sim::Family family;
 		Sim::Dispatch dispatch;
 		int tasks;
+	};
+
+	struct TreeSpec {
+		Sim::TreeFamily family;
+		int trees, parts;
+		double interval;  // s between releases; 0: the default
 	};
 
 	struct CondSpec {
@@ -85,6 +92,7 @@ namespace {
 		fs::path ported, out = "results.csv", sets_out;
 		fs::path examples = MRS_SPEC_EXAMPLES;
 		std::vector<GenSpec> gens;
+		std::vector<TreeSpec> tree_sets;
 		std::vector<CondSpec> conds;
 		int seed_a = 1, seed_b = 10, jobs = static_cast<int>(std::max(1u, std::thread::hardware_concurrency()));
 		double limit = 4000.0;
@@ -117,6 +125,19 @@ namespace {
 				if (!Sim::ParseFamily(f, g.family) || !Sim::ParseDispatch(d, g.dispatch)) throw std::runtime_error("bad --gen " + s.str());
 				g.tasks = std::stoi(n);
 				gens.push_back(g);
+			} else if (a == "--trees") {
+				std::stringstream s(next());
+				std::string f, n, p, iv;
+				std::getline(s, f, ':');
+				std::getline(s, n, ':');
+				std::getline(s, p, ':');
+				std::getline(s, iv, ':');
+				TreeSpec g{};
+				if (!Sim::ParseTreeFamily(f, g.family) || n.empty() || p.empty()) throw std::runtime_error("bad --trees " + s.str());
+				g.trees = std::stoi(n);
+				g.parts = std::stoi(p);
+				g.interval = iv.empty() ? 0.0 : std::stod(iv);
+				tree_sets.push_back(g);
 			} else if (a == "--cond") {
 				const std::string v = next();
 				const auto colon = v.find(':');
@@ -192,6 +213,29 @@ namespace {
 				add(s);
 			}
 
+		for (const auto& g : tree_sets)
+			for (int seed = seed_a; seed <= seed_b; ++seed) {
+				Sim::TreeGenConfig tc;
+				tc.family = g.family;
+				tc.trees = g.trees;
+				tc.parts = g.parts;
+				if (g.interval > 0) tc.interval = g.interval;
+				tc.seed = static_cast<std::uint64_t>(seed);
+				Sim::RunSpec s = base;
+				const std::string name = std::string(Sim::TreeFamilyName(g.family)) + "-" + std::to_string(g.trees) + "x" + std::to_string(g.parts) +
+				                         (g.interval > 0 ? "-i" + std::to_string(static_cast<int>(g.interval)) : std::string());
+				s.set = "tree/" + name + "/s" + std::to_string(seed);
+				s.family = Sim::TreeFamilyName(g.family);
+				s.dispatch = "even";
+				s.timeline = Sim::GenerateTreeSet(tc);
+				s.seed = tc.seed;
+				if (!sets_out.empty()) {
+					fs::create_directories(sets_out / name);
+					std::ofstream(sets_out / name / ("s" + std::to_string(seed) + ".mrsl"), std::ios::binary) << s.timeline;
+				}
+				add(s);
+			}
+
 		const auto done = Done(out);
 		std::vector<Sim::RunSpec> todo;
 		for (const auto& r : runs)
@@ -207,7 +251,7 @@ namespace {
 			meta << "# mrs_experiment run\ncommit " << commit << "\nworld QuadSim (spec 08 §9)\nexamples " << examples.string()
 			     << "\nmission " << s.mission.Text() << " (homes per run: a row " << s.home_spacing
 			     << " m apart in seed order)\ngps_noise " << s.gps_noise << " m\nbattery " << s.battery_wh << " Wh\ntime_limit "
-			     << s.time_limit << " s\nrta switch_margin " << s.rta.switch_margin << " claim_ttl " << s.rta.claim_ttl << "\nsize a1 "
+			     << s.time_limit << " s\nrta switch_margin " << s.rta.switch_margin << " claim_ttl " << s.rta.claim_ttl << "\nsta stack_bonus " << s.sta.stack_bonus << " relative_bonus " << s.sta.relative_bonus << "\nsize a1 "
 			     << s.size.a1 << " a2 " << s.size.a2 << " a3 " << s.size.a3 << " a4 " << s.size.a4 << " pursuit " << s.size.pursuit
 			     << "\ntravel v_xy " << s.travel.v_xy << " v_z " << s.travel.v_z << " settle " << s.travel.settle << " takeoff "
 			     << s.travel.takeoff << " cruise_alt " << s.travel.cruise_alt

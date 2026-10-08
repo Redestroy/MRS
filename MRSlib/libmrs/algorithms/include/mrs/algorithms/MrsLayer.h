@@ -63,7 +63,9 @@ namespace MRS {
 			void AddTree(const Protocol::Record& root, double t);
 			void AddEntry(std::shared_ptr<const Task::Task> task, double t);
 			void UpdateTrees(double t);
-			bool Gated(const TaskTree& tree, const TreeNode& leaf, const TreeState& state, double t) const;
+			struct Tree;
+			bool Gated(const Tree& tr, const TreeNode& unit, double t) const;
+			PoolState UnitState(const Tree& tr, const std::string& id) const;
 			void OnFinished(const std::string& id, PoolState s, const std::string& by, double t);
 			void Allocate(double t);
 			void Assign(const std::string& id, double t);
@@ -87,7 +89,8 @@ namespace MRS {
 				TaskTree tree;
 				TreeState state;
 				std::set<std::string> finished;  // nodes whose end was handled
-				std::string last_finisher;       // who reported the latest DONE leaf
+				std::string last_finisher;       // who reported the latest DONE unit
+				std::map<std::string, std::string> leaf_done_by;  // leaves inside complex units (spec 12 §2.2)
 				explicit Tree(TaskTree t) : tree(std::move(t)), state(tree) {}
 				Tree(const Tree&) = delete;
 			};
@@ -95,6 +98,7 @@ namespace MRS {
 			std::map<std::string, Tree*> tree_of_;                 // every node id -> its tree
 			PeerTable peers_;
 			std::string assigned_;
+			bool unit_started_ = false;  // a leaf of the assigned complex unit has run
 			std::deque<std::pair<Task::TaskEvent, double>> robot_events_;
 			std::deque<Robot::RaisedEvent> raised_;
 			double now_ = 0.0;

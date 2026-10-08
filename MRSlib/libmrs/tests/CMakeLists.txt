@@ -12,6 +12,7 @@ add_executable(mrs_tests
 	team/test_team.cpp
 	sim/test_planner.cpp
 	tree/test_tree.cpp
+	sta/test_sta.cpp
 )
 target_include_directories(mrs_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
 # Include the std headers instead of doctest forward-declaring std::tuple (MSVC warning C5285).

@@ -81,6 +81,7 @@ namespace MRS {
 			if (!c_.exclusive) return;
 			if (!claimed_.empty() && claimed_ != task && ctx_.release) ctx_.release(claimed_);
 			claimed_ = task;
+			claim_score_ = priority;
 			claim_expiry_ = t + c_.claim_ttl;
 			if (ctx_.claim) ctx_.claim(task, claim_expiry_, priority);
 		}
@@ -90,7 +91,7 @@ namespace MRS {
 			double best_p = 0.0;
 			for (const PoolEntry* e : ctx_.pool->Entries()) {
 				if (!Eligible(*e, t)) continue;
-				const double p = Priority(*e, w, t);
+				const double p = Score(*e, w, t);
 				if (Outclaimed(*e, p)) continue;
 				if (!best || p > best_p) {
 					best = e;
@@ -100,13 +101,17 @@ namespace MRS {
 
 			const PoolEntry* cur = current.id.empty() ? nullptr : ctx_.pool->Find(current.id);
 			const bool cur_ok = cur && Eligible(*cur, t);
-			const double cur_p = cur_ok ? Priority(*cur, w, t) : 0.0;
-			const bool cur_lost = cur_ok && Outclaimed(*cur, cur_p);  // the stronger claim keeps it
+			const double cur_p = cur_ok ? Score(*cur, w, t) : 0.0;
+			// The stronger claim keeps a task, until its actions run: a started task stays with its
+			// robot, whose claim does not weaken as it works away from the task's first target
+			// (spec 12 §3.2; a complex unit's robot moves off it from its second leaf on).
+			const bool cur_lost = cur_ok && !current.started && Outclaimed(*cur, cur_p);
 
 			if (cur_ok && !cur_lost) {
 				const bool better = best && best != cur && best_p > cur_p * (1.0 + c_.switch_margin);
 				if (current.started || !better) {
-					if (c_.exclusive && (claimed_ != cur->id || claim_expiry_ - t < c_.claim_ttl / 2)) ClaimFor(cur->id, cur_p, t);
+					const double claim_p = current.started && claimed_ == cur->id ? std::max(cur_p, claim_score_) : cur_p;
+					if (c_.exclusive && (claimed_ != cur->id || claim_expiry_ - t < c_.claim_ttl / 2)) ClaimFor(cur->id, claim_p, t);
 					return {Decision::Kind::KEEP, cur->id};
 				}
 			}
@@ -123,6 +128,75 @@ namespace MRS {
 
 		void RtaAllocator::OnTaskFinished(const std::string& task, PoolState, double) {
 			if (task == claimed_) claimed_.clear();  // a finished task needs no release
+		}
+	
+		// --- MRS-STA (spec 12 §3) -----------------------------------------------------------------
+
+		StaAllocator::StaAllocator(StaConfig c) : RtaAllocator([&] {
+			RtaConfig r = c.rta;
+			r.exclusive = true;
+			return r;
+		}()), s_(c) {}
+
+		namespace {
+			// The dot-separated parts of an id below the root.
+			std::vector<std::string> Path(const std::string& root, const std::string& id) {
+				std::vector<std::string> out;
+				if (id.size() <= root.size() + 1 || id.compare(0, root.size(), root) != 0) return out;
+				std::string part;
+				for (std::size_t i = root.size() + 1; i <= id.size(); ++i) {
+					if (i == id.size() || id[i] == '.') {
+						out.push_back(part);
+						part.clear();
+					} else {
+						part += id[i];
+					}
+				}
+				return out;
+			}
+		}
+
+		double StaAllocator::Kinship(const TaskTree& tree, const std::string& unit, const std::string& other) {
+			const auto a = Path(tree.root, unit), b = Path(tree.root, other);
+			if (a.empty() || b.empty()) return 0.0;
+			std::size_t common = 0;
+			while (common < a.size() && common < b.size() && a[common] == b[common]) ++common;
+			return static_cast<double>(common) / static_cast<double>(a.size());
+		}
+
+		double StaAllocator::Score(const PoolEntry& e, const Environment::Worldview& w, double t) const {
+			double p = Priority(e, w, t);
+			const TaskTree* tree = ctx_.tree_of ? ctx_.tree_of(e.id) : nullptr;
+			if (!tree) return p;
+			if (std::find(stack_.begin(), stack_.end(), tree->root) != stack_.end()) p *= 1.0 + s_.stack_bonus;
+			if (!last_.empty() && tree->Has(last_)) p *= 1.0 + s_.relative_bonus * Kinship(*tree, e.id, last_);
+			return p;
+		}
+
+		Decision StaAllocator::Select(const Environment::Worldview& w, const CurrentTask& current, double t) {
+			// A tree leaves the stack once none of its units is left for anyone.
+			stack_.erase(std::remove_if(stack_.begin(), stack_.end(),
+			                            [this](const std::string& root) {
+				                            const TaskTree* tree = ctx_.tree_of ? ctx_.tree_of(root) : nullptr;
+				                            if (!tree) return true;
+				                            for (const auto& u : tree->units)
+					                            if (const PoolEntry* e = ctx_.pool->Find(u); e && !Finished(e->state)) return false;
+				                            return true;
+			                            }),
+			             stack_.end());
+			const Decision d = RtaAllocator::Select(w, current, t);
+			if (d.kind != Decision::Kind::IDLE && ctx_.tree_of)
+				if (const TaskTree* tree = ctx_.tree_of(d.task)) {
+					stack_.erase(std::remove(stack_.begin(), stack_.end(), tree->root), stack_.end());
+					stack_.push_back(tree->root);
+				}
+			return d;
+		}
+
+		void StaAllocator::OnTaskFinished(const std::string& task, PoolState s, double t) {
+			RtaAllocator::OnTaskFinished(task, s, t);
+			if (s != PoolState::DONE) return;
+			if (const PoolEntry* e = ctx_.pool->Find(task); e && e->done_by == ctx_.self) last_ = task;
 		}
 	}
 }

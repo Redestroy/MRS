@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cmath>
 #include <iomanip>
+#include <set>
 #include <sstream>
 
 #include "mrs/sim/TaskSets.h"
@@ -17,12 +18,13 @@ namespace MRS {
 			case Condition::G_RTA: return "G-RTA";
 			case Condition::G_RTA_X: return "G-RTA-X";
 			case Condition::G_C: return "G-C";
+			case Condition::G_STA: return "G-STA";
 			}
 			return "?";
 		}
 
 		bool ParseCondition(const std::string& s, Condition& c) {
-			for (Condition x : {Condition::S1, Condition::S1_ORACLE, Condition::G_RTA, Condition::G_RTA_X, Condition::G_C})
+			for (Condition x : {Condition::S1, Condition::S1_ORACLE, Condition::G_RTA, Condition::G_RTA_X, Condition::G_C, Condition::G_STA})
 				if (s == ConditionName(x)) {
 					c = x;
 					return true;
@@ -82,6 +84,12 @@ namespace MRS {
 				break;
 			}
 			case Condition::G_C: c.allocator = [](int) { return std::make_unique<Algorithms::PlanFollowerAllocator>(); }; break;
+			case Condition::G_STA: {
+				Algorithms::StaConfig sta = spec.sta;
+				sta.rta = spec.rta;
+				c.allocator = [sta](int) { return std::make_unique<Algorithms::StaAllocator>(sta); };
+				break;
+			}
 			}
 			// Tasks keep arriving, so the central planner minimises the sum of completions and lets
 			// the makespan break ties (spec 10 §2.3).
@@ -115,6 +123,12 @@ namespace MRS {
 				r.latency_mean = latency_sum / r.done;
 			}
 			if (!r.completed) r.makespan = r.sim_time - first;  // a stalled run counts up to the limit
+			std::set<std::string> leaf_robots;
+			for (const auto& [id, it] : team.issuer.Leaves()) {
+				++r.leaves;
+				r.leaf_duplicates += std::max(0, it.done_count - 1);
+				if (it.done) leaf_robots.insert(it.done_by);
+			}
 			long calls = 0;
 			double total = 0.0;
 			for (const auto& robot : team.robots) {
@@ -124,7 +138,7 @@ namespace MRS {
 				calls += robot->timing->calls;
 				total += robot->timing->total_s;
 				r.decision_worst_us = std::max(r.decision_worst_us, robot->timing->worst_s * 1e6);
-				r.busy_robots += team.DoneBy(robot->layer->Self()) > 0;
+				r.busy_robots += team.DoneBy(robot->layer->Self()) > 0 || leaf_robots.count(robot->layer->Self());
 				if (auto* p = dynamic_cast<Algorithms::PlannerAllocator*>(&robot->timing->Inner())) {
 					r.plan_calls += p->Replans();
 					r.plan_worst_ms = std::max(r.plan_worst_ms, robot->timing->worst_s * 1e3);
@@ -147,7 +161,7 @@ namespace MRS {
 		std::string CsvHeader() {
 			return "set,family,dispatch,tasks,seed,condition,n,completed,done,failed,makespan_s,latency_mean_s,latency_max_s,"
 			       "distance_m,energy_wh,duplicates,busy_robots,messages,bytes,decision_mean_us,decision_worst_us,plan_calls,"
-			       "plan_worst_ms,separation_breaches,min_separation_m,fence_exits,crashed,sim_time_s,wall_s";
+			       "plan_worst_ms,separation_breaches,min_separation_m,fence_exits,crashed,sim_time_s,wall_s,leaves,leaf_duplicates";
 		}
 
 		std::string CsvRow(const RunSpec& s, const RunResult& r) {
@@ -158,7 +172,7 @@ namespace MRS {
 			  << "," << r.latency_mean << "," << r.latency_max << "," << r.distance_m << "," << r.energy_wh << "," << r.duplicates << ","
 			  << r.busy_robots << "," << r.messages << "," << r.bytes << "," << r.decision_mean_us << "," << r.decision_worst_us << ","
 			  << r.plan_calls << "," << r.plan_worst_ms << "," << r.separation_breaches << "," << r.min_separation_m << "," << r.fence_exits
-			  << "," << (r.crashed ? 1 : 0) << "," << r.sim_time << "," << r.wall_s;
+			  << "," << (r.crashed ? 1 : 0) << "," << r.sim_time << "," << r.wall_s << "," << r.leaves << "," << r.leaf_duplicates;
 			return o.str();
 		}
 	}

@@ -17,6 +17,23 @@ namespace MRS {
 			Field Tid(const std::string& id) { return Field::MakeText(FieldType::TaskId, id); }
 			Field Id(const std::string& id) { return Field::MakeText(FieldType::Id, id); }
 
+			bool Under(const std::string& id, const std::string& node) { return id == node || id.rfind(node + ".", 0) == 0; }
+
+			// A node strictly inside a complex unit: the robot running the unit handles it.
+			bool InsideUnit(const TaskTree& tree, const std::string& id) {
+				for (std::string a = tree.Node(id).parent; !a.empty(); a = tree.Node(a).parent)
+					if (tree.Node(a).unit) return true;
+				return false;
+			}
+		}
+
+		PoolState MrsLayer::UnitState(const Tree& tr, const std::string& id) const {
+			if (const PoolEntry* e = pool_.Find(id)) return e->state;
+			// A leaf inside a complex unit: done when a robot said so, else as its unit.
+			if (tr.leaf_done_by.count(id)) return PoolState::DONE;
+			if (auto u = tr.tree.unit_of.find(id); u != tr.tree.unit_of.end() && u->second != id)
+				if (const PoolEntry* e = pool_.Find(u->second); e && Finished(e->state) && e->state != PoolState::DONE) return e->state;
+			return PoolState::AVAILABLE;
 		}
 
 		MrsLayer::MrsLayer(Robot::RobotController& robot, Comm::ITransport& transport, const Task::FunctionRegistry& registry,
@@ -62,6 +79,7 @@ namespace MRS {
 					if (c->Evaluate(ec) == Task::Truth::False) return false;
 				return true;
 			};
+			ctx.tree_of = [this](const std::string& id) { return TreeOf(id); };
 			allocator_->Bind(ctx);
 		}
 
@@ -122,9 +140,14 @@ namespace MRS {
 			if (m.SlotCount() == 0) return;
 			PoolEntry* e = pool_.Find(m.Slot(0).s);
 			if (!e) {
-				// A complex node whose end condition failed on the robot that finished it.
-				if (code == "M_FAIL")
-					if (auto it = tree_of_.find(m.Slot(0).s); it != tree_of_.end()) it->second->state.Override(m.Slot(0).s, PoolState::FAILED);
+				if (auto it = tree_of_.find(m.Slot(0).s); it != tree_of_.end()) {
+					Tree& tr = *it->second;
+					const std::string& id = m.Slot(0).s;
+					// A leaf done inside another robot's complex unit (spec 12 §2.2), or a complex node
+					// whose end condition failed on the robot that finished it.
+					if (code == "M_DONE" && tr.tree.Node(id).leaf) tr.leaf_done_by.emplace(id, m.sender);
+					else if (code == "M_FAIL") tr.state.Override(id, PoolState::FAILED);
+				}
 				return;  // otherwise a task we have not heard of yet
 			}
 			if (code == "M_DONE") {
@@ -188,19 +211,19 @@ namespace MRS {
 			} catch (const DecomposeError&) {
 				return;
 			}
-			std::vector<std::shared_ptr<const Task::Task>> leaves;
+			std::vector<std::shared_ptr<const Task::Task>> units;
 			try {
-				for (const auto& id : tree->tree.leaves) leaves.push_back(factory_.BuildTask(tree->tree.Node(id).task));
+				for (const auto& id : tree->tree.units) units.push_back(factory_.BuildTask(tree->tree.Node(id).task));
 			} catch (const Task::TaskLoadError&) {
-				return;  // a leaf this robot cannot load: the robot takes no part in the tree
+				return;  // a unit this robot cannot load: the robot takes no part in the tree
 			}
 			Tree* raw = tree.get();
 			for (const auto& [id, n] : raw->tree.nodes) tree_of_[id] = raw;
 			trees_[raw->tree.root] = std::move(tree);
 			++stats_.trees;
-			for (auto& leaf : leaves) {
-				AddEntry(leaf, t);
-				if (PoolEntry* e = pool_.Find(leaf->Id()); e && e->state == PoolState::AVAILABLE) e->state = PoolState::BLOCKED;
+			for (auto& unit : units) {
+				AddEntry(unit, t);
+				if (PoolEntry* e = pool_.Find(unit->Id()); e && e->state == PoolState::AVAILABLE) e->state = PoolState::BLOCKED;
 			}
 			UpdateTrees(t);
 		}
@@ -210,10 +233,7 @@ namespace MRS {
 			auto it = tree_of_.find(id);
 			if (it == tree_of_.end()) return std::nullopt;
 			const Tree& tr = *it->second;
-			return tr.state.Of(id, [this](const std::string& leaf) {
-				const PoolEntry* e = pool_.Find(leaf);
-				return e ? e->state : PoolState::AVAILABLE;
-			});
+			return tr.state.Of(id, [this, &tr](const std::string& unit) { return UnitState(tr, unit); });
 		}
 
 		const TaskTree* MrsLayer::TreeOf(const std::string& id) const {
@@ -221,14 +241,11 @@ namespace MRS {
 			return it == tree_of_.end() ? nullptr : &it->second->tree;
 		}
 
-		bool MrsLayer::Gated(const TaskTree& tree, const TreeNode& leaf, const TreeState& state, double t) const {
-			const auto leaf_state = [this](const std::string& id) {
-				const PoolEntry* e = pool_.Find(id);
-				return e ? e->state : PoolState::AVAILABLE;
-			};
-			for (const auto& before : leaf.after)
-				if (state.Of(before, leaf_state) != PoolState::DONE) return true;
-			for (const auto& g : leaf.gates) {
+		bool MrsLayer::Gated(const Tree& tr, const TreeNode& unit, double t) const {
+			const auto unit_state = [this, &tr](const std::string& id) { return UnitState(tr, id); };
+			for (const auto& before : unit.after)
+				if (tr.state.Of(before, unit_state) != PoolState::DONE) return true;
+			for (const auto& g : unit.gates) {
 				std::unique_ptr<Task::Condition> c;
 				try {
 					c = factory_.BuildCondition(g);
@@ -238,28 +255,29 @@ namespace MRS {
 				Task::EvalContext ctx{robot_.World(), t, 0.0, robot_.World().Geo(), {}};
 				if (c->Evaluate(ctx) != Task::Truth::True) return true;
 			}
-			// Affinity (R_K): only the robot that did the partner may take it.
-			if (!leaf.affinity.empty() && tree.Has(leaf.affinity)) {
-				const PoolEntry* p = pool_.Find(leaf.affinity);
-				if (!p || p->state != PoolState::DONE || p->done_by != self_) return true;
+			// Affinity (R_K): only the robot that did the partner may take it. The partner is a unit
+			// in the pool or a leaf inside a complex unit (spec 12 §2.2).
+			if (!unit.affinity.empty() && tr.tree.Has(unit.affinity)) {
+				if (const PoolEntry* p = pool_.Find(unit.affinity)) return p->state != PoolState::DONE || p->done_by != self_;
+				auto d = tr.leaf_done_by.find(unit.affinity);
+				return d == tr.leaf_done_by.end() || d->second != self_;
 			}
 			return false;
 		}
 
 		void MrsLayer::UpdateTrees(double t) {
-			const auto leaf_state = [this](const std::string& id) {
-				const PoolEntry* e = pool_.Find(id);
-				return e ? e->state : PoolState::AVAILABLE;
-			};
-			for (auto& [root, tr] : trees_) {
-				// Nodes that just ended: their end condition, then the leaves they no longer need.
+			for (auto& [root, tree] : trees_) {
+				Tree* tr = tree.get();
+				const auto unit_state = [this, tr](const std::string& id) { return UnitState(*tr, id); };
+				// Nodes that just ended: their end condition, then the units they no longer need. A unit
+				// and the nodes inside it are the business of the robot running it (spec 12 §2.2).
 				for (const auto& [id, n] : tr->tree.nodes) {
-					if (n.leaf || tr->finished.count(id)) continue;
-					PoolState s = tr->state.Of(id, leaf_state);
+					if (n.leaf || n.unit || tr->finished.count(id) || InsideUnit(tr->tree, id)) continue;
+					PoolState s = tr->state.Of(id, unit_state);
 					if (!Finished(s)) continue;
 					tr->finished.insert(id);
 					if (s == PoolState::DONE && !n.end.code.empty() && n.end.code != "C_N" && tr->last_finisher == self_) {
-						// The robot that finished the last leaf checks the end condition (spec 03 §6.2 rule 6).
+						// The robot that finished the last unit checks the end condition (spec 03 §6.2 rule 6).
 						bool ok = false;
 						try {
 							auto c = factory_.BuildCondition(n.end);
@@ -275,14 +293,15 @@ namespace MRS {
 							messenger_.Post(r);
 						}
 					}
-					for (const auto& leaf : LeavesUnder(tr->tree, id))
-						if (const PoolEntry* e = pool_.Find(leaf); e && !Finished(e->state)) OnFinished(leaf, PoolState::CANCELLED, self_, t);
+					for (const auto& u : tr->tree.units)
+						if (Under(u, id))
+							if (const PoolEntry* e = pool_.Find(u); e && !Finished(e->state)) OnFinished(u, PoolState::CANCELLED, self_, t);
 				}
 				// Gates: BLOCKED until the predecessors are done, the gate conditions hold and the affinity fits.
-				for (const auto& id : tr->tree.leaves) {
+				for (const auto& id : tr->tree.units) {
 					PoolEntry* e = pool_.Find(id);
 					if (!e || (e->state != PoolState::AVAILABLE && e->state != PoolState::BLOCKED)) continue;
-					e->state = Gated(tr->tree, tr->tree.Node(id), tr->state, t) ? PoolState::BLOCKED : PoolState::AVAILABLE;
+					e->state = Gated(*tr, tr->tree.Node(id), t) ? PoolState::BLOCKED : PoolState::AVAILABLE;
 				}
 			}
 		}
@@ -327,7 +346,10 @@ namespace MRS {
 			if (robot_.TasksBlocked() || robot_.Stopped()) return;
 			CurrentTask current;
 			current.id = assigned_;
-			current.started = !assigned_.empty() && robot_.StateOf(assigned_) == TaskState::IN_PROGRESS;
+			// A complex unit counts as started once its first leaf runs, not when the robot sets off to
+			// it, so the robot may still give way to a closer one (spec 12 §2.2).
+			current.started = !assigned_.empty() && robot_.StateOf(assigned_) == TaskState::IN_PROGRESS &&
+			                  (!tree_of_.count(assigned_) || tree_of_.at(assigned_)->tree.Node(assigned_).leaf || unit_started_);
 			const Decision d = allocator_->Select(robot_.World(), current, t);
 			switch (d.kind) {
 			case Decision::Kind::KEEP: break;
@@ -350,6 +372,7 @@ namespace MRS {
 			}
 			robot_.AddTask(e->task->Clone());
 			assigned_ = id;
+			unit_started_ = false;
 			e->state = PoolState::ACTIVE;
 		}
 
@@ -379,7 +402,21 @@ namespace MRS {
 				const auto [e, et] = robot_events_.front();
 				robot_events_.pop_front();
 				PoolEntry* entry = pool_.Find(e.task_id);
-				if (!entry) continue;  // a task the robot had from elsewhere (a resumed journal)
+				if (!entry) {
+					// A leaf inside the complex unit this robot runs: others learn it is done (spec 12 §2.2).
+					auto it = tree_of_.find(e.task_id);
+					if (e.state == TaskState::IN_PROGRESS && it != tree_of_.end()) {
+						const auto& unit_of = it->second->tree.unit_of;
+						if (auto u = unit_of.find(e.task_id); u != unit_of.end() && u->second == assigned_) unit_started_ = true;
+					}
+					if (e.state == TaskState::SUCCEEDED && it != tree_of_.end() && it->second->tree.Node(e.task_id).leaf &&
+					    it->second->leaf_done_by.emplace(e.task_id, self_).second) {
+						auto r = messenger_.Begin("M_DONE", "all", et);
+						r.fields.push_back(Tid(e.task_id));
+						messenger_.Post(r);
+					}
+					continue;  // otherwise a task the robot had from elsewhere (a resumed journal)
+				}
 				if (e.state == TaskState::SUCCEEDED) {
 					if (assigned_ == e.task_id) assigned_.clear();
 					if (!Finished(entry->state)) {

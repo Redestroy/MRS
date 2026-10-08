@@ -215,6 +215,10 @@ In Webots, `platforms/webots/controllers/mrs_worldview_check` compares the same 
 
 `tests/tree/` checks spec 11; the cases are listed in spec 11 §5. The camera, gimbal and payload tests fly `mavic_delivery_webots.mrsd` in QuadSim.
 
-### 5.10 Out of scope for WP0
+### 5.10 Splittable trees and MRS-STA tests (WP8)
+
+`tests/sta/` checks spec 12; the cases are listed in spec 12 §5.
+
+### 5.11 Out of scope for WP0
 
 Condition evaluation, the executor, devices and the worldview get their own tests in WP1–WP3. WP0 only checks that every object can be read and written exactly.

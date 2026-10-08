@@ -416,6 +416,8 @@ TEST_CASE("WP7 acceptance: a GeoJSON polygon becomes a coverage tree that 3 UAVs
 			first_landing = std::min(first_landing, *leaf.done);
 		}
 	}
+	// Each cell is one unit: its legs are bound by affinity (spec 12 §2.1).
+	for (const auto& c : tree->Node("op.1.1").children) CHECK(tree->IsUnit(c));
 	CHECK(cell_robots.size() == 3);         // the cells were split between the three
 	CHECK(first_landing > last_strip);      // landing waits for every strip
 	for (const auto& r : team.robots) CHECK(r->sim.OnGround());

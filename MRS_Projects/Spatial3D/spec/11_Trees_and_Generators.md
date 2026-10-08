@@ -44,6 +44,8 @@ Precedence and parent start conditions are kept beside the leaf, as `after` and 
 
 ### 2.3 Leaves in the task pool
 
+*WP8 amendment:* the pool holds **units**, not leaves (spec 12 §2). A unit is a leaf, or a part of the tree that cannot be split (a bound sequence such as a waypoint chain), which one robot runs whole. What this section says about leaves holds for units.
+
 When a robot receives a tree (`M_TASK` with a `T_S`, `T_L` or `T_O` record), the MRS layer decomposes it, builds every leaf, and adds each leaf to its pool as an ordinary entry. A tree that fails to decompose, or that has a leaf the robot cannot load, is ignored by that robot. The static dump rule (spec 06 §5) applies to each leaf on its own.
 
 Each tick, before allocation, `UpdateTrees`:
@@ -202,7 +204,7 @@ Examples in `experiments/uav_trees/`: `field.geojson` (the acceptance polygon), 
 
 ## 6. Not in WP7
 
-* G-C planning of tree leaves, and STA/LDTA/CBBA on trees (WP8 onwards).
+* G-C planning of tree leaves, and LDTA/CBBA on trees (STA is WP8, spec 12).
 * Concave polygons and holes in coverage (tracks span the outer crossings).
 * Spiral search that stops on a detection (an end condition differing from the until condition, JB 2026-10-06 behaviour decision 2).
 * The land-when-idle mode (spec 08 §3.1a).

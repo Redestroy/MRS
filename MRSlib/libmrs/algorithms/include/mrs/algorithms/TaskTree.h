@@ -36,18 +36,36 @@ namespace MRS {
 			std::vector<std::string> after;
 			std::vector<Protocol::Record> gates;
 			std::string affinity;               // leaves: the R_K partner, or empty (rule 8)
+			// A unit is what one robot takes from the pool: a leaf, or a complex node that cannot be
+			// split (spec 12 §2). A complex unit keeps its whole subtree in `task`, with ids, and
+			// its own `after`, `gates` and `affinity` (those from outside the unit).
+			bool unit = false;
 		};
 
 		struct TaskTree {
 			std::string root;
 			std::map<std::string, TreeNode> nodes;
 			std::vector<std::string> leaves;  // depth-first, in listed order
+			std::vector<std::string> units;   // depth-first: the pool entries of the tree
+			std::map<std::string, std::string> unit_of;  // leaf -> the unit that holds it
 			const TreeNode& Node(const std::string& id) const { return nodes.at(id); }
 			bool Has(const std::string& id) const { return nodes.count(id) > 0; }
+			bool IsUnit(const std::string& id) const {
+				auto it = nodes.find(id);
+				return it != nodes.end() && it->second.unit;
+			}
 		};
 
-		// Decomposes a tree (spec 03 §6.2). The result depends only on the record, so every robot
-		// and the issuer get the same leaves. Throws DecomposeError for a tree without leaves, a
+		// Whether a complex node can be split between robots (spec 12 §2.1). A T_L or T_O can: its
+		// children are independent. A T_S cannot when every child after the first is bound to the
+		// child before it by affinity (R_K from each of its first leaves to a leaf of the previous
+		// child) and every complex child cannot be split either: a waypoint chain, or land then
+		// release. Leaves are never split.
+		bool Splittable(const TaskTree& tree, const std::string& id);
+
+		// Decomposes a tree (spec 03 §6.2) down to its units: it stops at nodes that cannot be split
+		// (spec 12 §2). The result depends only on the record, so every robot and the issuer get the
+		// same leaves and units. Throws DecomposeError for a tree without leaves, a
 		// reserved code (T_D, T_G, T_U) or a T_L whose k exceeds its children.
 		TaskTree Decompose(const Protocol::Record& root);
 
@@ -61,6 +79,7 @@ namespace MRS {
 		public:
 			explicit TreeState(const TaskTree& tree) : tree_(&tree) {}
 			using LeafState = std::function<PoolState(const std::string& leaf)>;
+			// `leaf` gives the state of every unit (a leaf or a complex unit).
 			PoolState Of(const std::string& id, const LeafState& leaf) const;
 			void Override(const std::string& id, PoolState s) { overrides_[id] = s; }
 			const std::map<std::string, PoolState>& Overrides() const { return overrides_; }

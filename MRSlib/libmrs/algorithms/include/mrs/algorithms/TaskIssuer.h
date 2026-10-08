@@ -58,6 +58,8 @@ namespace MRS {
 			const std::map<std::string, IssuedTask>& Tasks() const { return issued_; }
 			// The leaves of the tree tasks, by leaf id.
 			const std::map<std::string, IssuedTask>& Leaves() const { return leaves_; }
+			// The complex units of the tree tasks (spec 12 §2), by node id.
+			const std::map<std::string, IssuedTask>& Units() const { return units_; }
 			const TaskTree* Tree(const std::string& root) const;
 			const Comm::Messenger& Messages() const { return messenger_; }
 
@@ -87,6 +89,7 @@ namespace MRS {
 			std::map<std::string, std::unique_ptr<IssuedTree>> trees_;  // by root
 			std::map<std::string, std::string> root_of_;                 // node id -> root
 			std::map<std::string, IssuedTask> leaves_;
+			std::map<std::string, IssuedTask> units_;  // complex units below the root (spec 12 §2)
 
 			void SendPlans(double t);
 			void OnTreeMessage(const Comm::Message& m, const std::string& root);

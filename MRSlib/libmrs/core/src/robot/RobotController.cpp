@@ -418,7 +418,12 @@ namespace MRS {
 					}
 					continue;
 				}
-				if (e.behaviour || !records_.count(e.task_id)) continue;  // a child of a complex task
+				if (e.behaviour) continue;
+				if (!records_.count(e.task_id)) {
+					// A child of a complex task: the listener hears it, the journal does not (spec 12 §2.2).
+					if (listener_) listener_(e, t);
+					continue;
+				}
 				states_[e.task_id] = {e.state, e.reason};
 				const char* pool = e.state == Task::TaskState::SUCCEEDED ? "DONE" : e.state == Task::TaskState::FAILED ? "FAILED" : "ACTIVE";
 				Journal(e.task_id, pool, e.state, t);

@@ -40,5 +40,28 @@ namespace MRS {
 
 		// Task id -> release time (s) of every top-level task in a timeline.
 		std::map<std::string, double> ReleaseTimes(const std::string& timeline);
+
+		// --- tree-task sets (spec 12 §4) -------------------------------------------------------
+
+		enum class TreeFamily { COVERAGE, PERIMETER, SEARCH, MIXED };
+		const char* TreeFamilyName(TreeFamily f);  // "coverage", "perimeter", "search", "mixed"
+		bool ParseTreeFamily(const std::string& s, TreeFamily& f);
+
+		struct TreeGenConfig {
+			TreeFamily family = TreeFamily::MIXED;
+			int trees = 3;             // tree tasks in the set
+			int parts = 6;             // coverage cells, perimeter arcs, points of interest per search
+			std::uint64_t seed = 1;
+			double half_size = 60.0;   // m: every waypoint lies in [-half_size, half_size]²
+			double interval = 20.0;    // s between tree releases
+			double first = 1.0;        // s: the first release
+			std::string issuer = "op";
+		};
+
+		// A timeline (.mrsl) of tree tasks from the WP7 generators: coverage of a rotated
+		// rectangle (cells of boustrophedon chains), the perimeter of one (arcs), or a spiral search
+		// around points of interest. MIXED cycles coverage, perimeter, search. Deterministic for a
+		// seed on every platform.
+		std::string GenerateTreeSet(const TreeGenConfig& c);
 	}
 }

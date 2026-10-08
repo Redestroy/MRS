@@ -68,7 +68,7 @@ class IAllocator {
 };
 ```
 
-Allocators read the worldview, the pool and the peers, and send only claims and releases (through the context). They never touch devices. `CurrentTask` names the task the robot pursues and whether its actions have started (`IN_PROGRESS`). A task is **eligible** when it is not finished, not `DUMPED_SELF`, not `BLOCKED` (a gated tree leaf, spec 11 §2.3), past its retry cooldown, and none of its runtime conditions is FALSE now (spec 11 §2.4a, WP7).
+Allocators read the worldview, the pool and the peers, and send only claims and releases (through the context). They never touch devices. `CurrentTask` names the task the robot pursues and whether its actions have started (`IN_PROGRESS`; for a complex unit, once its first leaf runs, spec 12 §2.2). A task is **eligible** when it is not finished, not `DUMPED_SELF`, not `BLOCKED` (a gated tree leaf, spec 11 §2.3), past its retry cooldown, and none of its runtime conditions is FALSE now (spec 11 §2.4a, WP7).
 
 ### 4.2 Priority
 
@@ -94,7 +94,7 @@ Every tick, `RtaAllocator::Select` takes the eligible task of highest priority.
 * **Keep or switch.** While the current task's actions run (`started`), the robot keeps it. Before that, it switches only to a task whose priority is more than `switch_margin` (25 %) above the current one, so robots do not flip between two similar tasks.
 * **Done by someone else.** When `M_DONE` (or `M_FAIL`, or `M_CMD cancel`) arrives for the robot's task, the MRS layer takes the task back from the robot controller (§5) and the next tick picks another.
 * **Open mode** (default) ignores claims; several robots may pursue one task until one finishes it.
-* **Exclusive mode** (`exclusive = T`, `MRS-RTA-X`) claims the task it selects (`M_CLAIM` with `expiry = t + claim_ttl`, 10 s, and `score` = its priority), renews the claim at half its life, and releases it when it switches or idles. A task that another robot claims with a stronger claim (spec 06 §4.1: the higher score, then the lower robot number) is not eligible. A robot whose own task is outclaimed drops it at once, even when its actions have started.
+* **Exclusive mode** (`exclusive = T`, `MRS-RTA-X`) claims the task it selects (`M_CLAIM` with `expiry = t + claim_ttl`, 10 s, and `score` = its priority), renews the claim at half its life, and releases it when it switches or idles. A task that another robot claims with a stronger claim (spec 06 §4.1: the higher score, then the lower robot number) is not eligible. A robot whose own task is outclaimed drops it at once, unless its actions have started (WP8, spec 12 §3.2: a started task keeps its claim, and the claim's score does not drop while the robot works on it; before WP8 a started task was dropped too, which cost a robot a half-flown complex unit once it moved away from the unit's first target). For atomic tasks the change is not measurable: a robot whose actions run is at the target and already has the top score (45 WP6 runs re-flown: 40 identical, 5 at N = 8 within ±2.5%, condition means within 0.5%).
 
 ## 5. The MRS layer
 
@@ -167,7 +167,7 @@ All 25 sets are ported in [`experiments/uav_spatial/tasksets_2021/`](../experime
 
 Built with the Webots platform (spec 07 §1); checked against the Webots headers but not yet run in Webots.
 
-* `mrs_uav <id> [rta|rta-x] [definition] [ports] [behaviours]` builds the robot from the definition with its head node id replaced by `<id>`, runs the robot controller under the MRS layer with open or exclusive MRS-RTA, and appends its journal to `r<id>.mrsj`. The Mavic needs an Emitter `emitter` and a Receiver `receiver` in a body slot.
+* `mrs_uav <id> [rta|rta-x|sta] [definition] [ports] [behaviours]` builds the robot from the definition with its head node id replaced by `<id>`, runs the robot controller under the MRS layer with open or exclusive MRS-RTA or MRS-STA (spec 12 §3), and appends its journal to `r<id>.mrsj`. The Mavic needs an Emitter `emitter` and a Receiver `receiver` in a body slot.
 * `mrs_issuer <mission header> <timeline> [results.csv] [channel]` runs on a supervisor with its own Emitter and Receiver. It writes `task, dispatch, done, done_by, done_count, failed` per task when every task has ended, and pauses the simulation.
 
 ## 9. Tests

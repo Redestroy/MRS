@@ -1,11 +1,14 @@
 #pragma once
-// The allocator seam (plan §8.2, spec 09 §4), the priority estimate (plan §8.4) and MRS-RTA.
+// The allocator seam (plan §8.2, spec 09 §4), the priority estimate (plan §8.4), MRS-RTA and
+// MRS-STA (spec 12 §3).
 #include <functional>
 #include <memory>
 #include <optional>
 #include <string>
+#include <vector>
 
 #include "mrs/algorithms/TaskPool.h"
+#include "mrs/algorithms/TaskTree.h"
 #include "mrs/comm/Messenger.h"
 #include "mrs/robot/Resources.h"
 #include "mrs/world/Worldview.h"
@@ -66,6 +69,8 @@ namespace MRS {
 			std::function<void(const std::string& task)> release;
 			// False when the robot cannot run the task now (a runtime condition is FALSE); may be empty.
 			std::function<bool(const PoolEntry& entry, double t)> runnable;
+			// The tree a unit belongs to, or nullptr (spec 12 §2); may be empty.
+			std::function<const TaskTree*(const std::string& id)> tree_of;
 		};
 
 		struct Decision {
@@ -121,6 +126,10 @@ namespace MRS {
 			void OnTaskFinished(const std::string& task, PoolState s, double t) override;
 			AllocatorInfo Info() const override { return {c_.exclusive ? "MRS-RTA-X" : "MRS-RTA", c_.exclusive, true}; }
 
+		protected:
+			// What Select ranks tasks by: base_priority × size_est here.
+			virtual double Score(const PoolEntry& e, const Environment::Worldview& w, double t) const { return Priority(e, w, t); }
+
 		private:
 			// Whether another robot's claim beats ours at this priority.
 			bool Outclaimed(const PoolEntry& e, double priority) const;
@@ -129,6 +138,39 @@ namespace MRS {
 			RtaConfig c_;
 			std::string claimed_;       // the task we claim
 			double claim_expiry_ = 0.0;
+			double claim_score_ = 0.0;  // the score we last claimed with
+		};
+	
+		struct StaConfig {
+			RtaConfig rta{true};        // STA always claims (spec 12 §3.1)
+			double stack_bonus = 0.5;    // × (1 + this) for a unit of a tree on the active-task stack
+			double relative_bonus = 0.5; // × (1 + this × kinship) with the unit this robot finished last
+		};
+
+		// MRS-STA (plan §8.5, spec 12 §3): MRS-RTA-X over the units of split trees, with an
+		// active-task stack. A robot that takes a unit of a tree pushes the tree's root; while the
+		// tree has units left the root stays on the stack, and the robot prefers its units, most
+		// of all those nearest in the tree to the unit it finished last (kinship: the share of the
+		// unit's path below the root that the two have in common). Tasks outside trees rank as
+		// in MRS-RTA-X.
+		class StaAllocator : public RtaAllocator {
+		public:
+			explicit StaAllocator(StaConfig c = {});
+			Decision Select(const Environment::Worldview& w, const CurrentTask& current, double t) override;
+			void OnTaskFinished(const std::string& task, PoolState s, double t) override;
+			AllocatorInfo Info() const override { return {"MRS-STA", true, true}; }
+			// Tree roots, the latest on top.
+			const std::vector<std::string>& Stack() const { return stack_; }
+			// 0..1: how much of `unit`'s path below the root it shares with `other`.
+			static double Kinship(const TaskTree& tree, const std::string& unit, const std::string& other);
+
+		protected:
+			double Score(const PoolEntry& e, const Environment::Worldview& w, double t) const override;
+
+		private:
+			StaConfig s_;
+			std::vector<std::string> stack_;
+			std::string last_;  // the unit this robot finished last
 		};
 	}
 }

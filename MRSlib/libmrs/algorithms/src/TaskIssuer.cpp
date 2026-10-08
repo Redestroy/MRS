@@ -70,6 +70,8 @@ namespace MRS {
 							auto tree = std::make_unique<IssuedTree>(Decompose(task));
 							for (const auto& [node, n] : tree->tree.nodes) root_of_[node] = id;
 							for (const auto& leaf : tree->tree.leaves) leaves_[leaf] = IssuedTask{leaf, t, {}, {}, 0, {}, {}};
+							for (const auto& u : tree->tree.units)
+								if (!tree->tree.Node(u).leaf && u != id) units_[u] = IssuedTask{u, t, {}, {}, 0, {}, {}};
 							trees_[id] = std::move(tree);
 						} catch (const DecomposeError& err) {
 							it.failed = std::string("DECOMPOSE: ") + err.what();
@@ -126,8 +128,11 @@ namespace MRS {
 		void TaskIssuer::OnTreeMessage(const Comm::Message& m, const std::string& root) {
 			IssuedTree& tr = *trees_.at(root);
 			const std::string id = m.Slot(0).s;
-			if (auto leaf = leaves_.find(id); leaf != leaves_.end()) {
-				IssuedTask& it = leaf->second;
+			IssuedTask* found = nullptr;
+			if (auto leaf = leaves_.find(id); leaf != leaves_.end()) found = &leaf->second;
+			else if (auto unit = units_.find(id); unit != units_.end()) found = &unit->second;
+			if (found) {
+				IssuedTask& it = *found;
 				if (m.code == "M_DONE") {
 					++it.done_count;
 					if (!it.done) {
@@ -144,8 +149,11 @@ namespace MRS {
 			}
 			IssuedTask& top = issued_.at(root);
 			if (top.done || top.failed) return;
-			const PoolState s = tr.state.Of(root, [this](const std::string& leaf) {
-				const IssuedTask& it = leaves_.at(leaf);
+			const PoolState s = tr.state.Of(root, [this](const std::string& unit) {
+				auto u = units_.find(unit);
+				auto l = leaves_.find(unit);
+				if (u == units_.end() && l == leaves_.end()) return PoolState::AVAILABLE;  // the root as one unit
+				const IssuedTask& it = u != units_.end() ? u->second : l->second;
 				if (it.done) return PoolState::DONE;
 				if (it.failed) return *it.failed == "IMPOSSIBLE" ? PoolState::IMPOSSIBLE : PoolState::FAILED;
 				return PoolState::AVAILABLE;

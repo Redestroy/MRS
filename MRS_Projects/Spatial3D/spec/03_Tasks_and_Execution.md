@@ -187,7 +187,7 @@ The parent's start condition is checked before its first child starts, and its e
 `ITaskDecomposer` turns a tree into **leaf tasks** that any allocator can take. The result MUST be the same on every robot, so it depends only on the tree.
 
 1. **Ids.** Child `i` (1-based, in listed order) of task `p` gets the id `p.i`. Example: the second child of `op.17` is `op.17.2`, and its first child is `op.17.2.1`.
-2. **Leaves.** Every `T_A`, `T_P` and `T_B` in the tree is a leaf. Complex tasks are never executed as a whole by one robot after decomposition. Their state is derived from their children.
+2. **Leaves.** Every `T_A`, `T_P` and `T_B` in the tree is a leaf. Complex tasks are never executed as a whole by one robot after decomposition. Their state is derived from their children. *WP8 amendment (spec 12 §2):* the tree is split only where it can be split. A `T_S` whose later children are each bound to the previous one by affinity (rule 8) is not split, and one robot runs it as a complex task (§6.1); its leaves are still reported by id.
 3. **Precedence.** For a `T_S` parent, the first leaves of child `i+1` wait for `p.i` to be `DONE` (as if they had the extra start condition `C_S p.i DONE`). A leaf that waits is `BLOCKED`.
 4. **Parallel.** `T_L` children have no precedence. When `k` are `DONE`, the rest become `CANCELLED`.
 5. **Choice.** `T_O` children are all `AVAILABLE`. The first one `DONE` cancels the others.
