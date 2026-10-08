@@ -14,6 +14,10 @@ WorldInfo {
   ]
   title "mavic_team"
   basicTimeStep 8
+  defaultDamping Damping {
+    linear 0.5
+    angular 0.5
+  }
   gpsCoordinateSystem "WGS84"
   gpsReference 56.9496 24.1052 10
 }

@@ -103,9 +103,16 @@ namespace MRS {
 					if (!Due()) return false;
 					const double joules = robot_.batterySensorGetValue();
 					if (!std::isfinite(joules) || joules < 0) return false;
+					// Webots reports 0 from enabling until the first sample arrives; read as an empty
+					// battery, that would raise BATTERY_CRITICAL on the ground and stop the robot.
+					if (joules == 0.0 && !sampled_) return false;
+					sampled_ = true;
 					values = {joules / 3600.0};
 					return true;
 				}
+
+			private:
+				bool sampled_ = false;
 			};
 
 			class MotorPort : public P::Port {
@@ -167,6 +174,8 @@ namespace MRS {
 					if (receiver_->getQueueLength() <= 0) return std::nullopt;
 					std::string data(static_cast<const char*>(receiver_->getData()), static_cast<std::size_t>(receiver_->getDataSize()));
 					receiver_->nextPacket();
+					// Senders that pass C strings include the terminating NUL; the parser would reject it.
+					while (!data.empty() && data.back() == '\0') data.pop_back();
 					return data;
 				}
 

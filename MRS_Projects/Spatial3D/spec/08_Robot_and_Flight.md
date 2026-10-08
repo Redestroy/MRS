@@ -80,7 +80,7 @@ The four commands are one `A_MAP` of `A_MOT` entries applied to the motor nodes 
 | `setpoint_timeout` | 0.5 s | `takeoff_tol` | 0.3 m |
 | `state_timeout` | 0.25 s | | |
 
-The gains were tuned on the test simulator (§9), whose motor constants come from the proto but whose mass, inertia and power are estimates. With these gains the simulator takes off, flies 45 m and lands without a crash for masses from 0.4 to 1.1 kg; the hover integrator `ki_z` absorbs the difference to the mass `hover_speed` implies. JB checks them in Webots.
+The gains were tuned on the test simulator (§9), whose motor constants come from the proto but whose mass, inertia and power are estimates. With these gains the simulator takes off, flies 45 m and lands without a crash for masses from 0.4 to 1.1 kg; the hover integrator `ki_z` absorbs the difference to the mass `hover_speed` implies. In Webots the default `kp_att` 50 is too stiff: the Mavic oscillates in roll and pitch about 2 s after liftoff and flips. With `kp_att 20` (set on the `quadrotor` line of `mavic_webots.mrsd`) and the stock Mavic world's `defaultDamping` (linear and angular 0.5 in `WorldInfo`), the three-UAV team world flies all 15 tasks of task set 1. Without that damping the robots stay up but stall on their tasks. Values between 5 and 20 were stable in Webots; 50 flipped with any `kd_att` tried (1 to 8).
 
 ## 3. Robot controller
 

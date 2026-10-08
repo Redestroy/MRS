@@ -258,7 +258,9 @@ TEST_CASE("low battery without the energy for the task: return at once, and resu
 		bool drained = false;
 		REQUIRE(f.Run(200.0, [&] { return f.ctl->SwapLanded(); }, [&] {
 			if (!drained && f.ctl->StateOf("r.2") == Task::TaskState::IN_PROGRESS) {
-				f.sim.SetEnergy(14.9);
+				// Low but not critical, with 4.5 Wh above the reserve: the 600 s wait needs more at any
+				// hover power the energy model calibrates to after liftoff (about 30 to 45 W).
+				f.sim.SetEnergy(12.0);
 				drained = true;
 			}
 		}));

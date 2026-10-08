@@ -34,7 +34,7 @@ namespace {
 	public:
 		RadioTransport(webots::Emitter* tx, webots::Receiver* rx) : tx_(tx), rx_(rx) {}
 		bool Send(const std::string& text, const std::string&) override {
-			return tx_->send(text.c_str(), static_cast<int>(text.size()) + 1) == 1;
+			return tx_->send(text.data(), static_cast<int>(text.size())) == 1;
 		}
 		std::vector<std::string> Poll() override {
 			std::vector<std::string> out;
@@ -60,6 +60,7 @@ int main(int argc, char** argv) {
 		std::fprintf(stderr, "usage: mrs_issuer <mission header> <timeline.mrsl> [results.csv] [channel]\n");
 		return 2;
 	}
+	std::setvbuf(stdout, nullptr, _IONBF, 0);  // Webots shows a controller's output only as it is flushed
 	const std::string results_path = argc > 3 ? argv[3] : "mrs_issuer_results.csv";
 	const int channel = argc > 4 ? std::atoi(argv[4]) : 1;
 

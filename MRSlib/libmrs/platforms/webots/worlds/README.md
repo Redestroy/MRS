@@ -17,6 +17,8 @@ What the world sets, and what any other team world needs:
 
 * `WorldInfo`: `gpsCoordinateSystem "WGS84"` and `gpsReference 56.9496 24.1052 10`, the reference in
   the mission header (`mission_3uav.mrs`).
+  Also `defaultDamping` with linear and angular 0.5, as in Webots' own Mavic world; the FCU gains in
+  `mavic_webots.mrsd` (`kp_att 20`) are tuned for it, and without it the Mavics lose stability.
 * Each Mavic: `controllerArgs` = its robot id (`"1"`, `"2"`, …; add `"rta-x"` as a second argument for
   exclusive MRS-RTA), `battery [180000, 180000, 0]` (50 Wh in joules; an empty battery field gives
   no battery sensor and the robot reports a fault), and an `Emitter "emitter"` and a
