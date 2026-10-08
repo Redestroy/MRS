@@ -6,7 +6,7 @@
 
 D: D_H uav head.default 3 robot_type mavic2pro role camera_uav id 1 D_1/
 D_1: D_J frame mech_bus 0 D_1..6/
-D_1: D_X quadrotor quadrotor.webots 2 max_climb 2 max_speed_xy 8/
+D_1: D_X quadrotor quadrotor.webots 3 max_climb 2 max_speed_xy 8 kp_att 20/
 D_2: D_S gnss gnss.webots 1 device "gps"/
 D_3: D_S compass compass.webots 1 device "compass"/
 D_4: D_A leds led.webots 2 device "front left led" device "front right led" K_1/
