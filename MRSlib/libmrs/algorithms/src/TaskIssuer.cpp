@@ -65,6 +65,16 @@ namespace MRS {
 					it.id = id;
 					it.dispatch = t;
 					if (!first_dispatch_) first_dispatch_ = t;
+					if (IsComplexTask(task) && !trees_.count(id)) {
+						try {
+							auto tree = std::make_unique<IssuedTree>(Decompose(task));
+							for (const auto& [node, n] : tree->tree.nodes) root_of_[node] = id;
+							for (const auto& leaf : tree->tree.leaves) leaves_[leaf] = IssuedTask{leaf, t, {}, {}, 0, {}, {}};
+							trees_[id] = std::move(tree);
+						} catch (const DecomposeError& err) {
+							it.failed = std::string("DECOMPOSE: ") + err.what();
+						}
+					}
 				}
 			}
 			if (c_.task_period > 0 && t - last_repeat_ >= c_.task_period) {
@@ -83,6 +93,10 @@ namespace MRS {
 					if (m.code == "M_DUMP" && m.SlotCount() >= 3 && m.Slot(2).b) replan = true;
 				}
 				if (m.SlotCount() == 0 || m.Slot(0).type != FieldType::TaskId) continue;
+				if (auto r = root_of_.find(m.Slot(0).s); r != root_of_.end() && r->first != r->second) {
+					OnTreeMessage(m, r->second);
+					continue;
+				}
 				auto it = issued_.find(m.Slot(0).s);
 				if (it == issued_.end()) continue;
 				if (m.code == "M_DONE") {
@@ -104,11 +118,53 @@ namespace MRS {
 			if (planner_ && replan) SendPlans(t);
 		}
 
+		const TaskTree* TaskIssuer::Tree(const std::string& root) const {
+			auto it = trees_.find(root);
+			return it == trees_.end() ? nullptr : &it->second->tree;
+		}
+
+		void TaskIssuer::OnTreeMessage(const Comm::Message& m, const std::string& root) {
+			IssuedTree& tr = *trees_.at(root);
+			const std::string id = m.Slot(0).s;
+			if (auto leaf = leaves_.find(id); leaf != leaves_.end()) {
+				IssuedTask& it = leaf->second;
+				if (m.code == "M_DONE") {
+					++it.done_count;
+					if (!it.done) {
+						it.done = m.stamp;
+						it.done_by = m.sender;
+					}
+				} else if (m.code == "M_FAIL") {
+					if (!it.failed && !it.done) it.failed = m.Slot(1).s;
+				} else if (m.code == "M_DUMP" && m.Slot(2).b) {
+					it.dumped_by.push_back(m.sender);
+				}
+			} else if (m.code == "M_FAIL") {
+				tr.state.Override(id, PoolState::FAILED);  // a node whose end condition failed
+			}
+			IssuedTask& top = issued_.at(root);
+			if (top.done || top.failed) return;
+			const PoolState s = tr.state.Of(root, [this](const std::string& leaf) {
+				const IssuedTask& it = leaves_.at(leaf);
+				if (it.done) return PoolState::DONE;
+				if (it.failed) return *it.failed == "IMPOSSIBLE" ? PoolState::IMPOSSIBLE : PoolState::FAILED;
+				return PoolState::AVAILABLE;
+			});
+			if (s == PoolState::DONE) {
+				top.done = m.stamp;
+				top.done_by = m.sender;
+				top.done_count = 1;
+			} else if (Finished(s)) {
+				top.failed = "TREE";
+			}
+		}
+
 		void TaskIssuer::SendPlans(double t) {
 			std::vector<Record> open;
 			for (const auto& id : order_) {
 				const IssuedTask& it = issued_.at(id);
-				if (!it.done && !it.failed) open.push_back(records_.at(id));
+				// The central planner plans atomic tasks only; tree tasks are out of its scope (spec 11 §2.5).
+				if (!it.done && !it.failed && !trees_.count(id)) open.push_back(records_.at(id));
 			}
 			const Plan plan = planner_->Replan(open, t);
 			for (const auto& [robot, route] : plan.routes) {

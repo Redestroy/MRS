@@ -68,7 +68,7 @@ class IAllocator {
 };
 ```
 
-Allocators read the worldview, the pool and the peers, and send only claims and releases (through the context). They never touch devices. `CurrentTask` names the task the robot pursues and whether its actions have started (`IN_PROGRESS`). A task is **eligible** when it is not finished, not `DUMPED_SELF`, and past its retry cooldown.
+Allocators read the worldview, the pool and the peers, and send only claims and releases (through the context). They never touch devices. `CurrentTask` names the task the robot pursues and whether its actions have started (`IN_PROGRESS`). A task is **eligible** when it is not finished, not `DUMPED_SELF`, not `BLOCKED` (a gated tree leaf, spec 11 §2.3), past its retry cooldown, and none of its runtime conditions is FALSE now (spec 11 §2.4a, WP7).
 
 ### 4.2 Priority
 
@@ -81,7 +81,7 @@ size_est = a1·Δt + a2 / (Δs3 + ε) − a3·energy_fraction − a4·claim_pena
 | Term | Value | Default |
 |---|---|---|
 | `Δt` | time since this robot heard of the task | `a1` = 0.001 per s |
-| `Δs3` | travel to the task's first `C_P3` the layered way: `|layer.alt − z| + horizontal + |layer.alt − target.z|`, or straight without a layer; 0 for a task without a position | `a2` = 10 m, `ε` = 1 m |
+| `Δs3` | travel to the task's first `C_P3` the layered way: `|layer.alt − z| + horizontal + |layer.alt − target.z|`, or straight without a layer or when the horizontal distance is at most the fly-to's switch radius (3 m; WP7: a robot over its target was scored as if it had to climb to its layer first, and once idle robots waited at their layers, exclusive claims flipped between robots without end); 0 for a task without a position | `a2` = 10 m, `ε` = 1 m |
 | `energy_fraction` | `ResourceManager::TaskCost` / `battery.energy_wh` (spec 08 §6), at most 1 | `a3` = 0.5 |
 | `claim_penalty` | 1 when a peer that claims the task is closer to it | `a4` = 0.5 |
 

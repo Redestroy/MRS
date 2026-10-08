@@ -165,6 +165,7 @@ Requirements say what a robot needs to take a task. They are checked by the dump
 | `R_R` | Role | `id role` | the robot has the role (JB decision 9) | static |
 | `R_E` | Resource | `id resource`, `num amount` | the resource manager can commit `amount` | dynamic |
 | `R_K` | Affinity | `tid task` | this robot executed `task` (interdependent task) | dynamic |
+| `R_I` | Robot | `id robot` | the robot's name is `robot` (`r<id>`, spec 06 §2), for example the landing leaf of one robot (spec 11 §3.6) | static |
 | `R_C` | Runtime condition | `C` | the condition is TRUE on every tick from `STARTED` to the end | runtime (§8.5) |
 
 **Implicit requirements.** Every field read by the task's conditions and functions, and every action code it uses, is added automatically as an `R_F` (with `max_age` = the field's default, spec 05 §3) and an `R_A`. A task author only writes the requirements that cannot be derived: roles, resources, affinity, runtime conditions, and fields read inside registry functions not covered by their registration.
@@ -187,10 +188,10 @@ The parent's start condition is checked before its first child starts, and its e
 
 1. **Ids.** Child `i` (1-based, in listed order) of task `p` gets the id `p.i`. Example: the second child of `op.17` is `op.17.2`, and its first child is `op.17.2.1`.
 2. **Leaves.** Every `T_A`, `T_P` and `T_B` in the tree is a leaf. Complex tasks are never executed as a whole by one robot after decomposition. Their state is derived from their children.
-3. **Precedence.** For a `T_S` parent, child `i+1` gets the extra start condition `C_S p.i DONE`, applied to the first leaf of child `i+1`. A leaf whose added conditions are false is `BLOCKED`.
+3. **Precedence.** For a `T_S` parent, the first leaves of child `i+1` wait for `p.i` to be `DONE` (as if they had the extra start condition `C_S p.i DONE`). A leaf that waits is `BLOCKED`.
 4. **Parallel.** `T_L` children have no precedence. When `k` are `DONE`, the rest become `CANCELLED`.
 5. **Choice.** `T_O` children are all `AVAILABLE`. The first one `DONE` cancels the others.
-6. **Start and end of a complex parent.** The parent's start condition is added to the start conditions of its first leaves. Its end condition is checked by the robot that finishes its last leaf; if it is FALSE, the parent is `FAILED`.
+6. **Start and end of a complex parent.** The parent's start condition gates its first leaves: they are `BLOCKED` until it is TRUE. Its end condition is checked by the robot that finishes its last leaf; if it is FALSE, the parent is `FAILED` and that robot sends `M_FAIL` for the parent's id.
 7. **Effective priority** is inherited as in §2.
 8. **Affinity** (`R_K`) is kept on each leaf as written.
 
@@ -221,6 +222,8 @@ A_1: A_N/
 Decomposition gives three leaves: `op.40.1.1` and `op.40.1.2` (the strips, `AVAILABLE` to any robot) and `op.40.2` (land, `BLOCKED` until `op.40.1` is `DONE`). In a real mission each robot gets its own landing leaf; the generator writes one per robot.
 
 *Note:* the ids inside a tree are written as `0` and assigned by the decomposer. A task file MUST give an id only to the root.
+
+*Amendment (WP7, spec 11 §2.2).* Precedence (rule 3) and a parent's start condition (rule 6) are kept beside the leaf as **gates**. They are not merged into the leaf's own start condition. A merged start condition would be a `C_L` or a `C_S`, which no behaviour can make TRUE, so the leaf could never start its own fly-to (§7). The pool keeps a gated leaf `BLOCKED` and makes it `AVAILABLE` when its gates hold; the leaf's start condition is then fulfilled by the behaviour library as usual. A robot that runs a tree alone may still execute it as one complex task (§6.1, spec 11 §2.6).
 
 ## 7. The behaviour library
 

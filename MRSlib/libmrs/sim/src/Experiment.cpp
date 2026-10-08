@@ -67,7 +67,10 @@ namespace MRS {
 			Algorithms::PlannerConfig pc;
 			pc.travel = travel;
 			// The single UAV flies altitude-first; the groups keep the layered default (plan §10.2).
-			if (IsSingle(spec.condition)) c.behaviour_priority["flyto.altitude_first"] = 11;
+			if (IsSingle(spec.condition)) {
+				c.behaviour_priority["flyto.altitude_first"] = 11;
+				c.mrs.split_trees = false;  // the oracle form is one robot's own sequence (spec 10 §3.3)
+			}
 			switch (spec.condition) {
 			case Condition::S1:
 			case Condition::S1_ORACLE: c.allocator = [pc](int) { return std::make_unique<Algorithms::PlannerAllocator>(pc); }; break;

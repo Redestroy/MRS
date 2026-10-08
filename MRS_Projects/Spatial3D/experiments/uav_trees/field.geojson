@@ -1,0 +1,12 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {"task": "coverage", "altitude": 20, "footprint": 20, "overlap": 0.2, "cells": 3},
+      "geometry": {"type": "Polygon", "coordinates": [[
+        [24.1043, 56.9492], [24.1062, 56.9492], [24.1062, 56.9501], [24.1043, 56.9501], [24.1043, 56.9492]
+      ]]}
+    }
+  ]
+}

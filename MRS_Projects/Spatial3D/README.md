@@ -2,7 +2,7 @@
 
 This project builds a group of flight-capable UAVs on the MRS framework. The UAVs allocate and execute 3D spatial tasks. The project also answers one question: **does a group of N UAVs finish a set of spatial tasks faster than one UAV flying a planned mission?**
 
-Branch: `spatial-3d`. Status: **WP6 done** (WP0–WP6). Library code is in [`MRSlib/libmrs`](../../MRSlib/libmrs); the WP6 findings are in [`experiments/uav_spatial/results/wp6`](experiments/uav_spatial/results/wp6/README.md).
+Branch: `spatial-3d`. Status: **WP7 done** (WP0–WP7). Library code is in [`MRSlib/libmrs`](../../MRSlib/libmrs); the WP6 findings are in [`experiments/uav_spatial/results/wp6`](experiments/uav_spatial/results/wp6/README.md); the WP7 generator examples are in [`experiments/uav_trees`](experiments/uav_trees/README.md).
 
 ## Contents
 
@@ -27,6 +27,7 @@ Branch: `spatial-3d`. Status: **WP6 done** (WP0–WP6). Library code is in [`MRS
 | 08 | [Robot layer and flight](spec/08_Robot_and_Flight.md) | The flight control unit, the robot controller and its events, the safety supervisor, energy, journal and resume (WP4) |
 | 09 | [MRS layer](spec/09_MRS_Layer.md) | Messages and transports, the task pool, allocation (MRS-RTA), the dump rule and the task issuer (WP5) |
 | 10 | [Evaluation harness](spec/10_Evaluation.md) | The route planner (S1, S1*, G-C), task-set generators and the oracle form, the team harness, the batch runner and the analysis (WP6) |
+| 11 | [Tree tasks and generators](spec/11_Trees_and_Generators.md) | Tree tasks split across robots, the point, path, coverage, perimeter and spiral search generators, GeoJSON input and `mrs_generate` (WP7) |
 
 ## WP0 acceptance (from the plan)
 
@@ -49,3 +50,9 @@ Branch: `spatial-3d`. Status: **WP6 done** (WP0–WP6). Library code is in [`MRS
 ## WP2 decisions (JB, 2026-10-06)
 
 1. **Ports are never picked because they are free.** Which device sits on which port is fixed by the wiring or the connection order. A port comes from the robot's port map (first-time setup, `.mrsp`), from an explicit address, or from a port scan that identifies the device (spec 04 §6).
+
+## WP7 decisions (JB, 2026-10-08)
+
+1. **Idle robots wait at their own layer** (spec 08 §3.1a). A later mode may land idle robots and bring them up to their layer only to hear from task dispatch, depending on the radio and on the signal at ground level.
+2. **Point presets:** land, release a package (only when the robot carries it, it is the recipient's package, and the robot has landed), take a picture, orient the gimbal, flash the LEDs (spec 11 §3.1).
+3. **Points of interest** are searched in a spiral with minimum overlap (spec 11 §3.5).

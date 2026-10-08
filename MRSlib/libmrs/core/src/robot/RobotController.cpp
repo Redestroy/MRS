@@ -238,6 +238,15 @@ namespace MRS {
 							Stop(t);
 						}
 					}
+					// An idle robot in the air waits at its own layer (spec 08 §3.3).
+					// The second it waits first lets the next task of a chain start where the last one ended.
+					if (fcu_ && !blocked_ && !returning_ && pending_.empty() && executor_.Empty() && Airborne()) {
+						if (!idle_since_) idle_since_ = t;
+						if (t - *idle_since_ >= 1.0) IdleAtLayer(t);
+					} else {
+						idle_since_.reset();
+						idle_yaw_.reset();
+					}
 					if (!list_done_ && any_task_ && !blocked_ && pending_.empty() && executor_.Empty()) {
 						list_done_ = true;
 						if (journal_end_) journal_.Event(t, "end");
@@ -292,6 +301,21 @@ namespace MRS {
 				for (const char* n : kFlightCritical)
 					if (f.node == n) return true;
 			return fcu_ && !robot_.self.Provides("pose.enu");
+		}
+
+		void RobotController::IdleAtLayer(double t) {
+			const auto& w = model_.world;
+			const auto layer = w.Raw("layer.alt");
+			const auto z = w.Scalar("pose.enu.z", t);
+			if (!layer || !std::holds_alternative<double>(layer->value) || !z) return;
+			if (!idle_yaw_) idle_yaw_ = w.Scalar("att.yaw", t).value_or(0.0);
+			// The horizontal setpoint stays where the last task left it (spec 02 §4.2).
+			Device::ActionMap a;
+			Device::Action pzy;
+			pzy.code = "A_PZY";
+			pzy.arg = *Device::PackArgument(Device::ArgLayout::F32X2, std::vector<double>{std::get<double>(layer->value), *idle_yaw_});
+			a.entries.push_back({"any", pzy});
+			safety_.Dispatch(a, t);
 		}
 
 		bool RobotController::Airborne() const { return model_.world.Bool("airborne", now_).value_or(false); }

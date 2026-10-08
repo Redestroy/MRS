@@ -88,6 +88,8 @@ Altitudes are uniform in 5–25 m, positions rounded to 1 cm. Ids are `op.1…`.
 
 So a robot that knows the future may fly to a task before its release and wait there, but cannot do it earlier. Makespan and latency are always measured from the original releases (`ReleaseTimes`).
 
+Since WP7 a team splits tree tasks between robots (spec 11 §2). The single-UAV conditions turn that off (`MrsConfig::split_trees`, spec 11 §2.6), so the robot runs each oracle `T_S` itself as above.
+
 ### 3.4 Seeds
 
 A seed sets the home order (the row of homes is shuffled with SplitMix64), the GPS noise sequence (0.05 m) and, for generated sets, the set itself.
@@ -152,6 +154,6 @@ Intervals are percentile bootstraps (2000 resamples, fixed RNG seed), so the tab
 
 ## 8. Not in WP6
 
-* G-CBBA and G-STA (WP7, WP8); tree-task sets.
+* G-CBBA and G-STA (WP8 onwards); tree-task sets (tree tasks themselves are WP7, spec 11).
 * A Webots batch runner and per-N world generator: the grid runs in QuadSim (§1).
 * Battery swaps during a run.

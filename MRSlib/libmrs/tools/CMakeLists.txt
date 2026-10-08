@@ -9,3 +9,7 @@ find_package(Threads REQUIRED)
 add_executable(mrs_experiment mrs_experiment.cpp)
 target_link_libraries(mrs_experiment PRIVATE mrs_sim Threads::Threads mrs_warnings)
 target_compile_definitions(mrs_experiment PRIVATE MRS_SPEC_EXAMPLES="${MRS_SPEC_EXAMPLES}")
+
+# GeoJSON to a timeline of generated tasks (spec 11 §4.3).
+add_executable(mrs_generate mrs_generate.cpp)
+target_link_libraries(mrs_generate PRIVATE mrs_generators mrs_warnings)

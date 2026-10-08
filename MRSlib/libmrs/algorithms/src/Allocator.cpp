@@ -20,7 +20,10 @@ namespace MRS {
 			const auto& g = targets.front();
 			const double across = std::hypot(g[0] - (*here)[0], g[1] - (*here)[1]);
 			const auto layer = w.Raw("layer.alt");
-			if (layer && layer->valid && std::holds_alternative<double>(layer->value)) {
+			// The layered fly-to goes straight once within its switch radius (spec 02 §8, 3 m in
+			// uav_behaviours.mrsb), so a robot over its target does not count the climb to its layer.
+			constexpr double kSwitchRadius = 3.0;
+			if (across > kSwitchRadius && layer && layer->valid && std::holds_alternative<double>(layer->value)) {
 				const double alt = std::get<double>(layer->value);
 				return std::fabs(alt - (*here)[2]) + across + std::fabs(alt - g[2]);
 			}
@@ -59,7 +62,8 @@ namespace MRS {
 
 		bool IAllocator::Eligible(const PoolEntry& e, double t) const {
 			if (Finished(e.state) || e.state == PoolState::DUMPED_SELF || e.state == PoolState::BLOCKED) return false;
-			return e.retry_after <= t;
+			if (e.retry_after > t) return false;
+			return !ctx_.runnable || ctx_.runnable(e, t);
 		}
 
 		double IAllocator::Priority(const PoolEntry& e, const Environment::Worldview& w, double t) const {

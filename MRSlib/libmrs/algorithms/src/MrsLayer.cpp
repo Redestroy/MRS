@@ -54,6 +54,14 @@ namespace MRS {
 				messenger_.Post(r);
 				if (auto* e = pool_.Find(task)) e->claims.erase(self_);
 			};
+			ctx.runnable = [this](const PoolEntry& e, double t) {
+				// A runtime condition that is FALSE now rules the task out before the robot flies to
+				// it (spec 11 §2.4): a release point is not for a robot carrying another package.
+				Task::EvalContext ec{robot_.World(), t, 0.0, robot_.World().Geo(), {}};
+				for (const auto& c : e.task->RuntimeConditions())
+					if (c->Evaluate(ec) == Task::Truth::False) return false;
+				return true;
+			};
 			allocator_->Bind(ctx);
 		}
 
@@ -61,6 +69,7 @@ namespace MRS {
 			now_ = t;
 			for (const auto& m : messenger_.Receive()) Handle(m, t);
 			pool_.ExpireClaims(t);
+			UpdateTrees(t);
 			if (robot_.HasMission()) Allocate(t);
 			robot_.Tick(t);
 			AfterRobot(t);
@@ -112,7 +121,12 @@ namespace MRS {
 			}
 			if (m.SlotCount() == 0) return;
 			PoolEntry* e = pool_.Find(m.Slot(0).s);
-			if (!e) return;  // a task we have not heard of yet
+			if (!e) {
+				// A complex node whose end condition failed on the robot that finished it.
+				if (code == "M_FAIL")
+					if (auto it = tree_of_.find(m.Slot(0).s); it != tree_of_.end()) it->second->state.Override(m.Slot(0).s, PoolState::FAILED);
+				return;  // otherwise a task we have not heard of yet
+			}
 			if (code == "M_DONE") {
 				OnFinished(e->id, PoolState::DONE, m.sender, t);
 			} else if (code == "M_FAIL") {
@@ -135,23 +149,141 @@ namespace MRS {
 		void MrsLayer::OnTasks(const Comm::Message& m, double t) {
 			for (std::size_t k = 0; k < m.SlotCount(); ++k) {
 				if (m.Slot(k).type != FieldType::Ref) continue;
+				const Record& r = m.Child(k);
+				if (c_.split_trees && IsComplexTask(r)) {
+					AddTree(r, t);
+					continue;
+				}
 				std::shared_ptr<const Task::Task> task;
 				try {
-					task = factory_.BuildTask(m.Child(k));
+					task = factory_.BuildTask(r);
 				} catch (const Task::TaskLoadError&) {
 					continue;  // a task this robot cannot load is a task it cannot do
 				}
-				PoolEntry* e = pool_.Add(task, t);
-				if (!e) continue;
-				++stats_.tasks_received;
-				if (!StaticOk(*task)) {
-					// Dump rule 1 (spec 06 §5): never on this robot.
-					e->state = PoolState::DUMPED_SELF;
-					e->static_dumps.insert(self_);
-					SendDump(e->id, "IMPOSSIBLE", true, 0, t);
-					CheckImpossible(*e, t);
+				AddEntry(task, t);
+			}
+		}
+
+		void MrsLayer::AddEntry(std::shared_ptr<const Task::Task> task, double t) {
+			PoolEntry* e = pool_.Add(task, t);
+			if (!e) return;
+			++stats_.tasks_received;
+			if (!StaticOk(*task)) {
+				// Dump rule 1 (spec 06 §5): never on this robot.
+				e->state = PoolState::DUMPED_SELF;
+				e->static_dumps.insert(self_);
+				SendDump(e->id, "IMPOSSIBLE", true, 0, t);
+				CheckImpossible(*e, t);
+			}
+			allocator_->OnTaskReceived(e->id, t);
+		}
+
+		// --- tree tasks (spec 11 §2) -------------------------------------------------------------
+
+		void MrsLayer::AddTree(const Record& root, double t) {
+			if (root.fields.empty() || trees_.count(root.fields[0].s)) return;  // a repeat
+			std::unique_ptr<Tree> tree;
+			try {
+				tree = std::make_unique<Tree>(Decompose(root));
+			} catch (const DecomposeError&) {
+				return;
+			}
+			std::vector<std::shared_ptr<const Task::Task>> leaves;
+			try {
+				for (const auto& id : tree->tree.leaves) leaves.push_back(factory_.BuildTask(tree->tree.Node(id).task));
+			} catch (const Task::TaskLoadError&) {
+				return;  // a leaf this robot cannot load: the robot takes no part in the tree
+			}
+			Tree* raw = tree.get();
+			for (const auto& [id, n] : raw->tree.nodes) tree_of_[id] = raw;
+			trees_[raw->tree.root] = std::move(tree);
+			++stats_.trees;
+			for (auto& leaf : leaves) {
+				AddEntry(leaf, t);
+				if (PoolEntry* e = pool_.Find(leaf->Id()); e && e->state == PoolState::AVAILABLE) e->state = PoolState::BLOCKED;
+			}
+			UpdateTrees(t);
+		}
+
+		std::optional<PoolState> MrsLayer::StateOf(const std::string& id) const {
+			if (const PoolEntry* e = pool_.Find(id)) return e->state;
+			auto it = tree_of_.find(id);
+			if (it == tree_of_.end()) return std::nullopt;
+			const Tree& tr = *it->second;
+			return tr.state.Of(id, [this](const std::string& leaf) {
+				const PoolEntry* e = pool_.Find(leaf);
+				return e ? e->state : PoolState::AVAILABLE;
+			});
+		}
+
+		const TaskTree* MrsLayer::TreeOf(const std::string& id) const {
+			auto it = tree_of_.find(id);
+			return it == tree_of_.end() ? nullptr : &it->second->tree;
+		}
+
+		bool MrsLayer::Gated(const TaskTree& tree, const TreeNode& leaf, const TreeState& state, double t) const {
+			const auto leaf_state = [this](const std::string& id) {
+				const PoolEntry* e = pool_.Find(id);
+				return e ? e->state : PoolState::AVAILABLE;
+			};
+			for (const auto& before : leaf.after)
+				if (state.Of(before, leaf_state) != PoolState::DONE) return true;
+			for (const auto& g : leaf.gates) {
+				std::unique_ptr<Task::Condition> c;
+				try {
+					c = factory_.BuildCondition(g);
+				} catch (const Task::TaskLoadError&) {
+					return true;
 				}
-				allocator_->OnTaskReceived(e->id, t);
+				Task::EvalContext ctx{robot_.World(), t, 0.0, robot_.World().Geo(), {}};
+				if (c->Evaluate(ctx) != Task::Truth::True) return true;
+			}
+			// Affinity (R_K): only the robot that did the partner may take it.
+			if (!leaf.affinity.empty() && tree.Has(leaf.affinity)) {
+				const PoolEntry* p = pool_.Find(leaf.affinity);
+				if (!p || p->state != PoolState::DONE || p->done_by != self_) return true;
+			}
+			return false;
+		}
+
+		void MrsLayer::UpdateTrees(double t) {
+			const auto leaf_state = [this](const std::string& id) {
+				const PoolEntry* e = pool_.Find(id);
+				return e ? e->state : PoolState::AVAILABLE;
+			};
+			for (auto& [root, tr] : trees_) {
+				// Nodes that just ended: their end condition, then the leaves they no longer need.
+				for (const auto& [id, n] : tr->tree.nodes) {
+					if (n.leaf || tr->finished.count(id)) continue;
+					PoolState s = tr->state.Of(id, leaf_state);
+					if (!Finished(s)) continue;
+					tr->finished.insert(id);
+					if (s == PoolState::DONE && !n.end.code.empty() && n.end.code != "C_N" && tr->last_finisher == self_) {
+						// The robot that finished the last leaf checks the end condition (spec 03 §6.2 rule 6).
+						bool ok = false;
+						try {
+							auto c = factory_.BuildCondition(n.end);
+							Task::EvalContext ctx{robot_.World(), t, 0.0, robot_.World().Geo(), {}};
+							ok = c->Evaluate(ctx) == Task::Truth::True;
+						} catch (const Task::TaskLoadError&) {
+						}
+						if (!ok) {
+							tr->state.Override(id, PoolState::FAILED);
+							auto r = messenger_.Begin("M_FAIL", "all", t);
+							r.fields.push_back(Tid(id));
+							r.fields.push_back(Id("END_NOT_MET"));
+							messenger_.Post(r);
+						}
+					}
+					for (const auto& leaf : LeavesUnder(tr->tree, id))
+						if (const PoolEntry* e = pool_.Find(leaf); e && !Finished(e->state)) OnFinished(leaf, PoolState::CANCELLED, self_, t);
+				}
+				// Gates: BLOCKED until the predecessors are done, the gate conditions hold and the affinity fits.
+				for (const auto& id : tr->tree.leaves) {
+					PoolEntry* e = pool_.Find(id);
+					if (!e || (e->state != PoolState::AVAILABLE && e->state != PoolState::BLOCKED)) continue;
+					e->state = Gated(tr->tree, tr->tree.Node(id), tr->state, t) ? PoolState::BLOCKED : PoolState::AVAILABLE;
+				}
 			}
 		}
 
@@ -161,7 +293,10 @@ namespace MRS {
 			PoolEntry* e = pool_.Find(id);
 			if (!e || Finished(e->state)) return;
 			e->state = s;
-			if (s == PoolState::DONE) e->done_by = by;
+			if (s == PoolState::DONE) {
+				e->done_by = by;
+				if (auto it = tree_of_.find(id); it != tree_of_.end()) it->second->last_finisher = by;
+			}
 			e->claims.clear();
 			if (assigned_ == id) {
 				if (robot_.CancelTask(id, t)) ++stats_.cancels;

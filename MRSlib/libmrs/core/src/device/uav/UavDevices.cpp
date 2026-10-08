@@ -1,5 +1,6 @@
 #include "mrs/device/uav/UavDevices.h"
 
+#include <algorithm>
 #include <cmath>
 
 #include "mrs/BuildError.h"
@@ -200,6 +201,109 @@ namespace MRS {
 				return out;
 			}
 
+			// --- Gimbal ----------------------------------------------------------------------
+
+			void Gimbal::OnConfigure() {
+				min_pitch_ = GetParams().Num("min_pitch", -1.5708);
+				max_pitch_ = GetParams().Num("max_pitch", 0.5);
+				if (min_pitch_ > max_pitch_) throw BuildError("min_pitch is above max_pitch");
+				Declare(Capability::Act("A_GMB", {{"min_pitch", min_pitch_}, {"max_pitch", max_pitch_}}));
+				const auto type = PortTypeOf(GetParams());
+				Params position;
+				position.Add("mode", IdValue("position"));  // a motor port that takes angles, not speeds
+				DeclarePort("pitch", type, Required(GetParams(), "pitch"), true, position);
+				if (GetParams().Has("yaw")) DeclarePort("yaw", type, GetParams().Text("yaw"), true, position);
+			}
+
+			ActionStatus Gimbal::Apply(const Action& action, double) {
+				if (action.code != "A_GMB") return ActionStatus::REJECTED;
+				const auto v = UnpackReals(ArgLayout::F32X2, action.arg);
+				const double pitch = std::clamp(v.at(0), min_pitch_, max_pitch_);
+				Port::Port* p = GetPort("pitch");
+				bool ok = p && p->Write({pitch});
+				if (Port::Port* y = GetPort("yaw")) ok = y->Write({v.at(1)}) && ok;
+				return ok ? ActionStatus::DONE : ActionStatus::FAILED;
+			}
+
+			// --- Camera ----------------------------------------------------------------------
+
+			void Camera::OnConfigure() {
+				Declare(Capability::Act("A_CAM", {}));
+				Params port = RateParams();
+				if (GetParams().Has("prefix")) port.Add("prefix", StrValue(GetParams().Text("prefix")));
+				DeclarePort("camera", PortTypeOf(GetParams()), Required(GetParams(), "device"), true, port);
+			}
+
+			ActionStatus Camera::Apply(const Action& action, double t) {
+				if (action.code != "A_CAM") return ActionStatus::REJECTED;
+				const auto v = UnpackIntegers(ArgLayout::U32X2, action.arg);
+				const auto shots = static_cast<std::uint32_t>(v.at(0)), interval_ms = static_cast<std::uint32_t>(v.at(1));
+				if (shots == 0) return ActionStatus::DONE;
+				if (!active_ || burst_ != action.arg) {
+					active_ = true;
+					burst_ = action.arg;
+					taken_ = 0;
+					next_ = t;
+				}
+				if (t + 1e-9 < next_) return ActionStatus::RUNNING;
+				Port::Port* port = GetPort("camera");
+				if (!port || !port->Write({static_cast<double>(shots_)})) {
+					active_ = false;
+					return ActionStatus::FAILED;
+				}
+				++shots_;
+				++taken_;
+				next_ = t + interval_ms / 1000.0;
+				if (taken_ < shots) return ActionStatus::RUNNING;
+				active_ = false;
+				return ActionStatus::DONE;
+			}
+
+			// --- Payload ---------------------------------------------------------------------
+
+			void PayloadLatch::OnConfigure() {
+				Declare(Capability::Act("A_REL", {}));
+				DeclarePort("latch", PortTypeOf(GetParams()), Required(GetParams(), "device"), true, RateParams());
+				package_ = GetParams().Int("package", 0);
+			}
+
+			std::int64_t PayloadLatch::Carried() {
+				std::vector<double> v;
+				Port::Port* port = GetPort("latch");
+				if (port && port->Read(v) && !v.empty()) held_ = v[0] > 0.5;
+				return held_ && !released_ ? package_ : 0;
+			}
+
+			ActionStatus PayloadLatch::Apply(const Action& action, double) {
+				if (action.code != "A_REL") return ActionStatus::REJECTED;
+				const auto package = UnpackIntegers(ArgLayout::I64, action.arg).at(0);
+				// Only the package the bay holds can be released (JB, 2026-10-08).
+				if (package == 0 || Carried() != package) return ActionStatus::FAILED;
+				Port::Port* port = GetPort("latch");
+				if (!port || !port->Write({0.0})) return ActionStatus::FAILED;
+				released_ = true;
+				return ActionStatus::DONE;
+			}
+
+			void PayloadSense::OnConfigure() { Declare(Capability::ViewOf("V_PAY")); }
+
+			void PayloadSense::Sample(double t, std::vector<View>& out) {
+				if (latch_) out.push_back({"V_PAY", t, {static_cast<double>(latch_->Carried())}, {}});
+			}
+
+			void Payload::Expand(const DeviceRegistry& registry) {
+				const Params& p = GetParams();
+				const std::string platform = Platform();
+				Params lp;
+				lp.Add("device", StrValue(Required(p, "device")));
+				Pass(p, lp, {"port", "package", "rate_hz"});
+				auto* latch = dynamic_cast<PayloadLatch*>(&AddVirtual(registry, "latch." + platform, "latch", lp));
+				if (!latch) throw BuildError("latch." + platform + " is not a payload latch");
+				auto* sense = dynamic_cast<PayloadSense*>(&AddVirtual(registry, "cargo.default", "cargo", Params{}));
+				if (!sense) throw BuildError("cargo.default is not a payload sensor");
+				sense->SetLatch(latch);
+			}
+
 			// --- Quadrotor -------------------------------------------------------------------
 
 			void Quadrotor::Expand(const DeviceRegistry& registry) {
@@ -245,6 +349,11 @@ namespace MRS {
 				r.Register<Barometer>("baro.webots", {{"device", StrValue("altimeter")}});
 				r.Register<LedArray>("led.webots", {{"device", StrValue("front left led")}, {"device", StrValue("front right led")}});
 				r.Register<Battery>("battery.webots", {{"device", StrValue("battery")}, {"voltage", NumValue(11.55)}});
+				r.Register<Gimbal>("gimbal.webots", {{"pitch", StrValue("camera pitch")}, {"yaw", StrValue("camera yaw")}});
+				r.Register<Camera>("camera.webots", {{"device", StrValue("camera")}});
+				r.Register<Payload>("payload.webots", {{"device", StrValue("connector")}});
+				r.Register<PayloadLatch>("latch.webots");
+				r.Register<PayloadSense>("cargo.default");
 				r.Register<Radio>("radio.webots",
 				                  {{"emitter", StrValue("emitter")}, {"receiver", StrValue("receiver")}, {"channel", NumValue(1)}});
 			}

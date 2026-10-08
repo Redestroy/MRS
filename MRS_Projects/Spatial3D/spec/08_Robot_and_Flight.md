@@ -99,6 +99,14 @@ Life cycle hooks, in the order they run: `OnInit` and `OnStart` (once, at the st
 5. `actuators.Update(t)`: the `fcu` runs its cascade.
 6. `resources.Update(world, t)`.
 
+### 3.1a Idle at layer (WP7, JB 2026-10-08)
+
+An airborne robot with nothing to do waits **at its own layer** (`layer.alt`, spec 06 §6), not at the altitude of its last task. After step 4, when the robot is airborne, its executor is empty, no task is pending, new tasks are not blocked, it is not returning home and this has lasted at least 1 s, the controller sends `A_PZY layer.alt yaw` through the safety supervisor, where `yaw` is the heading held when it went idle. The horizontal setpoint is left as it was, so the robot holds its place and only changes altitude. The 1 s delay keeps it from moving between two tasks that follow each other. A robot without `layer.alt` (no mission header) holds where it is.
+
+Effect on the WP6 runs (spec 10; even dispatch, 30 tasks, cluster, multicluster and random families, seeds 1–10, re-run on 2026-10-08): at N = 8, separation breaches per run fell from 16.0, 10.6 and 4.6 to 10.3, 6.3 and 1.5 with exclusive MRS-RTA, and barely changed with open MRS-RTA (41.8, 34.5, 14.6 to 40.1, 32.8, 13.7), whose breaches come from robots sharing a target. Makespans stayed within 1 to 4%. At N = 3 nothing changed beyond noise. These runs needed the travel fix of spec 09 §4 (`Δs3`); without it, exclusive claims flipped without end and 19 of 30 runs at N = 8 stalled.
+
+*Future mode (JB, not in version 0.1):* idle robots land and climb back to their layer only to hear from task dispatch, depending on the radio's range and on whether there is a signal at ground level.
+
 ### 3.2 Task list (WP4 only)
 
 Tasks are added from task strings (`.mrst` text). The executor's task source hands out the next one in order unless new tasks are blocked (battery low, swap). A task that fails the static checks (spec 03 §5), or whose target (a `C_P3` anywhere in it) lies outside the geofence shrunk by `fence_margin` or below `min_alt` (§5), ends at once as `FAILED` with reason `IMPOSSIBLE`. The shrunk box is used because the supervisor would clamp the robot short of a target in the margin, and the task's position condition could then never hold. In WP5 the MRS layer replaces this list.

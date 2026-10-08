@@ -133,6 +133,17 @@ namespace MRS {
 				}
 			};
 
+			// payload.id: the package the robot carries, 0 when its bay is empty (spec 05 §5.3).
+			class PayloadProcessor : public IViewProcessor {
+			public:
+				std::string Name() const override { return "PayloadProcessor"; }
+				std::vector<std::string> Subscriptions() const override { return {"V_PAY"}; }
+				std::vector<std::string> Provides() const override { return {"payload.id"}; }
+				void Process(const View& v, Worldview& w, double) override {
+					if (!v.values.empty()) w.SetScalar("payload.id", v.values[0], v.stamp, "payload");
+				}
+			};
+
 			class AglFromAmslProcessor : public IViewProcessor {
 			public:
 				std::string Name() const override { return "AglFromAmslProcessor"; }
@@ -394,6 +405,7 @@ namespace MRS {
 			p.push_back(std::make_unique<GeofenceProcessor>());
 			p.push_back(std::make_unique<PeerStateProcessor>());
 			p.push_back(std::make_unique<DetectionProcessor>(c));
+			p.push_back(std::make_unique<PayloadProcessor>());
 			return p;
 		}
 

@@ -44,6 +44,7 @@ namespace MRS {
 			p.actions = actions;
 			p.fields = fields;
 			p.roles.insert(roles.begin(), roles.end());
+			p.robot = "r" + std::to_string(id);
 			return p;
 		}
 

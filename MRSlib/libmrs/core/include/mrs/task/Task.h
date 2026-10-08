@@ -41,6 +41,7 @@ namespace MRS {
 			std::set<std::string> actions;  // action codes
 			std::set<std::string> fields;   // worldview fields it can provide, e.g. "pose.enu"
 			std::set<std::string> roles;
+			std::string robot;  // "r<id>", for R_I
 		};
 
 		// A requirement record R_* (spec 03 §5).
@@ -48,7 +49,7 @@ namespace MRS {
 			std::string code;
 			double max_age = -1.0;            // R_F
 			std::vector<std::string> items;   // R_F fields, R_A action codes
-			std::string name;                 // R_R role, R_E resource, R_K task id
+			std::string name;                 // R_R role, R_E resource, R_K task id, R_I robot
 			double amount = 0.0;              // R_E
 			std::shared_ptr<const Condition> condition;  // R_C
 			std::vector<Requirement> children;           // R_S

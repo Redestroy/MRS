@@ -64,6 +64,8 @@ namespace MRS {
 			// Messages the allocator may send.
 			std::function<void(const std::string& task, double expiry, double score)> claim;
 			std::function<void(const std::string& task)> release;
+			// False when the robot cannot run the task now (a runtime condition is FALSE); may be empty.
+			std::function<bool(const PoolEntry& entry, double t)> runnable;
 		};
 
 		struct Decision {

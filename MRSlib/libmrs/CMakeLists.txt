@@ -34,6 +34,7 @@ endif()
 
 add_subdirectory(core)
 add_subdirectory(algorithms)
+add_subdirectory(generators)
 add_subdirectory(sim)
 
 if(MRS_BUILD_WEBOTS)

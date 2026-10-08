@@ -83,6 +83,16 @@ Layers 2 and 3 use only these for flight (plan §5.7). Positions and velocities 
 
 A position setpoint and a velocity setpoint MUST NOT be mixed in one combined action. Missing halves of a setpoint keep their last commanded value: `A_PXY` alone keeps the last `z` and yaw.
 
+### 4.2a Payload actions (WP7)
+
+Used by the point presets of spec 11 §3.1. The actuators are in spec 04 §3.
+
+| Code | Name | Layout | Values | Meaning |
+|---|---|---|---|---|
+| `A_CAM` | CAPTURE | `U32X2` | shots, interval ms | Take `shots` pictures, `interval` ms apart. The action is `RUNNING` until the last one; 0 shots is done at once |
+| `A_GMB` | GIMBAL | `F32X2` | pitch rad, yaw rad | Point the camera gimbal. Pitch 0 is level and negative is down (−π/2 straight down); yaw is relative to the body. The gimbal clamps pitch to its limits |
+| `A_REL` | RELEASE | `I64` | package id | Open the payload bay if it holds package `id`. `FAILED` when it holds another package or none; id 0 is never released |
+
 ### 4.3 Device-level actions (inside the device layer only)
 
 These are produced by combined actuators for their sub-actuators. Tasks SHOULD NOT use them.

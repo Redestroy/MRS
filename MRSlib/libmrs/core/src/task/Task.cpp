@@ -53,6 +53,7 @@ namespace MRS {
 
 			bool RolesMet(const Requirement& r, const CapabilityProfile& p) {
 				if (r.code == "R_R" && !p.roles.count(r.name)) return false;
+				if (r.code == "R_I" && r.name != p.robot) return false;
 				for (const auto& c : r.children)
 					if (!RolesMet(c, p)) return false;
 				return true;

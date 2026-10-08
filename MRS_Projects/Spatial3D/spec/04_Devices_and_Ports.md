@@ -125,6 +125,13 @@ Parameters of `quadrotor.webots`, all optional, with the Webots Mavic 2 Pro devi
 | `led.webots` | `D_A` | `device`, repeatable, one per LED bit (`"front left led"`, `"front right led"`); `rgb` (`F`: any colour turns the LED on; `T`: the colour is written to an RGB LED) | `A_L` | `led0`, `led1`, … |
 | `battery.webots` | `D_M` | `capacity_wh` (required), `voltage` (nominal, 11.55 V) | `K_Q energy_wh`, view `V_BAT` | `battery` (address `battery`, the `Robot.battery` field) |
 | `radio.webots` | `D_C` | `channel` (1), `range_m`, `emitter` (`"emitter"`), `receiver` (`"receiver"`) | `K_M broadcast` | `tx`, `rx` |
+| `gimbal.webots` | `D_A` | `pitch` (`"camera pitch"`, required), `yaw` (`"camera yaw"`, optional), `min_pitch` (−1.5708), `max_pitch` (0.5) rad | `A_GMB`, with limits `min_pitch`, `max_pitch` | `pitch`, `yaw` (motor ports with `mode position`) |
+| `camera.webots` | `D_A` | `device` (`"camera"`), `rate_hz`, `prefix` (`"shot_"`) | `A_CAM` | `camera`. On Webots each shot is saved as `<prefix><robot>_<n>.jpg` in the controller folder |
+| `payload.webots` | `D_X` | `device` (`"connector"`), `package` (the package loaded before the flight, 0 for none), `rate_hz` | expands to `latch` and `cargo`, below | |
+| `latch.webots` | `D_A` | from `payload.webots` | `A_REL` | `latch`: reads 1 while it holds a package; a write of 0 opens it, 1 closes it |
+| `cargo.default` | `D_S` | none | `V_PAY` (the package the latch holds) | none: it reads the latch |
+
+The stock Mavic has the gimbal motors and the camera. The payload bay needs a Webots `Connector` named `connector` in the Mavic's `bodySlot`, locked to the package before the flight. `mavic_delivery_webots.mrsd` and `.mrsp` in the examples are the Mavic with all three (WP7). The test simulator (spec 10 §4) has the same device names: it records each shot (time, position, gimbal pitch) and each release (time, position).
 
 The stock Mavic has no barometer; without `baro.webots` the worldview takes `alt.amsl` from GNSS (spec 05 §5.1).
 

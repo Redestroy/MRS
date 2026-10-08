@@ -20,7 +20,10 @@ MRSlib/
       src/
     algorithms/            MRS::Algorithms: task pool, peer table, allocators, the MRS layer
                            and the task issuer (WP5); the route planner, PlannerAllocator,
-                           CentralPlanner and PlanFollowerAllocator (WP6)
+                           CentralPlanner and PlanFollowerAllocator (WP6); the tree
+                           decomposer and tree tasks in the pool and issuer (WP7)
+    generators/            MRS::Generators (mrs_generators): point, path, coverage, perimeter and
+                           spiral search generators, GeoJSON input (WP7, spec 11)
     sim/                   MRS::Sim (mrs_sim): QuadSim, the team harness, task-set generators,
                            the oracle form and evaluation runs (WP6, spec 10)
     platforms/webots/      WebotsPlatform (mrs_webots), built only when WEBOTS_HOME is set;
@@ -31,7 +34,8 @@ MRSlib/
     behaviours/            .mrsb files
     tools/                 mrs_fmt (check a file, print its canonical form);
                            mrs_port2021 (convert a 2021 task set, WP5);
-                           mrs_experiment (the WP6 batch runner, spec 10 §6)
+                           mrs_experiment (the WP6 batch runner, spec 10 §6);
+                           mrs_generate (GeoJSON to a timeline, WP7, spec 11 §4.3)
     tests/
       third_party/doctest.h
       protocol/            round-trip and error tests
@@ -41,6 +45,8 @@ MRSlib/
       flight/              the single-UAV flight tests on QuadSim (WP4)
       team/                several UAVs over a simulated radio: messages, claims, RTA, dumps (WP5)
       sim/                 planner, generators, oracle form, M_PLAN, one run per condition (WP6)
+      tree/                decomposer, derived states, generators, GeoJSON, payload devices,
+                           idle at layer and the 3-UAV coverage acceptance run (WP7)
 MRS_Projects/Spatial3D/
   README.md
   docs/                    plan and design notes
@@ -48,6 +54,7 @@ MRS_Projects/Spatial3D/
     examples/              example protocol files (also test inputs)
   experiments/uav_spatial/ ported 2021 task sets and the 5-UAV mission (WP5); analyze.py
                            and the WP6 results (spec 10)
+  experiments/uav_trees/   GeoJSON examples for the generators (WP7, spec 11 §4.3)
 .github/workflows/spatial3d.yml
 ```
 
@@ -204,6 +211,10 @@ In Webots, `platforms/webots/controllers/mrs_worldview_check` compares the same 
 * Ported task set 1 under every condition: every task done, nothing crashed or outside the fence,
   S1* no slower than S1, every group under 0.6 × S1, no duplicates under G-C and G-RTA-X.
 
-### 5.9 Out of scope for WP0
+### 5.9 Tree and generator tests (WP7)
+
+`tests/tree/` checks spec 11; the cases are listed in spec 11 §5. The camera, gimbal and payload tests fly `mavic_delivery_webots.mrsd` in QuadSim.
+
+### 5.10 Out of scope for WP0
 
 Condition evaluation, the executor, devices and the worldview get their own tests in WP1–WP3. WP0 only checks that every object can be read and written exactly.

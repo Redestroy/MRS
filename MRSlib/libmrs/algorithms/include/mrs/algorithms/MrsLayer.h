@@ -2,12 +2,16 @@
 // The MRS layer of one robot (plan §8, spec 09 §5): messages in and out, the task pool, the
 // peer table, the dump rule, and the allocator that feeds the robot controller.
 #include <deque>
+#include <map>
+#include <optional>
+#include <set>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include "mrs/algorithms/Allocator.h"
 #include "mrs/algorithms/TaskPool.h"
+#include "mrs/algorithms/TaskTree.h"
 #include "mrs/comm/Messenger.h"
 #include "mrs/robot/RobotController.h"
 #include "mrs/task/TaskFactory.h"
@@ -20,11 +24,15 @@ namespace MRS {
 			double peer_timeout = 10.0;    // s (spec 06 §5)
 			double retry_cooldown = 30.0;  // s after a dynamic dump (spec 06 §5)
 			double claim_grace = 120.0;    // s, until a mission header says otherwise (spec 06 §4.1)
+			// Tree tasks are split into leaves that any robot may take (spec 11 §2). Off: the robot
+			// runs each tree itself as one complex task (spec 03 §6.1), as a lone robot may.
+			bool split_trees = true;
 		};
 
 		struct MrsStats {
 			long tasks_received = 0, done = 0, failed = 0, dumps_static = 0, dumps_dynamic = 0;
 			long switches = 0, cancels = 0;
+			long trees = 0;  // tree tasks decomposed (spec 11 §2)
 		};
 
 		class MrsLayer {
@@ -44,10 +52,18 @@ namespace MRS {
 			const MrsStats& Stats() const { return stats_; }
 			// The task this layer gave the robot, or empty.
 			const std::string& Assigned() const { return assigned_; }
+			// The pool state of a task, a leaf or a node of a tree task (spec 03 §3.2).
+			std::optional<PoolState> StateOf(const std::string& id) const;
+			// The tree a leaf or node belongs to, or nullptr.
+			const TaskTree* TreeOf(const std::string& id) const;
 
 		private:
 			void Handle(const Comm::Message& m, double t);
 			void OnTasks(const Comm::Message& m, double t);
+			void AddTree(const Protocol::Record& root, double t);
+			void AddEntry(std::shared_ptr<const Task::Task> task, double t);
+			void UpdateTrees(double t);
+			bool Gated(const TaskTree& tree, const TreeNode& leaf, const TreeState& state, double t) const;
 			void OnFinished(const std::string& id, PoolState s, const std::string& by, double t);
 			void Allocate(double t);
 			void Assign(const std::string& id, double t);
@@ -67,6 +83,16 @@ namespace MRS {
 			MrsConfig c_;
 			std::string self_;
 			TaskPool pool_;
+			struct Tree {
+				TaskTree tree;
+				TreeState state;
+				std::set<std::string> finished;  // nodes whose end was handled
+				std::string last_finisher;       // who reported the latest DONE leaf
+				explicit Tree(TaskTree t) : tree(std::move(t)), state(tree) {}
+				Tree(const Tree&) = delete;
+			};
+			std::map<std::string, std::unique_ptr<Tree>> trees_;  // by root id
+			std::map<std::string, Tree*> tree_of_;                 // every node id -> its tree
 			PeerTable peers_;
 			std::string assigned_;
 			std::deque<std::pair<Task::TaskEvent, double>> robot_events_;

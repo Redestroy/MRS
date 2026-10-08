@@ -106,6 +106,7 @@ The thresholds are configuration, not spec.
 | `peer.<id>.task` | id | `PeerStateProcessor` | |
 | `rel.<id>.enu` | vec3 | `RelativePositionProcessor` | Relative position of a peer from a ranging sensor |
 | `det.<class>.<n>.enu` | vec3 | `DetectionProcessor` | Object detections |
+| `payload.id` | scalar | `PayloadProcessor` | The package the robot carries, 0 when its bay is empty (WP7, spec 11 §3.1) |
 
 ## 5. Processors
 
@@ -180,6 +181,7 @@ The self model (spec 04 §7) works out which fields a robot can provide from des
 | `GeofenceProcessor` | — | `pose.enu` | `geofence.inside` | |
 | `PeerStateProcessor` | `V_PEER` | — | `peer` (the `peer.<id>.*` subtree) | |
 | `DetectionProcessor` | `V_DET` | — | `det` (the `det.<class>.<n>.*` subtree) | |
+| `PayloadProcessor` | `V_PAY` | — | `payload.id` | |
 
 A processor is in the robot's chain when at least one of its subscriptions is produced (or it has none) and its needs are met; this is the same fixed point as spec 04 §7. Processors whose inputs never appear are left out, so they cost nothing.
 
@@ -218,6 +220,7 @@ Every view code starts with the slot `num stamp` (mission time of the informatio
 | `V_PEER` | `int robot`, `num x`, `num y`, `num z`, `num vx`, `num vy`, `num vz`, `num battery`, `tid task` | a peer's `STATE` message (spec 06) |
 | `V_REL3` | `int robot`, `num dx`, `num dy`, `num dz` | relative-position sensor |
 | `V_DET` | `id class`, `num x`, `num y`, `num z`, `num confidence` | detector |
+| `V_PAY` | `num package` | payload bay: the package held, 0 for none (WP7) |
 | `V_P2` | `num x`, `num y`, `num yaw` | legacy 2D pose (E-puck) |
 
 **View matching (`C_V`)** in version 0.1 is defined only for:

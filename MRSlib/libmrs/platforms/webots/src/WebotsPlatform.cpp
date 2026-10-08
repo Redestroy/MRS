@@ -1,12 +1,15 @@
 #include "mrs/platform/WebotsPlatform.h"
 
+#include <algorithm>
 #include <cmath>
 #include <limits>
 #include <string>
 
 #include <webots/Accelerometer.hpp>
 #include <webots/Altimeter.hpp>
+#include <webots/Camera.hpp>
 #include <webots/Compass.hpp>
+#include <webots/Connector.hpp>
 #include <webots/Device.hpp>
 #include <webots/Emitter.hpp>
 #include <webots/GPS.hpp>
@@ -36,6 +39,7 @@ namespace MRS {
 				case webots::Node::EMITTER: return "Emitter";
 				case webots::Node::RECEIVER: return "Receiver";
 				case webots::Node::CAMERA: return "Camera";
+				case webots::Node::CONNECTOR: return "Connector";
 				default: return "";
 				}
 			}
@@ -118,17 +122,69 @@ namespace MRS {
 			class MotorPort : public P::Port {
 			public:
 				MotorPort(P::PortAssignment a, webots::Motor* motor) : P::Port(std::move(a)), motor_(motor) {
+					position_ = Assignment().params.Text("mode", "velocity") == "position";  // gimbal axes
+					if (position_) return;
 					motor_->setPosition(std::numeric_limits<double>::infinity());  // velocity mode
 					motor_->setVelocity(0.0);
 				}
 				bool Write(const std::vector<double>& values) override {
 					if (values.empty() || !std::isfinite(values[0])) return false;
-					motor_->setVelocity(values[0]);
+					if (position_) {
+						const double lo = motor_->getMinPosition(), hi = motor_->getMaxPosition();
+						double v = values[0];
+						if (lo < hi) v = std::min(std::max(v, lo), hi);  // both 0: no limits
+						motor_->setPosition(v);
+					} else {
+						motor_->setVelocity(values[0]);
+					}
 					return true;
 				}
 
 			private:
 				webots::Motor* motor_;
+				bool position_ = false;
+			};
+
+			// A write saves the camera's current image as <prefix><robot>_<shot>.jpg in the
+			// controller's folder.
+			class CameraPort : public P::Port {
+			public:
+				CameraPort(P::PortAssignment a, webots::Robot& robot, webots::Camera* camera, int period_ms)
+				    : P::Port(std::move(a)), robot_(robot), camera_(camera) {
+					camera_->enable(period_ms);
+					prefix_ = Assignment().params.Text("prefix", "shot_");
+				}
+				bool Write(const std::vector<double>& values) override {
+					if (values.empty()) return false;
+					const std::string file = prefix_ + robot_.getName() + "_" + std::to_string(static_cast<long>(values[0])) + ".jpg";
+					return camera_->saveImage(file, 90) == 0;
+				}
+
+			private:
+				webots::Robot& robot_;
+				webots::Camera* camera_;
+				std::string prefix_;
+			};
+
+			// Payload latch: reads 1 while locked to a package, a write of 0 unlocks, 1 locks.
+			class ConnectorPort : public P::Port {
+			public:
+				ConnectorPort(P::PortAssignment a, webots::Connector* connector, int period_ms) : P::Port(std::move(a)), connector_(connector) {
+					connector_->enablePresence(period_ms);
+				}
+				bool Read(std::vector<double>& values) override {
+					values = {connector_->isLocked() ? 1.0 : 0.0};
+					return true;
+				}
+				bool Write(const std::vector<double>& values) override {
+					if (values.empty()) return false;
+					if (values[0] >= 0.5) connector_->lock();
+					else connector_->unlock();
+					return true;
+				}
+
+			private:
+				webots::Connector* connector_;
 			};
 
 			class LedPort : public P::Port {
@@ -248,6 +304,8 @@ namespace MRS {
 			case webots::Node::LED: return std::make_unique<LedPort>(a, static_cast<webots::LED*>(d));
 			case webots::Node::EMITTER: return std::make_unique<EmitterPort>(a, static_cast<webots::Emitter*>(d));
 			case webots::Node::RECEIVER: return std::make_unique<ReceiverPort>(a, static_cast<webots::Receiver*>(d), period);
+			case webots::Node::CAMERA: return std::make_unique<CameraPort>(a, robot_, static_cast<webots::Camera*>(d), period);
+			case webots::Node::CONNECTOR: return std::make_unique<ConnectorPort>(a, static_cast<webots::Connector*>(d), period);
 			default: return nullptr;
 			}
 		}

@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "mrs/algorithms/Planner.h"
+#include "mrs/algorithms/TaskTree.h"
 #include "mrs/comm/Messenger.h"
 #include "mrs/protocol/Record.h"
 
@@ -53,7 +54,11 @@ namespace MRS {
 			long PlansSent() const { return plans_sent_; }
 			const CentralPlanner* Planner() const { return planner_.get(); }
 
+			// Top-level tasks, tree roots included: a root is done when its tree is (spec 11 §2.5).
 			const std::map<std::string, IssuedTask>& Tasks() const { return issued_; }
+			// The leaves of the tree tasks, by leaf id.
+			const std::map<std::string, IssuedTask>& Leaves() const { return leaves_; }
+			const TaskTree* Tree(const std::string& root) const;
 			const Comm::Messenger& Messages() const { return messenger_; }
 
 		private:
@@ -73,8 +78,18 @@ namespace MRS {
 			std::vector<std::string> order_;  // ids in dispatch order
 			std::unique_ptr<CentralPlanner> planner_;
 			long plans_sent_ = 0;
+			struct IssuedTree {
+				TaskTree tree;
+				TreeState state;
+				explicit IssuedTree(TaskTree t) : tree(std::move(t)), state(tree) {}
+				IssuedTree(const IssuedTree&) = delete;
+			};
+			std::map<std::string, std::unique_ptr<IssuedTree>> trees_;  // by root
+			std::map<std::string, std::string> root_of_;                 // node id -> root
+			std::map<std::string, IssuedTask> leaves_;
 
 			void SendPlans(double t);
+			void OnTreeMessage(const Comm::Message& m, const std::string& root);
 		};
 
 		// How a 2021 E-puck task set maps to a flying area (spec 09 §7).

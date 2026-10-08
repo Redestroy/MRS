@@ -102,6 +102,74 @@ namespace MRS {
 				void OnConfigure() override;
 			};
 
+			// A_GMB: gimbal pitch and yaw (rad), each written to a position-mode motor port.
+			class Gimbal : public Actuator {
+			public:
+				ActionStatus Apply(const Action& action, double t) override;
+
+			protected:
+				void OnConfigure() override;
+
+			private:
+				double min_pitch_ = -1.5708, max_pitch_ = 0.5;
+			};
+
+			// A_CAM shots interval_ms: a burst of pictures. Each shot is one write of its index to the
+			// camera port; the action is RUNNING until the last shot.
+			class Camera : public Actuator {
+			public:
+				ActionStatus Apply(const Action& action, double t) override;
+				std::size_t Shots() const { return shots_; }
+
+			protected:
+				void OnConfigure() override;
+
+			private:
+				std::uint64_t burst_ = 0;  // argument of the burst in progress
+				bool active_ = false;
+				std::uint32_t taken_ = 0;
+				double next_ = 0.0;
+				std::size_t shots_ = 0;    // every shot since start
+			};
+
+			// The release half of a payload bay: its port reads 1 while a package is held and takes a
+			// write of 0 to open. A_REL package releases the held package, if it is that package.
+			class PayloadLatch : public Actuator {
+			public:
+				ActionStatus Apply(const Action& action, double t) override;
+				// The package held now, 0 when the bay is empty.
+				std::int64_t Carried();
+				void SetPackage(std::int64_t package) { package_ = package; }
+
+			protected:
+				void OnConfigure() override;
+
+			private:
+				std::int64_t package_ = 0;
+				bool held_ = false;
+				bool released_ = false;
+			};
+
+			// The sense half of a payload bay: V_PAY with the package the latch holds.
+			class PayloadSense : public Sensor {
+			public:
+				void Sample(double t, std::vector<View>& out) override;
+				void SetLatch(PayloadLatch* latch) { latch_ = latch; }
+
+			protected:
+				void OnConfigure() override;
+
+			private:
+				PayloadLatch* latch_ = nullptr;
+			};
+
+			// payload.*: expands to latch (A_REL) and cargo (V_PAY). Parameters: device (the latch's
+			// port address) and package (the package loaded before the flight, 0 for none).
+			class Payload : public ComplexDevice {
+			public:
+				void Expand(const DeviceRegistry& registry) override;
+			};
+
 			// quadrotor.*: expands to m_fl, m_fr, m_rl, m_rr, fcu and imu (spec 04 §3).
 			class Quadrotor : public ComplexDevice {
 			public:

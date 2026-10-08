@@ -534,6 +534,8 @@ namespace MRS {
 					c.Num();
 				} else if (code == "R_K") {
 					c.Tid();
+				} else if (code == "R_I") {
+					c.Id();
 				} else if (code == "R_C") {
 					c.Label('C');
 				}
@@ -593,7 +595,7 @@ namespace MRS {
 				c.Num();  // stamp
 				static const std::map<std::string, int> plain = {
 					{"V_GEO", 3}, {"V_POS3", 3}, {"V_VEL3", 3}, {"V_ATT", 3}, {"V_RATE", 3}, {"V_ACC", 3},
-					{"V_BARO", 1}, {"V_MAG", 1}, {"V_RNG", 1}, {"V_BAT", 3}, {"V_P2", 3}};
+					{"V_BARO", 1}, {"V_MAG", 1}, {"V_RNG", 1}, {"V_PAY", 1}, {"V_BAT", 3}, {"V_P2", 3}};
 				auto it = plain.find(code);
 				if (it != plain.end()) return c.Nums(it->second);
 				if (code == "V_PEER") {
@@ -752,12 +754,12 @@ namespace MRS {
 					};
 					add({"T_A", "T_P", "T_B", "T_S", "T_L", "T_O"}, TaskSlots);
 					add({"C_N", "C_F", "C_?", "C_m", "C_T", "C_W", "C_L", "C_V", "C_S", "C_P", "C_P3", "C_G", "C_H"}, ConditionSlots);
-					add({"R_S", "R_F", "R_A", "R_R", "R_E", "R_K", "R_C"}, RequirementSlots);
+					add({"R_S", "R_F", "R_A", "R_R", "R_E", "R_K", "R_I", "R_C"}, RequirementSlots);
 					add({"A_MAP", "A_FN"}, ActionSlots);
 					for (const auto& info : Device::ActionRegistry()) s.codes[info.code] = ActionSlots;
 					add({"F_K", "F_L", "F_X", "F_S", "F_P", "F_C"}, FunctionSlots);
 					add({"V_GEO", "V_POS3", "V_VEL3", "V_ATT", "V_RATE", "V_ACC", "V_BARO", "V_MAG", "V_RNG", "V_BAT",
-					     "V_PEER", "V_REL3", "V_DET", "V_P2"}, ViewSlots);
+					     "V_PEER", "V_REL3", "V_DET", "V_P2", "V_PAY"}, ViewSlots);
 					add({"D_H", "D_J", "D_X", "D_S", "D_A", "D_C", "D_M"}, DeviceSlots);
 					add({"P_R", "P_A"}, PortSlots);
 					add({"K_A", "K_V", "K_M", "K_Q"}, CapabilitySlots);
