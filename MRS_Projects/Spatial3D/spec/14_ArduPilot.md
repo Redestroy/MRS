@@ -180,12 +180,24 @@ Version 0.1 does step 1. Steps 2 and 3 need JB's machines (§10).
 
 **SITL alone.** ArduCopter 4.6.3 (`Copter-4.6.3`), built with `./waf configure --board sitl && ./waf copter`. Each instance *i* runs `arducopter --model + --speedup 1 --defaults Tools/autotest/default_params/copter.parm --sysid i+1 -I i --home LAT,LON,ALT,0`, at the geodetic position of robot *i* + 1's home in the mission header. `experiments/uav_ardupilot/run_sitl.sh` starts N instances, N robots and the operator, and stops them all at the end.
 
-RESULTS
+`sitl.parm` adds `BATT_CAPACITY 20000`: SITL's default 3.3 Ah pack draws about 25 A in the `+` model, and one copter reached the low-battery rule (spec 08 §4) after 14 of the 15 tasks of task set 1. It then flew home, landed for a swap and waited, as specified.
+
+**Results** (`experiments/uav_ardupilot/results/wp10`, 2026-10-09). Task set 1 of 2021, mission `mission_5uav`; every run completed all tasks with no duplicate completions, faults or failsafes. Two runs per team condition:
+
+| condition | SITL (s) | QuadSim (s) | SITL / QuadSim | Webots Mavic (s) |
+|---|---|---|---|---|
+| S1, one copter | 319.8 | 276.6 | 1.16 | |
+| G-RTA, N = 3 | 147.3, 147.7 | 134.0 | 1.10 | 130.7 |
+| G-RTA-X, N = 3 | 161.4, 153.9 | 136.1 | 1.13–1.19 | |
+| G-CBBA, N = 3 | 161.2, 160.5 | 117.9 | 1.36–1.37 | |
+| G-LDTA2, N = 3 | 156.1, 161.3 | 136.1 | 1.15–1.18 | |
+
+ArduCopter is 10–20% slower than QuadSim on the same tasks; its position controller limits acceleration and jerk, so short legs do not reach cruise speed (inferred). Runs differ by up to 5%, since SITL runs in real time over UDP. CBBA loses its QuadSim lead: its bundles are planned from a travel estimate that matches QuadSim, not ArduCopter (inferred). `single_flight.mrsl` (take off, fly 8 m, land) completed in SITL in 73.8 s.
 
 ## 10. Not in version 0.1
 
 * **Webots with SITL** (acceptance step 2). ArduPilot ships a Webots integration (`libraries/SITL/examples/Webots_Python`, SITL model `webots-python`), in which Webots supplies the physics and sensors and SITL flies. `mrs_ardupilot_uav` connects to that SITL exactly as in §9; nothing in the library changes. It needs a Webots version the integration supports, and SITL on Linux or WSL.
-* **A real flight** (acceptance step 3). One copter flies `uav_single_flight.mrst` (take off to 5 m, fly to a point, land) with `mrs_ardupilot_uav` on a companion computer or a laptop on the telemetry link. It needs a safety pilot with an RC override, the geofence of the mission header inside a legal flying area, and the autopilot's own failsafes configured.
+* **A real flight** (acceptance step 3). One copter flies `experiments/uav_ardupilot/single_flight.mrsl` (take off to 6 m, fly 8 m, flash the LEDs, land; flown in SITL first, §9). Between tasks and on the way, the robot rises to its altitude layer (20 m for robot 1, spec 09), so the field must allow that height. `mrs_ardupilot_uav` runs on a companion computer or a laptop on the telemetry link, and the mission header's `G_O` and fence are moved to the field. It needs a safety pilot with an RC override, the geofence of the mission header inside a legal flying area, and the autopilot's own failsafes configured.
 * A serial link, MAVLink signing, and more than one autopilot per link.
 * Rangefinder and relative-altitude pass-through. `alt.agl` assumes flat ground at home (§5).
 

@@ -26,8 +26,8 @@ for name in sorted(os.listdir(root)):
     n = int(name.split("_n")[1].split("_")[0])
     alloc = name.split("_", 2)[2]
     cond = "S1" if n == 1 else CONDITION.get(alloc, alloc)
-    q = quadsim.get((cond, n))
+    q = quadsim.get((cond, n)) if name.startswith("ts1_") else None  # the QuadSim CSV holds task set 1
     qm = float(q["makespan_s"]) if q else None
     print(f"| {name} | {n} | {len(done)}/{len(rows)} | {makespan:.1f} | {sum(lat)/len(lat):.1f} | {max(lat):.1f} | "
-          f"{' '.join(f'{k}:{v}' for k, v in sorted(per.items()))} | {qm if qm is None else f'{qm:.1f}'} | "
+          f"{' '.join(f'{k}:{v}' for k, v in sorted(per.items()))} | {'' if qm is None else f'{qm:.1f}'} | "
           f"{'' if qm is None else f'{makespan/qm:.2f}'} |")

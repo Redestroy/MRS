@@ -1,0 +1,30 @@
+# mrs_experiment run
+commit unknown
+world QuadSim (spec 08 §9)
+examples /home/claude/mrs/MRS_Projects/Spatial3D/spec/examples
+mission H: H_M m1 56.9496 24.1052 10 -100 100 -100 100 60 20 3 120 0/ (homes per run: a row 4 m apart in seed order)
+gps_noise 0.05 m
+battery 200 Wh
+time_limit 4000 s
+rta switch_margin 0.25 claim_ttl 10
+sta stack_bonus 0.5 relative_bonus 0.5
+size a1 0.001 a2 10 a3 0.5 a4 0.5 pursuit 0.2
+travel v_xy 7.5 v_z 2 settle 1.5 takeoff 0 cruise_alt 20
+planner S1/S1* objective makespan, G-C objective completion; improve_rounds 30
+runs 5 (5 to do)
+
+# mrs_experiment run
+commit unknown
+world QuadSim (spec 08 §9)
+examples /home/claude/mrs/MRS_Projects/Spatial3D/spec/examples
+mission H: H_M m1 56.9496 24.1052 10 -100 100 -100 100 60 20 3 120 0/ (homes per run: a row 4 m apart in seed order)
+gps_noise 0.05 m
+battery 200 Wh
+time_limit 4000 s
+rta switch_margin 0.25 claim_ttl 10
+sta stack_bonus 0.5 relative_bonus 0.5
+size a1 0.001 a2 10 a3 0.5 a4 0.5 pursuit 0.2
+travel v_xy 7.5 v_z 2 settle 1.5 takeoff 0 cruise_alt 20
+planner S1/S1* objective makespan, G-C objective completion; improve_rounds 30
+runs 1 (1 to do)
+
