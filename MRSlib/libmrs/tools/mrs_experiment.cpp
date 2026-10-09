@@ -9,6 +9,7 @@
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <mutex>
 #include <set>
@@ -32,6 +33,8 @@ namespace {
 	    "                     [--out results.csv] [--limit SECONDS] [--sets-out DIR] [--examples DIR]\n"
 	    "                     [--commit HASH] [--trees FAMILY:TREES:PARTS[:INTERVAL]]... [--cond G-STA:N,..|G-CBBA:N,..]\n"
 	    "                     [--bitrate BPS,..]  (0: no limit; every run is flown at each bitrate)\n"
+	    "                     [--repulsion LEAD,..]  (s; 0: off; every run is flown at each lead, spec 15 §4.3)\n"
+	    "                     [--ranging NOISE_M]  (every robot gets a ranging sensor, spec 15 §3.1)\n"
 	    "  mrs_experiment gen FAMILY DISPATCH TASKS SEED\n"
 	    "  mrs_experiment oracle FILE\n"
 	    "families: grid radial cluster multicluster random; dispatch: static even clustered random\n"
@@ -70,9 +73,15 @@ namespace {
 		return out;
 	}
 
+	std::string Fmt(double v) {
+		std::ostringstream o;
+		o << std::fixed << std::setprecision(3) << v;
+		return o.str();
+	}
+
 	std::string Key(const Sim::RunSpec& s) {
 		return s.set + "|" + std::to_string(s.seed) + "|" + Sim::ConditionName(s.condition) + "|" + std::to_string(Sim::IsSingle(s.condition) ? 1 : s.n) +
-		       "|" + std::to_string(std::lround(s.bitrate_bps));
+		       "|" + std::to_string(std::lround(s.bitrate_bps)) + "|" + Fmt(s.repulsion_lead) + "|" + Fmt(s.ranging_noise);
 	}
 
 	// Runs already in the CSV (set, seed, condition, n), so an interrupted grid resumes.
@@ -88,7 +97,10 @@ namespace {
 			while (std::getline(s, x, ',')) f.push_back(x);
 			// The bitrate column (spec 13 §4) is absent in files from before WP9: no limit.
 			const std::string bitrate = f.size() > 31 ? std::to_string(std::lround(std::stod(f[31]))) : "0";
-			if (f.size() > 6) keys.insert(f[0] + "|" + f[4] + "|" + f[5] + "|" + f[6] + "|" + bitrate);
+			// The repulsion and ranging columns (spec 15 §5) are absent before WP11: off.
+			const std::string lead = f.size() > 35 ? Fmt(std::stod(f[35])) : Fmt(0.0);
+			const std::string ranging = f.size() > 36 ? Fmt(std::stod(f[36])) : Fmt(-1.0);
+			if (f.size() > 6) keys.insert(f[0] + "|" + f[4] + "|" + f[5] + "|" + f[6] + "|" + bitrate + "|" + lead + "|" + ranging);
 		}
 		return keys;
 	}
@@ -99,7 +111,8 @@ namespace {
 		std::vector<GenSpec> gens;
 		std::vector<TreeSpec> tree_sets;
 		std::vector<CondSpec> conds;
-		std::vector<double> bitrates{0.0};
+		std::vector<double> bitrates{0.0}, leads{0.0};
+		double ranging = -1.0;
 		int seed_a = 1, seed_b = 10, jobs = static_cast<int>(std::max(1u, std::thread::hardware_concurrency()));
 		double limit = 4000.0;
 		std::string commit = "unknown";
@@ -122,6 +135,12 @@ namespace {
 				std::string part;
 				while (std::getline(in, part, ',')) bitrates.push_back(std::stod(part));
 			}
+			else if (a == "--repulsion") {
+				leads.clear();
+				std::stringstream in(next());
+				std::string part;
+				while (std::getline(in, part, ',')) leads.push_back(std::stod(part));
+			} else if (a == "--ranging") ranging = std::stod(next());
 			else if (a == "--seeds") {
 				const std::string v = next();
 				const auto dash = v.find('-');
@@ -172,15 +191,18 @@ namespace {
 		// The run list: every set and seed under every condition.
 		std::vector<Sim::RunSpec> runs;
 		auto add = [&](Sim::RunSpec s) {
-			for (double b : bitrates)
-				for (const auto& c : conds)
-					for (int n : c.n) {
-						s.condition = c.condition;
-						s.n = Sim::IsSingle(c.condition) ? 1 : n;
-						s.bitrate_bps = b;
-						runs.push_back(s);
-						if (Sim::IsSingle(c.condition)) break;
-					}
+			s.ranging_noise = ranging;
+			for (double lead : leads)
+				for (double b : bitrates)
+					for (const auto& c : conds)
+						for (int n : c.n) {
+							s.condition = c.condition;
+							s.n = Sim::IsSingle(c.condition) ? 1 : n;
+							s.bitrate_bps = b;
+							s.repulsion_lead = lead;
+							runs.push_back(s);
+							if (Sim::IsSingle(c.condition)) break;
+						}
 		};
 		if (!ported.empty()) {
 			std::vector<fs::path> files_in;

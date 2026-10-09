@@ -58,8 +58,9 @@ taskid = issuer "." seq { "." child }
 | `M_STATE` | `V` (a `V_PEER` view) | broadcast, at `state_rate` (default 2 Hz) | Heartbeat: pose, velocity, battery, current task |
 | `M_PROFILE` | `id robot_type`, `int n`, `n × id role`, `K*` | broadcast, on join and on change | Capability profile from the self model (spec 04 §7) |
 | `M_BID` | `int n`, `n × (tid task, num bid, id winner, num time)` | broadcast | CBBA winning-bid list (task, winning bid, winning agent, time of the bid). Winner `0`: none (the sender gave the task up). Spec 13 §2.2 |
-| `M_INFOREQ` | `int n`, `n × id topic` | P2P | Ask a peer for information. Topics: `mission`, `tasks`, `profile`, or a field path |
-| `M_INFO` | any records | P2P | Answer to `M_INFOREQ`: `H`, `T`, `K` or `V` records |
+| `M_INFOREQ` | `int n`, `n × id topic` | P2P | Ask a peer for information. Topics: `mission`, `tasks`, `profile`, or a field prefix (robots answer field prefixes only in version 0.1; spec 15 §2.3) |
+| `M_INFO` | any records | P2P | Answer to `M_INFOREQ`: `H`, `T`, `K` or `V` records (`V_FLD` and `V_DET` for a field prefix) |
+| `M_SYNC` | `V+` (`V_FLD` and `V_DET` views) | broadcast | World fields and detections the sender measured itself (WP11, spec 15 §2) |
 | `M_CMD` | `id command`, `tid task` | broadcast or P2P, from the issuer | `abort`, `recall`, `pause`, `resume`, `cancel` (with a task id; `0` for commands about the whole mission) |
 | `M_PLAN` | `int revision`, `int n`, `n × tid task` | P2P, from the issuer | The recipient's route from the central planner (G-C, spec 10 §2.3), in order. A higher revision replaces the route; a lower or equal one is ignored |
 

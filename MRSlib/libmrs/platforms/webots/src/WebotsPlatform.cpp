@@ -219,16 +219,39 @@ namespace MRS {
 				webots::Emitter* emitter_;
 			};
 
+			// The robot id N of a message from "rN": the sender is the fifth token, "M: <code> <ver> <mission> <sender>".
+			int SenderId(const std::string& data) {
+				std::size_t at = 0;
+				for (int k = 0; k < 4; ++k) {
+					at = data.find(' ', at);
+					if (at == std::string::npos) return -1;
+					++at;
+				}
+				if (at >= data.size() || data[at] != 'r') return -1;
+				int id = 0, digits = 0;
+				for (std::size_t k = at + 1; k < data.size() && data[k] >= '0' && data[k] <= '9'; ++k, ++digits) id = id * 10 + (data[k] - '0');
+				return digits > 0 ? id : -1;
+			}
+
 			class ReceiverPort : public P::Port {
 			public:
-				ReceiverPort(P::PortAssignment a, webots::Receiver* receiver, int period_ms)
-				    : P::Port(std::move(a)), receiver_(receiver) {
+				ReceiverPort(P::PortAssignment a, webots::Receiver* receiver, int period_ms, webots::Robot& robot,
+				             std::shared_ptr<WebotsPlatform::Bearings> bearings)
+				    : P::Port(std::move(a)), receiver_(receiver), robot_(robot), bearings_(std::move(bearings)) {
 					receiver_->setChannel(static_cast<int>(Assignment().params.Int("channel", 1)));
 					receiver_->enable(period_ms);
 				}
 				std::optional<std::string> Receive() override {
 					if (receiver_->getQueueLength() <= 0) return std::nullopt;
 					std::string data(static_cast<const char*>(receiver_->getData()), static_cast<std::size_t>(receiver_->getDataSize()));
+					const int sender = SenderId(data);
+					if (sender >= 0) {  // for the ranging port
+						auto& b = (*bearings_)[sender];
+						b.t = robot_.getTime();
+						const double* d = receiver_->getEmitterDirection();
+						for (int k = 0; k < 3; ++k) b.dir[k] = d[k];
+						b.strength = receiver_->getSignalStrength();
+					}
 					receiver_->nextPacket();
 					// Senders that pass C strings include the terminating NUL; the parser would reject it.
 					while (!data.empty() && data.back() == '\0') data.pop_back();
@@ -237,6 +260,43 @@ namespace MRS {
 
 			private:
 				webots::Receiver* receiver_;
+				webots::Robot& robot_;
+				std::shared_ptr<WebotsPlatform::Bearings> bearings_;
+			};
+
+			// Relative positions from the radio bearings (spec 15 §3.1): r = 1/sqrt(strength), turned
+			// from the receiver (body) frame into ENU with the inertial unit's roll, pitch and yaw.
+			class RangingPort : public SampledPort {
+			public:
+				RangingPort(P::PortAssignment a, webots::Robot& robot, int period_ms, webots::InertialUnit* imu,
+				            std::shared_ptr<const WebotsPlatform::Bearings> bearings)
+				    : SampledPort(std::move(a), robot, period_ms), imu_(imu), bearings_(std::move(bearings)),
+				      window_(std::max(period_ms / 1000.0, 0.1)), range_(Assignment().params.Num("range_m", 1e9)) {}
+				bool Read(std::vector<double>& v) override {
+					if (!Due()) return false;
+					const double* rpy = imu_->getRollPitchYaw();
+					const double cr = std::cos(rpy[0]), sr = std::sin(rpy[0]), cp = std::cos(rpy[1]), sp = std::sin(rpy[1]),
+					             cy = std::cos(rpy[2]), sy = std::sin(rpy[2]);
+					// R = Rz(yaw) Ry(pitch) Rx(roll), body to world.
+					const double R[9] = {cy * cp, cy * sp * sr - sy * cr, cy * sp * cr + sy * sr,
+					                     sy * cp, sy * sp * sr + cy * cr, sy * sp * cr - cy * sr,
+					                     -sp,     cp * sr,                cp * cr};
+					v.clear();
+					const double t = robot_.getTime();
+					for (const auto& [id, b] : *bearings_) {
+						if (t - b.t > window_ || b.strength <= 0.0) continue;
+						const double r = 1.0 / std::sqrt(b.strength);
+						if (r > range_) continue;
+						v.push_back(static_cast<double>(id));
+						for (int k = 0; k < 3; ++k) v.push_back(r * (R[3 * k] * b.dir[0] + R[3 * k + 1] * b.dir[1] + R[3 * k + 2] * b.dir[2]));
+					}
+					return true;
+				}
+
+			private:
+				webots::InertialUnit* imu_;
+				std::shared_ptr<const WebotsPlatform::Bearings> bearings_;
+				double window_, range_;
 			};
 		}
 
@@ -260,6 +320,7 @@ namespace MRS {
 				if (d) out.push_back({P::PortType::SIM, d->getName(), NodeTypeName(d->getNodeType())});
 			}
 			out.push_back({P::PortType::SIM, "battery", "Battery"});
+			out.push_back({P::PortType::SIM, "ranging", "Ranging"});
 			return out;
 		}
 
@@ -269,6 +330,12 @@ namespace MRS {
 			if (a.address == "battery") {
 				robot_.batterySensorEnable(period);
 				return std::make_unique<BatteryPort>(a, robot_, period);
+			}
+			if (a.address == "ranging") {
+				webots::Device* imu = robot_.getDevice(a.params.Text("inertial", "inertial unit"));
+				if (!imu || imu->getNodeType() != webots::Node::INERTIAL_UNIT) return nullptr;
+				static_cast<webots::InertialUnit*>(imu)->enable(period);
+				return std::make_unique<RangingPort>(a, robot_, period, static_cast<webots::InertialUnit*>(imu), bearings_);
 			}
 			webots::Device* d = robot_.getDevice(a.address);
 			if (!d) return nullptr;
@@ -303,7 +370,7 @@ namespace MRS {
 			case webots::Node::ROTATIONAL_MOTOR: return std::make_unique<MotorPort>(a, static_cast<webots::Motor*>(d));
 			case webots::Node::LED: return std::make_unique<LedPort>(a, static_cast<webots::LED*>(d));
 			case webots::Node::EMITTER: return std::make_unique<EmitterPort>(a, static_cast<webots::Emitter*>(d));
-			case webots::Node::RECEIVER: return std::make_unique<ReceiverPort>(a, static_cast<webots::Receiver*>(d), period);
+			case webots::Node::RECEIVER: return std::make_unique<ReceiverPort>(a, static_cast<webots::Receiver*>(d), period, robot_, bearings_);
 			case webots::Node::CAMERA: return std::make_unique<CameraPort>(a, robot_, static_cast<webots::Camera*>(d), period);
 			case webots::Node::CONNECTOR: return std::make_unique<ConnectorPort>(a, static_cast<webots::Connector*>(d), period);
 			default: return nullptr;

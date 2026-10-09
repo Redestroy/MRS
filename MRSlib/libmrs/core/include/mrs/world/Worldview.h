@@ -22,6 +22,10 @@ namespace MRS {
 			std::string source;  // who wrote it; for an offered field, the selected source (spec 05 §5.1)
 		};
 
+		// A value a peer shared (spec 15 §2.4): its source is "peer:" + the peer's name. Such sources
+		// rank after every other source of a field, and are never sent on.
+		inline bool IsPeerSource(const std::string& source) { return source.rfind("peer:", 0) == 0; }
+
 		// Something in the world (spec 05 §5.4).
 		struct SemanticObject {
 			std::string id;   // "r2", "det.person.1"

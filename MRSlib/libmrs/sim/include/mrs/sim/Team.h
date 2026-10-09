@@ -81,6 +81,9 @@ namespace MRS {
 		// The definition of robot `id`, optionally without its LEDs (and their capability).
 		std::string DefinitionFor(const std::string& base, int id, bool leds);
 		std::string PortMapFor(const std::string& base, bool leds);
+		// The definition and port map with a ranging sensor (spec 15 §3.1) added under the frame joint.
+		std::string WithRanging(const std::string& definition, double noise_m, double range_m = 30.0);
+		std::string WithRangingPort(const std::string& port_map, double rate_hz = 10.0);
 
 		using AllocatorFactory = std::function<std::unique_ptr<Algorithms::IAllocator>(int id)>;
 
@@ -94,6 +97,8 @@ namespace MRS {
 			QuadParams quad;                               // seed is offset by the robot id
 			double separation = 1.0;                       // m: closer than this is a breach
 			double bitrate_bps = 0.0;                      // the channel's bitrate; 0: no limit (spec 13 §3)
+			double repulsion_lead = 0.0;                   // the supervisor's repulsion hook; 0: off (spec 15 §4.3)
+			double ranging_noise = -1.0;                   // m; at least 0: every robot has a ranging sensor (spec 15 §3.1)
 		};
 
 		// Times Select of the allocator it wraps (the decision time of spec 10 §5).

@@ -14,6 +14,8 @@ namespace MRS {
 			double min_alt = 0.5;       // m above home ground, while airborne
 			double max_speed_xy = 8.0;  // m/s
 			double max_climb = 2.0;     // m/s
+			// Opt-in use of the repulsion (spec 15 §4.3): s of lead for position setpoints; 0: off.
+			double repulsion_lead = 0.0;
 		};
 
 		// The geofence box of the mission (geofence.xmin ... zmax); z runs from 0.

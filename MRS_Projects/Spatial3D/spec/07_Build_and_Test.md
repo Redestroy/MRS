@@ -51,6 +51,7 @@ MRSlib/
                            idle at layer and the 3-UAV coverage acceptance run (WP7)
       sta/, cbba/          units and MRS-STA (WP8); CBBA, LDTA² and the channel (WP9)
       ardupilot/           ArduPilot platform, GUIDED fcu and UDP, on the mock autopilot (WP10)
+      sync/                worldview sync, ranging, neighbours and repulsion (WP11)
 MRS_Projects/Spatial3D/
   README.md
   docs/                    plan and design notes
@@ -232,6 +233,10 @@ In Webots, `platforms/webots/controllers/mrs_worldview_check` compares the same 
 
 `tests/ardupilot/` checks spec 14 against `MockAutopilot`; the cases are listed in spec 14 §11. SITL runs are not in CI (spec 14 §9).
 
-### 5.13 Out of scope for WP0
+### 5.13 Sync, ranging and repulsion tests (WP11)
+
+`tests/sync/` checks spec 15; the cases are listed in spec 15 §6.
+
+### 5.14 Out of scope for WP0
 
 Condition evaluation, the executor, devices and the worldview get their own tests in WP1–WP3. WP0 only checks that every object can be read and written exactly.

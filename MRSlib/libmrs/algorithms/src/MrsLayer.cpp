@@ -44,7 +44,8 @@ namespace MRS {
 		      allocator_(std::move(allocator)),
 		      size_(size ? std::move(size) : std::make_unique<SpatialSizeEstimator>()),
 		      c_(config),
-		      self_(RobotName(robot.DeviceSide())) {
+		      self_(RobotName(robot.DeviceSide())),
+		      max_payload_(transport.MaxPayload()) {
 			robot_.SetJournalEnd(false);
 			robot_.SetTaskListener([this](const Task::TaskEvent& e, double t) { robot_events_.push_back({e, t}); });
 			robot_.SetEventListener([this](const Robot::RaisedEvent& e) { raised_.push_back(e); });
@@ -103,6 +104,7 @@ namespace MRS {
 				double period = c_.state_period;
 				if (const double b = Budget(t); b > 0.0) period = std::max(period, 200.0 * 8.0 / (c_.state_share * b));
 				if (t - last_state_ >= period) SendState(t);
+				SendSync(t);
 			}
 		}
 
@@ -121,10 +123,13 @@ namespace MRS {
 				return;
 			}
 			if (code == "M_TASK") return OnTasks(m, t);
+			if (code == "M_SYNC" || code == "M_INFO") return OnShared(m);
+			if (code == "M_INFOREQ") return OnInfoRequest(m, t);
 			if (code == "M_STATE") {
 				auto view = Environment::ViewFromRecord(m.Child(0));
 				if (!view) return;
 				robot_.InjectViews({*view});
+				if (!asked_.count(m.sender)) AskPeer(m.sender, t);
 				Peer& p = peers_.Touch(m.sender, t);
 				if (view->values.size() >= 8) {
 					p.pose = {view->values[1], view->values[2], view->values[3]};

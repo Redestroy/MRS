@@ -608,6 +608,9 @@ namespace MRS {
 				} else if (code == "V_DET") {
 					c.Id();
 					c.Nums(4);
+				} else if (code == "V_FLD") {
+					c.Id();
+					c.Num();
 				}
 			}
 
@@ -719,6 +722,7 @@ namespace MRS {
 					c.Bool();
 					c.Int();
 				} else if (code == "M_STATE") c.Label('V');
+				else if (code == "M_SYNC") c.Labels("V", 1);
 				else if (code == "M_PROFILE") {
 					c.Id();
 					std::int64_t n = c.Count();
@@ -759,7 +763,7 @@ namespace MRS {
 					for (const auto& info : Device::ActionRegistry()) s.codes[info.code] = ActionSlots;
 					add({"F_K", "F_L", "F_X", "F_S", "F_P", "F_C"}, FunctionSlots);
 					add({"V_GEO", "V_POS3", "V_VEL3", "V_ATT", "V_RATE", "V_ACC", "V_BARO", "V_MAG", "V_RNG", "V_BAT",
-					     "V_PEER", "V_REL3", "V_DET", "V_P2", "V_PAY"}, ViewSlots);
+					     "V_PEER", "V_REL3", "V_DET", "V_P2", "V_PAY", "V_FLD"}, ViewSlots);
 					add({"D_H", "D_J", "D_X", "D_S", "D_A", "D_C", "D_M"}, DeviceSlots);
 					add({"P_R", "P_A"}, PortSlots);
 					add({"K_A", "K_V", "K_M", "K_Q"}, CapabilitySlots);
@@ -768,7 +772,7 @@ namespace MRS {
 					add({"J_H", "J_T", "J_K", "J_C", "J_E"}, JournalSlots);
 					add({"B_E"}, BehaviourSlots);
 					add({"M_MISSION", "M_TASK", "M_CLAIM", "M_RELEASE", "M_DONE", "M_FAIL", "M_DUMP", "M_STATE",
-					     "M_PROFILE", "M_BID", "M_INFOREQ", "M_INFO", "M_CMD", "M_PLAN"}, MessageSlots);
+					     "M_PROFILE", "M_BID", "M_INFOREQ", "M_INFO", "M_CMD", "M_PLAN", "M_SYNC"}, MessageSlots);
 					s.reserved = {"T_D", "T_G", "T_U", "C_Q", "F_E",
 					              // legacy 2021 action codes (spec 02 §4.5)
 					              "A_l", "A_p", "A_t", "A_f", "A_b", "A_r", "A_y", "A_c", "A_d", "A_D", "A_M", "A_R",
@@ -795,6 +799,9 @@ namespace MRS {
 					if (v.code != "V_DET" && v.code != "V_PEER") fail_child(v, "C_V: only V_DET and V_PEER can be matched in version 0.1");
 				} else if (rec.code == "M_STATE") {
 					if (rec.children.at(0).code != "V_PEER") fail_child(rec.children[0], "M_STATE carries a V_PEER view");
+				} else if (rec.code == "M_SYNC") {
+					for (const Record& v : rec.children)
+						if (v.code != "V_FLD" && v.code != "V_DET") fail_child(v, "M_SYNC carries V_FLD and V_DET views");
 				} else if (rec.code == "A_MAP") {
 					std::set<std::pair<std::string, std::string>> entries;
 					for (std::size_t k = 0; k + 1 < rec.fields.size(); k += 2) {

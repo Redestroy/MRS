@@ -25,7 +25,9 @@ namespace MRS {
 					}
 				}
 			}
-			if (messages) m.views.insert("V_PEER");  // peer STATE messages decode to V_PEER
+			// Peer messages decode to views: STATE to V_PEER, shared world fields and detections to
+			// V_FLD and V_DET (spec 15 §2.4).
+			if (messages) m.views.insert({"V_PEER", "V_FLD", "V_DET"});
 			auto resolution = catalog.Resolve(m.views);
 			m.fields = std::move(resolution.fields);
 			m.processors = std::move(resolution.active);

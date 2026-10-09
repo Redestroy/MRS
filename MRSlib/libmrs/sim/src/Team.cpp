@@ -111,6 +111,26 @@ namespace MRS {
 			return leds ? base : std::regex_replace(base, std::regex("P: P_A leds[^\n]*\n"), "");
 		}
 
+		std::string WithRanging(const std::string& definition, double noise_m, double range_m) {
+			// The frame joint lists its children as D_1..N; the sensor becomes child N + 1.
+			std::smatch m;
+			if (!std::regex_search(definition, m, std::regex("D_J frame mech_bus 0 D_1\\.\\.([0-9]+)/"))) return definition;
+			const int n = std::stoi(m[1]) + 1;
+			std::string d = std::regex_replace(definition, std::regex("(D_J frame mech_bus 0 D_1\\.\\.)[0-9]+/"), "$01" + std::to_string(n) + "/");
+			std::ostringstream line;
+			line << "D_" << n << ": D_S rel ranging.webots 3 device \"ranging\" range_m " << range_m << " noise_m " << noise_m << "/\n";
+			if (!d.empty() && d.back() != '\n') d += "\n";
+			return d + line.str();
+		}
+
+		std::string WithRangingPort(const std::string& port_map, double rate_hz) {
+			std::ostringstream line;
+			line << "P: P_A rel ranging SIM \"ranging\" 1 rate_hz " << rate_hz << "/\n";
+			std::string p = port_map;
+			if (!p.empty() && p.back() != '\n') p += "\n";
+			return p + line.str();
+		}
+
 		// --- timing ------------------------------------------------------------------------------
 
 		void TimedAllocator::Bind(const Algorithms::AllocatorContext& ctx) {
@@ -144,9 +164,15 @@ namespace MRS {
 			Task::BehaviourLibrary library;
 			library.PopulateFromFile(files.behaviours_path, factory);
 			for (const auto& [name, priority] : c.behaviour_priority) library.SetPriority(name, priority);
-			const auto map = Port::PortMap::Parse(PortMapFor(files.port_map, leds));
-			robot = Device::BuildRobot(DefinitionFor(files.definition, id, leds), devices, sim, &map);
+			std::string port_map = PortMapFor(files.port_map, leds), definition = DefinitionFor(files.definition, id, leds);
+			if (c.ranging_noise >= 0.0) {
+				definition = WithRanging(definition, c.ranging_noise);
+				port_map = WithRangingPort(port_map);
+			}
+			const auto map = Port::PortMap::Parse(port_map);
+			robot = Device::BuildRobot(definition, devices, sim, &map);
 			Robot::ControllerConfig cc;
+			cc.safety.repulsion_lead = c.repulsion_lead;
 			cc.robot = "r" + std::to_string(id);
 			cc.robot_id = id;
 			ctl = std::make_unique<Robot::RobotController>(robot, library, functions, cc);
@@ -168,6 +194,9 @@ namespace MRS {
 				robots.push_back(std::make_unique<TeamRobot>(id, c.mission.homes[k], !c.without_leds.count(id), files, c));
 				air.Add(&robots.back()->sim);
 			}
+			for (auto& r : robots)  // every robot is a peer of every other, for the ranging sensor
+				for (auto& q : robots)
+					if (q != r) r->sim.peers.push_back({static_cast<int>(q->robot.self.id), &q->sim});
 		}
 
 		bool Team::Run(double seconds, bool stop_when_done) {

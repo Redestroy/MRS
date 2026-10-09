@@ -56,6 +56,16 @@ namespace MRS {
 				void OnConfigure() override;
 			};
 
+			// V_REL3 per peer in range: a relative position sensor (spec 15 §3.1). Its port reads
+			// (robot id, dx, dy, dz) for each peer, ENU, one after another.
+			class Ranging : public Sensor {
+			public:
+				void Sample(double t, std::vector<View>& out) override;
+
+			protected:
+				void OnConfigure() override;
+			};
+
 			// V_MAG: heading = atan2(n_y, n_x) of the body-frame north vector, wrapped to [0, 2π).
 			class Compass : public Sensor {
 			public:

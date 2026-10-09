@@ -104,7 +104,9 @@ The thresholds are configuration, not spec.
 | `peer.<id>.pose.enu`, `peer.<id>.vel.enu` | vec3 | `PeerStateProcessor` | `<id>` is the robot id written as `r<N>`, for example `peer.r3.pose.enu` |
 | `peer.<id>.battery.remaining` | scalar | `PeerStateProcessor` | |
 | `peer.<id>.task` | id | `PeerStateProcessor` | |
-| `rel.<id>.enu` | vec3 | `RelativePositionProcessor` | Relative position of a peer from a ranging sensor |
+| `rel.<id>.enu`, `rel.<id>.range` | vec3, scalar | `RelativePositionProcessor` | Relative position of a peer from a ranging sensor; `max_age` 1 s (spec 15 §3.2) |
+| `sync.<id>.<path>` | scalar | `WorldviewSyncProcessor` | A world field peer `<id>` shared (spec 15 §2.4) |
+| `repulse.enu`, `repulse.nearest`, `repulse.count` | vec3, scalar, scalar | `RepulsionProcessor` | Repulsion away from nearby robots, m/s (spec 15 §4) |
 | `det.<class>.<n>.enu` | vec3 | `DetectionProcessor` | Object detections |
 | `payload.id` | scalar | `PayloadProcessor` | The package the robot carries, 0 when its bay is empty (WP7, spec 11 §3.1) |
 
@@ -141,6 +143,7 @@ For every offered field the worldview keeps the latest value of each source and 
 
 * A source is fresh when its latest value is at most the field's `max_age` old.
 * Sources are ranked by the field's **source order**, a per-robot setting. Sources missing from the order rank after it, by name.
+* Sources named `peer:<id>` (values a peer shared, spec 15 §2.4) rank after every other source, whatever the order, and among themselves newest first (WP11).
 * The field is re-selected whenever a source offers a new value, and at the end of every tick. When no source is fresh, the newest value is kept, so the field reads as stale.
 * The field records which source it came from (`WorldField::source`), and the change of source is visible to logs.
 
@@ -184,6 +187,9 @@ The self model (spec 04 §7) works out which fields a robot can provide from des
 | `PeerStateProcessor` | `V_PEER` | — | `peer` (the `peer.<id>.*` subtree) | |
 | `DetectionProcessor` | `V_DET` | — | `det` (the `det.<class>.<n>.*` subtree) | |
 | `PayloadProcessor` | `V_PAY` | — | `payload.id` | |
+| `RelativePositionProcessor` | `V_REL3` | — | `rel` (the `rel.<id>.*` subtree) | (WP11, spec 15 §3.2) |
+| `WorldviewSyncProcessor` | `V_FLD` | — | `sync` (the `sync.<id>.*` subtree); offers peers' fields under source `peer:<id>` | (WP11, spec 15 §2.4) |
+| `RepulsionProcessor` | — | — | `repulse` (`repulse.enu`, `.nearest`, `.count`) | (WP11, spec 15 §4) |
 
 A processor is in the robot's chain when at least one of its subscriptions is produced (or it has none) and its needs are met; this is the same fixed point as spec 04 §7. Processors whose inputs never appear are left out, so they cost nothing.
 
@@ -223,6 +229,7 @@ Every view code starts with the slot `num stamp` (mission time of the informatio
 | `V_REL3` | `int robot`, `num dx`, `num dy`, `num dz` | relative-position sensor |
 | `V_DET` | `id class`, `num x`, `num y`, `num z`, `num confidence` | detector |
 | `V_PAY` | `num package` | payload bay: the package held, 0 for none (WP7) |
+| `V_FLD` | `id path`, `num value` | a world field a peer shared (WP11, spec 15 §2.2) |
 | `V_P2` | `num x`, `num y`, `num yaw` | legacy 2D pose (E-puck) |
 
 **View matching (`C_V`)** in version 0.1 is defined only for:

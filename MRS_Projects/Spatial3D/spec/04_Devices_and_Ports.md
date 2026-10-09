@@ -130,6 +130,7 @@ Parameters of `quadrotor.webots`, all optional, with the Webots Mavic 2 Pro devi
 | `payload.webots` | `D_X` | `device` (`"connector"`), `package` (the package loaded before the flight, 0 for none), `rate_hz` | expands to `latch` and `cargo`, below | |
 | `latch.webots` | `D_A` | from `payload.webots` | `A_REL` | `latch`: reads 1 while it holds a package; a write of 0 opens it, 1 closes it |
 | `cargo.default` | `D_S` | none | `V_PAY` (the package the latch holds) | none: it reads the latch |
+| `ranging.webots` | `D_S` | `device` (default `"ranging"`), `range_m`, `noise_m` | `V_REL3` per peer in range | `ranging`: reads (robot id, dx, dy, dz) per peer, ENU (WP11, spec 15 §3.1) |
 
 The stock Mavic has the gimbal motors and the camera. The payload bay needs a Webots `Connector` named `connector` in the Mavic's `bodySlot`, locked to the package before the flight. `mavic_delivery_webots.mrsd` and `.mrsp` in the examples are the Mavic with all three (WP7). The test simulator (spec 10 §4) has the same device names: it records each shot (time, position, gimbal pitch) and each release (time, position).
 

@@ -34,6 +34,8 @@ namespace MRS {
 			Algorithms::StaConfig sta;
 			Algorithms::CbbaConfig cbba;
 			double bitrate_bps = 0.0;  // the shared channel; 0: no limit (spec 13 §3)
+			double repulsion_lead = 0.0;   // s; 0: the repulsion is not used to fly (spec 15 §4.3)
+			double ranging_noise = -1.0;   // m; negative: no ranging sensor (spec 15 §3.1)
 			Algorithms::SpatialSizeConfig size;
 			Algorithms::TravelModel travel;  // its mode follows the condition
 		};

@@ -21,6 +21,7 @@ add_library(mrs_core STATIC
 	src/world/View.cpp
 	src/world/Processor.cpp
 	src/world/UavProcessors.cpp
+	src/world/Neighbours.cpp
 	src/world/WorldviewRequirements.cpp
 	src/task/Condition.cpp
 	src/task/Function.cpp

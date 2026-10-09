@@ -42,14 +42,14 @@ namespace {
 	std::vector<View> MavicViews(const Environment::GeoReference& geo, double t, bool gnss, bool compass) {
 		const Truth s = TruthAt(t);
 		std::vector<View> v;
-		v.push_back({"V_ATT", t, {0.0, 0.0, s.yaw}, {}});
-		v.push_back({"V_RATE", t, {0.0, 0.0, 0.2}, {}});
+		v.push_back({"V_ATT", t, {0.0, 0.0, s.yaw}, {}, {}});
+		v.push_back({"V_RATE", t, {0.0, 0.0, 0.2}, {}, {}});
 		if (gnss) {
 			double lat, lon, alt;
 			geo.ToGeodetic({s.x, s.y, s.z}, lat, lon, alt);
-			v.push_back({"V_GEO", t, {lat, lon, alt}, {}});
+			v.push_back({"V_GEO", t, {lat, lon, alt}, {}, {}});
 		}
-		if (compass) v.push_back({"V_MAG", t, {Environment::HeadingFromYaw(s.yaw)}, {}});
+		if (compass) v.push_back({"V_MAG", t, {Environment::HeadingFromYaw(s.yaw)}, {}, {}});
 		return v;
 	}
 
@@ -156,8 +156,8 @@ TEST_CASE("processors can be added and removed without touching the others") {
 		for (int k = 0; k < 10; ++k) {
 			const double t = k * 0.01;
 			auto v = MavicViews(geo, t, true, true);
-			v.push_back({"V_RNG", t, {7.5}, {}});
-			v.push_back({"V_BARO", t, {17.0}, {}});
+			v.push_back({"V_RNG", t, {7.5}, {}, {}});
+			v.push_back({"V_BARO", t, {17.0}, {}, {}});
 			model.Update(v, t);
 		}
 		CHECK(model.world.SelectedSource("alt.agl") == "range");
@@ -170,7 +170,7 @@ TEST_CASE("processors can be added and removed without touching the others") {
 		std::set<std::string> names;
 		for (auto* p : model.chain.Order()) names.insert(p->Name());
 		CHECK(names == std::set<std::string>{"Clock", "AttitudeProcessor", "RateProcessor", "CompassHeadingProcessor",
-		                                     "AttitudeHeadingProcessor", "BatteryProcessor"});
+		                                     "AttitudeHeadingProcessor", "BatteryProcessor", "RepulsionProcessor"});
 	}
 }
 
@@ -248,8 +248,8 @@ TEST_CASE("peers, detections and flight state") {
 	auto peer = Environment::ViewFromRecord(parsed.document.records[0]);
 	REQUIRE(peer);
 	CHECK(Environment::ToRecord(*peer) == parsed.document.records[0]);
-	model.Update({*peer, {"V_DET", 142.5, {10, 10, 0, 0.9}, "person"}, {"V_DET", 142.5, {11, 10, 0, 0.8}, "person"},
-	              {"V_DET", 142.5, {40, 10, 0, 0.7}, "person"}},
+	model.Update({*peer, {"V_DET", 142.5, {10, 10, 0, 0.9}, "person", {}}, {"V_DET", 142.5, {11, 10, 0, 0.8}, "person", {}},
+	              {"V_DET", 142.5, {40, 10, 0, 0.7}, "person", {}}},
 	             142.5);
 	CHECK(w.IsFresh("peer.r2.pose.enu", 142.6));
 	CHECK(w.Id("peer.r2.task", 142.6) == std::string("op.17"));
@@ -261,13 +261,13 @@ TEST_CASE("peers, detections and flight state") {
 
 	// Local position source: landed after 1 s at rest on the ground, at home.
 	double t = 200;
-	for (int k = 0; k <= 150; ++k, t += 0.01) model.Update({{"V_POS3", t, {0.2, 0.1, 0.05}, {}}}, t);
+	for (int k = 0; k <= 150; ++k, t += 0.01) model.Update({{"V_POS3", t, {0.2, 0.1, 0.05}, {}, {}}}, t);
 	t -= 0.01;
 	CHECK(w.SelectedSource("pose.enu") == "local");
 	CHECK(w.Bool("landed", t) == true);
 	CHECK(w.Bool("airborne", t) == false);
 	CHECK(w.Bool("home", t) == true);
-	model.Update({{"V_POS3", t + 0.5, {0.2, 0.1, 3.0}, {}}}, t + 0.5);
+	model.Update({{"V_POS3", t + 0.5, {0.2, 0.1, 3.0}, {}, {}}}, t + 0.5);
 	CHECK(w.Bool("landed", t + 0.5) == false);
 }
 

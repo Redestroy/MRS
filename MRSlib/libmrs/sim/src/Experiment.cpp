@@ -67,6 +67,8 @@ namespace MRS {
 			c.quad.capacity_wh = spec.battery_wh;
 			c.quad.seed = Mix(spec.seed) & 0xFFFFFFFFULL;
 			c.bitrate_bps = spec.bitrate_bps;
+			c.repulsion_lead = spec.repulsion_lead;
+			c.ranging_noise = spec.ranging_noise;
 			// A limited channel loses messages, so the issuer repeats open tasks (spec 13 §3).
 			if (spec.bitrate_bps > 0.0) c.issuer.task_period = 15.0;
 			Algorithms::TravelModel travel = spec.travel;
@@ -181,7 +183,8 @@ namespace MRS {
 		std::string CsvHeader() {
 			return "set,family,dispatch,tasks,seed,condition,n,completed,done,failed,makespan_s,latency_mean_s,latency_max_s,"
 			       "distance_m,energy_wh,duplicates,busy_robots,messages,bytes,decision_mean_us,decision_worst_us,plan_calls,"
-			       "plan_worst_ms,separation_breaches,min_separation_m,fence_exits,crashed,sim_time_s,wall_s,leaves,leaf_duplicates,bitrate_bps,dropped,delay_mean_s,delay_max_s";
+			       "plan_worst_ms,separation_breaches,min_separation_m,fence_exits,crashed,sim_time_s,wall_s,leaves,leaf_duplicates,bitrate_bps,dropped,delay_mean_s,delay_max_s,"
+			       "repulsion_lead_s,ranging_noise_m";
 		}
 
 		std::string CsvRow(const RunSpec& s, const RunResult& r) {
@@ -193,7 +196,7 @@ namespace MRS {
 			  << r.busy_robots << "," << r.messages << "," << r.bytes << "," << r.decision_mean_us << "," << r.decision_worst_us << ","
 			  << r.plan_calls << "," << r.plan_worst_ms << "," << r.separation_breaches << "," << r.min_separation_m << "," << r.fence_exits
 			  << "," << (r.crashed ? 1 : 0) << "," << r.sim_time << "," << r.wall_s << "," << r.leaves << "," << r.leaf_duplicates << "," << s.bitrate_bps << "," << r.dropped
-			  << "," << r.delay_mean << "," << r.delay_max;
+			  << "," << r.delay_mean << "," << r.delay_max << "," << s.repulsion_lead << "," << s.ranging_noise;
 			return o.str();
 		}
 	}

@@ -70,7 +70,7 @@ namespace MRS {
 				std::vector<double> v;
 				for (const auto& p : kPorts) {
 					Port::Port* port = GetPort(p.first);
-					if (port && port->Read(v) && v.size() >= 3) out.push_back({p.second, t, {v[0], v[1], v[2]}, {}});
+					if (port && port->Read(v) && v.size() >= 3) out.push_back({p.second, t, {v[0], v[1], v[2]}, {}, {}});
 				}
 			}
 
@@ -87,7 +87,7 @@ namespace MRS {
 			void Gnss::Sample(double t, std::vector<View>& out) {
 				std::vector<double> v;
 				Port::Port* port = GetPort("gnss");
-				if (port && port->Read(v) && v.size() >= 3) out.push_back({local_ ? "V_POS3" : "V_GEO", t, {v[0], v[1], v[2]}, {}});
+				if (port && port->Read(v) && v.size() >= 3) out.push_back({local_ ? "V_POS3" : "V_GEO", t, {v[0], v[1], v[2]}, {}, {}});
 			}
 
 			void Velocity::OnConfigure() {
@@ -98,7 +98,22 @@ namespace MRS {
 			void Velocity::Sample(double t, std::vector<View>& out) {
 				std::vector<double> v;
 				Port::Port* port = GetPort("velocity");
-				if (port && port->Read(v) && v.size() >= 3) out.push_back({"V_VEL3", t, {v[0], v[1], v[2]}, {}});
+				if (port && port->Read(v) && v.size() >= 3) out.push_back({"V_VEL3", t, {v[0], v[1], v[2]}, {}, {}});
+			}
+
+			void Ranging::OnConfigure() {
+				Declare(Capability::ViewOf("V_REL3"));
+				Params port = RateParams();
+				for (const char* key : {"range_m", "noise_m"})
+					if (GetParams().Has(key)) port.Add(key, NumValue(GetParams().Num(key, 0.0)));
+				DeclarePort("ranging", PortTypeOf(GetParams()), Required(GetParams(), "device"), true, port);
+			}
+
+			void Ranging::Sample(double t, std::vector<View>& out) {
+				std::vector<double> v;
+				Port::Port* port = GetPort("ranging");
+				if (!port || !port->Read(v)) return;
+				for (std::size_t k = 0; k + 3 < v.size(); k += 4) out.push_back({"V_REL3", t, {v[k], v[k + 1], v[k + 2], v[k + 3]}, {}, {}});
 			}
 
 			double Compass::Heading(double north_x, double north_y) {
@@ -116,7 +131,7 @@ namespace MRS {
 			void Compass::Sample(double t, std::vector<View>& out) {
 				std::vector<double> v;
 				Port::Port* port = GetPort("compass");
-				if (port && port->Read(v) && v.size() >= 2) out.push_back({"V_MAG", t, {Heading(v[0], v[1])}, {}});
+				if (port && port->Read(v) && v.size() >= 2) out.push_back({"V_MAG", t, {Heading(v[0], v[1])}, {}, {}});
 			}
 
 			void Barometer::OnConfigure() {
@@ -127,7 +142,7 @@ namespace MRS {
 			void Barometer::Sample(double t, std::vector<View>& out) {
 				std::vector<double> v;
 				Port::Port* port = GetPort("baro");
-				if (port && port->Read(v) && !v.empty()) out.push_back({"V_BARO", t, {v[0]}, {}});
+				if (port && port->Read(v) && !v.empty()) out.push_back({"V_BARO", t, {v[0]}, {}, {}});
 			}
 
 			// --- LedArray --------------------------------------------------------------------
@@ -180,7 +195,7 @@ namespace MRS {
 				const double energy = fraction_only ? v[2] * capacity_wh_ : v[0];
 				if (remaining < 0.0) remaining = 0.0;
 				if (remaining > 1.0) remaining = 1.0;
-				out.push_back({"V_BAT", t, {v.size() > 1 ? v[1] : voltage_, remaining, energy}, {}});
+				out.push_back({"V_BAT", t, {v.size() > 1 ? v[1] : voltage_, remaining, energy}, {}, {}});
 			}
 
 			// --- Radio -----------------------------------------------------------------------
@@ -301,7 +316,7 @@ namespace MRS {
 			void PayloadSense::OnConfigure() { Declare(Capability::ViewOf("V_PAY")); }
 
 			void PayloadSense::Sample(double t, std::vector<View>& out) {
-				if (latch_) out.push_back({"V_PAY", t, {static_cast<double>(latch_->Carried())}, {}});
+				if (latch_) out.push_back({"V_PAY", t, {static_cast<double>(latch_->Carried())}, {}, {}});
 			}
 
 			void Payload::Expand(const DeviceRegistry& registry) {
@@ -361,6 +376,7 @@ namespace MRS {
 				r.Register<Imu>("imu.webots", {{"inertial", StrValue("inertial unit")}, {"gyro", StrValue("gyro")}});
 				r.Register<Gnss>("gnss.webots", {{"device", StrValue("gps")}});
 				r.Register<Compass>("compass.webots", {{"device", StrValue("compass")}});
+				r.Register<Ranging>("ranging.webots", {{"device", StrValue("ranging")}});
 				r.Register<Barometer>("baro.webots", {{"device", StrValue("altimeter")}});
 				r.Register<LedArray>("led.webots", {{"device", StrValue("front left led")}, {"device", StrValue("front right led")}});
 				r.Register<Battery>("battery.webots", {{"device", StrValue("battery")}, {"voltage", NumValue(11.55)}});
