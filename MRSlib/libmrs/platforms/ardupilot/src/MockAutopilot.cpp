@@ -237,7 +237,7 @@ namespace MRS {
 				next_slow_ = t_ + 1.0;
 				const std::uint8_t base = static_cast<std::uint8_t>(MAV_MODE_FLAG_CUSTOM_MODE_ENABLED | (armed_ ? MAV_MODE_FLAG_SAFETY_ARMED : 0));
 				mavlink_msg_heartbeat_pack(sys, 1, &m, MAV_TYPE_QUADROTOR, MAV_AUTOPILOT_ARDUPILOTMEGA, base, mode_,
-				                           armed_ ? MAV_STATE_ACTIVE : MAV_STATE_STANDBY);
+				                           static_cast<std::uint8_t>(armed_ ? MAV_STATE_ACTIVE : MAV_STATE_STANDBY));
 				SendRaw(&m);
 				std::uint16_t cells[10];
 				std::fill(std::begin(cells), std::end(cells), UINT16_MAX);
@@ -248,7 +248,7 @@ namespace MRS {
 				SendRaw(&m);
 				const bool on_ground = pos_[2] > -0.05;
 				mavlink_msg_extended_sys_state_pack(sys, 1, &m, MAV_VTOL_STATE_UNDEFINED,
-				                                    !armed_ || on_ground ? MAV_LANDED_STATE_ON_GROUND : MAV_LANDED_STATE_IN_AIR);
+				                                    static_cast<std::uint8_t>(!armed_ || on_ground ? MAV_LANDED_STATE_ON_GROUND : MAV_LANDED_STATE_IN_AIR));
 				SendRaw(&m);
 			}
 			if (t_ < next_stream_) return;
