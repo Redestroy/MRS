@@ -61,16 +61,21 @@ namespace MRS {
 			protected:
 				void OnConfigure() override;
 
+				// For flight controllers that run elsewhere (spec 14 §4): the same actions, gains and
+				// state, with their own Apply and Update.
+				FcuGains g_;
+				FlightStateSource state_;
+				FcuMode mode_ = FcuMode::DISARMED;
+				bool failsafe_ = false;
+				std::map<std::string, std::vector<double>> setpoints_;
+				std::string last_code_;
+
 			private:
 				enum class Axis { POSITION, VELOCITY };
 				void HoldHere(const FlightState& s);
 				void WriteMotors(double t);
 
-				FcuGains g_;
 				std::array<RotorMotor*, 4> motors_{};
-				FlightStateSource state_;
-				FcuMode mode_ = FcuMode::DISARMED;
-				bool failsafe_ = false;
 				double missing_since_ = -1;  // no flight state since
 
 				// Commanded values.
@@ -89,8 +94,6 @@ namespace MRS {
 				double last_t_ = -1;
 				std::array<double, 4> commands_{};
 
-				std::map<std::string, std::vector<double>> setpoints_;
-				std::string last_code_;
 				double hold_until_ = -1.0;
 				std::uint64_t hold_arg_ = 0;
 			};

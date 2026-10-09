@@ -1,0 +1,5 @@
+# Extra SITL parameters for run_sitl.sh, after Tools/autotest/default_params/copter.parm.
+# SITL's default 3.3 Ah pack draws about 25 A in the + model, so one copter reaches the
+# low-battery rule (spec 08 §4, BATTERY_LOW) and lands for a swap after about 350 s.
+# A 20 Ah pack keeps the whole of task set 1 on one battery, like the 50 Wh Mavic model.
+BATT_CAPACITY 20000

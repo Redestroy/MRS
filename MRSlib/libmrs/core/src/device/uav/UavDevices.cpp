@@ -90,6 +90,17 @@ namespace MRS {
 				if (port && port->Read(v) && v.size() >= 3) out.push_back({local_ ? "V_POS3" : "V_GEO", t, {v[0], v[1], v[2]}, {}});
 			}
 
+			void Velocity::OnConfigure() {
+				Declare(Capability::ViewOf("V_VEL3"));
+				DeclarePort("velocity", PortTypeOf(GetParams()), Required(GetParams(), "device"), true, RateParams());
+			}
+
+			void Velocity::Sample(double t, std::vector<View>& out) {
+				std::vector<double> v;
+				Port::Port* port = GetPort("velocity");
+				if (port && port->Read(v) && v.size() >= 3) out.push_back({"V_VEL3", t, {v[0], v[1], v[2]}, {}});
+			}
+
 			double Compass::Heading(double north_x, double north_y) {
 				double h = std::atan2(north_y, north_x);
 				if (h < 0.0) h += 2.0 * kPi;
@@ -163,8 +174,10 @@ namespace MRS {
 				std::vector<double> v;
 				Port::Port* port = GetPort("battery");
 				if (!port || !port->Read(v) || v.empty()) return;
-				const double energy = v[0];
-				double remaining = energy / capacity_wh_;
+				const bool fraction_only = v[0] < 0.0 && v.size() >= 3;
+				if (fraction_only && v[2] < 0.0) return;  // the autopilot does not know yet
+				double remaining = fraction_only ? v[2] : v[0] / capacity_wh_;
+				const double energy = fraction_only ? v[2] * capacity_wh_ : v[0];
 				if (remaining < 0.0) remaining = 0.0;
 				if (remaining > 1.0) remaining = 1.0;
 				out.push_back({"V_BAT", t, {v.size() > 1 ? v[1] : voltage_, remaining, energy}, {}});
@@ -324,8 +337,10 @@ namespace MRS {
 				Params fp;
 				Pass(p, fp, {"max_climb", "max_speed_xy", "hover_speed", "max_motor", "max_tilt", "max_yaw_rate", "kp_pos", "kp_vel",
 				             "ki_vel", "kv", "ki_z", "kp_yaw", "kr", "kp_att", "kd_att", "setpoint_timeout", "takeoff_tol", "state_timeout"});
-				auto* fcu = dynamic_cast<FlightControlUnit*>(&AddVirtual(registry, "fcu.default", "fcu", fp));
-				if (!fcu) throw BuildError("fcu.default is not a flight control unit");
+				const std::string fcu_key = registry.Has("fcu." + platform) ? "fcu." + platform : "fcu.default";
+				Pass(p, fp, {"port", "guided", "arm_timeout"});
+				auto* fcu = dynamic_cast<FlightControlUnit*>(&AddVirtual(registry, fcu_key, "fcu", fp));
+				if (!fcu) throw BuildError(fcu_key + " is not a flight control unit");
 				fcu->SetMotors(motors);
 
 				Params ip;

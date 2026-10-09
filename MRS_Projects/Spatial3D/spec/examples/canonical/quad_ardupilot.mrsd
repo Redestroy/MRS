@@ -1,0 +1,10 @@
+@: MRS 0.1/
+
+D: D_H uav head.default 3 robot_type arducopter role camera_uav id 1 D_1/
+D_1: D_J frame mech_bus 0 D_1..5/
+D_1: D_X quadrotor quadrotor.mavlink 2 max_climb 2 max_speed_xy 8/
+D_2: D_S gnss gnss.mavlink 1 device "GLOBAL_POSITION_INT"/
+D_3: D_S vel vel.mavlink 1 device "VELOCITY"/
+D_4: D_A leds led.mavlink 2 device "RELAY:0" device "RELAY:1" K_1/
+K_1: K_A A_L 1 rate_hz 10/
+D_5: D_M bat battery.mavlink 2 device "BATTERY_STATUS" capacity_wh 50/

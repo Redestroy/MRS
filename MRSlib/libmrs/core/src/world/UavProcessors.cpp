@@ -209,7 +209,8 @@ namespace MRS {
 				std::string Name() const override { return "KinematicsEstimator"; }
 				std::vector<std::string> Subscriptions() const override { return {}; }
 				std::vector<std::string> Needs() const override { return {"pose.enu"}; }
-				std::vector<std::string> Provides() const override { return {"vel.enu", "acc.enu"}; }
+				std::vector<std::string> Provides() const override { return {"acc.enu"}; }
+				std::vector<Offer> Offers() const override { return {{"vel.enu", "kinematics"}}; }
 				void Tick(Worldview& w, double) override {
 					const double stamp = StampOf(w, "pose.enu.x");
 					if (stamp < 0.0 || stamp <= last_) return;
@@ -238,7 +239,7 @@ namespace MRS {
 					}
 					++samples_;
 					last_ = stamp;
-					if (samples_ >= 2) w.SetVec3("vel.enu", v_[0], v_[1], v_[2], stamp, "kinematics");
+					if (samples_ >= 2) w.OfferVec3("vel.enu", "kinematics", v_[0], v_[1], v_[2], stamp);
 					if (samples_ >= 3) w.SetVec3("acc.enu", a_[0], a_[1], a_[2], stamp, "kinematics");
 				}
 
@@ -247,6 +248,17 @@ namespace MRS {
 				double x_[3] = {0, 0, 0}, v_[3] = {0, 0, 0}, a_[3] = {0, 0, 0};
 				int samples_ = 0;
 				double last_ = -1.0;
+			};
+
+			// A velocity source that estimates it itself, such as an autopilot's EKF (spec 14 §5).
+			class VelocityProcessor : public IViewProcessor {
+			public:
+				std::string Name() const override { return "VelocityProcessor"; }
+				std::vector<std::string> Subscriptions() const override { return {"V_VEL3"}; }
+				std::vector<Offer> Offers() const override { return {{"vel.enu", "nav"}}; }
+				void Process(const View& v, Worldview& w, double) override {
+					if (v.values.size() >= 3) w.OfferVec3("vel.enu", "nav", v.values[0], v.values[1], v.values[2], v.stamp);
+				}
 			};
 
 			class BatteryProcessor : public IViewProcessor {
@@ -400,6 +412,7 @@ namespace MRS {
 			p.push_back(std::make_unique<CompassHeadingProcessor>());
 			p.push_back(std::make_unique<AttitudeHeadingProcessor>());
 			p.push_back(std::make_unique<KinematicsEstimator>(c));
+			p.push_back(std::make_unique<VelocityProcessor>());
 			p.push_back(std::make_unique<BatteryProcessor>(c));
 			p.push_back(std::make_unique<FlightStateProcessor>(c));
 			p.push_back(std::make_unique<GeofenceProcessor>());
@@ -414,6 +427,7 @@ namespace MRS {
 			w.SetSourceOrder("alt.amsl", {"baro", "gnss", "local"});
 			w.SetSourceOrder("alt.agl", {"range", "amsl"});
 			w.SetSourceOrder("heading", {"compass", "attitude"});
+			w.SetSourceOrder("vel.enu", {"nav", "kinematics"});
 		}
 
 		void ApplyMissionHeader(const Protocol::Record& h, std::int64_t robot_id, Worldview& w, double t) {

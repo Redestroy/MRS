@@ -152,6 +152,7 @@ Default source orders (version 0.1, UAV):
 | `alt.amsl` | `baro`, `gnss`, `local` | `BaroAltitudeProcessor` (`V_BARO`), `GnssAltitudeProcessor` (`geo.position.alt`), `LocalAltitudeProcessor` (`V_POS3` z + `alt0`) |
 | `alt.agl` | `range`, `amsl` | `RangeAltitudeProcessor` (`V_RNG`), `AglFromAmslProcessor` (`alt.amsl` − ground) |
 | `heading` | `compass`, `attitude` | `CompassHeadingProcessor` (`V_MAG`), `AttitudeHeadingProcessor` (`V_ATT` yaw, converted, spec 00 §3) |
+| `vel.enu` | `nav`, `kinematics` | `VelocityProcessor` (`V_VEL3`, an autopilot's estimate, spec 14 §5), `KinematicsEstimator` (from `pose.enu`) |
 
 * Ground altitude in version 0.1 is flat ground at the robot's home: `alt0 + home.enu.z`, or `alt0` before the mission header arrives.
 * A robot without a barometer (the stock Webots Mavic) gets `alt.amsl` from GNSS; one with a rangefinder gets `alt.agl` from it. Nothing else changes.
@@ -175,7 +176,8 @@ The self model (spec 04 §7) works out which fields a robot can provide from des
 | `RateProcessor` | `V_RATE` | — | `rate.body` | |
 | `CompassHeadingProcessor` | `V_MAG` | — | | `heading`/`compass` |
 | `AttitudeHeadingProcessor` | `V_ATT` | — | | `heading`/`attitude` |
-| `KinematicsEstimator` | — | `pose.enu` | `vel.enu`, `acc.enu` | |
+| `KinematicsEstimator` | — | `pose.enu` | `acc.enu` | `vel.enu`/`kinematics` |
+| `VelocityProcessor` | `V_VEL3` | — | | `vel.enu`/`nav` (WP10, spec 14 §5) |
 | `BatteryProcessor` | `V_BAT` | — | `battery`, `battery.low`, `battery.critical` | |
 | `FlightStateProcessor` | — | `alt.agl`, `vel.enu` | `airborne`, `landed`, `home` | |
 | `GeofenceProcessor` | — | `pose.enu` | `geofence.inside` | |

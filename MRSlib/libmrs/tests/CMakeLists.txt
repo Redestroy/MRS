@@ -21,4 +21,8 @@ target_compile_definitions(mrs_tests PRIVATE DOCTEST_CONFIG_USE_STD_HEADERS)
 target_link_libraries(mrs_tests PRIVATE mrs_core mrs_algorithms mrs_generators mrs_sim mrs_warnings)
 # Test inputs are the spec examples, so the spec and the tests cannot drift apart (spec 07 §4).
 target_compile_definitions(mrs_tests PRIVATE MRS_SPEC_EXAMPLES="${MRS_SPEC_EXAMPLES}")
+if(TARGET mrs_ardupilot)
+	target_sources(mrs_tests PRIVATE ardupilot/test_ardupilot.cpp)
+	target_link_libraries(mrs_tests PRIVATE mrs_ardupilot)
+endif()
 add_test(NAME mrs_tests COMMAND mrs_tests)

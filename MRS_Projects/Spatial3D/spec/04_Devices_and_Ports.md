@@ -135,6 +135,8 @@ The stock Mavic has the gimbal motors and the camera. The payload bay needs a We
 
 The stock Mavic has no barometer; without `baro.webots` the worldview takes `alt.amsl` from GNSS (spec 05 §5.1).
 
+The `.mavlink` keys of the ArduPilot platform (`quadrotor.mavlink`, `fcu.mavlink`, `gnss.mavlink`, `vel.mavlink`, `led.mavlink`, `battery.mavlink`) and their MAVLink ports are in spec 14 §3–4. `quadrotor.*` uses `fcu.<platform>` when the registry has it, and `fcu.default` otherwise (WP10).
+
 Compass heading: Webots returns the north direction in the body frame, `(n_x, n_y, n_z)`. The heading is `atan2(n_y, n_x)` wrapped to `[0, 2π)`.
 
 A storage device MAY produce views (the battery produces `V_BAT`); it is then sampled like a sensor.

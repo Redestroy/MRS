@@ -137,6 +137,10 @@ No run stalled, crashed or left the fence. Paired speed-up makespan(S1) / makesp
 
 A duplicate is a task reported done by more than one robot. A re-sent `M_DONE` (§3.3) is not counted.
 
+### 6.3 Choices accepted
+
+JB accepted these on 2026-10-09: the LDTA² type mapping (§5.3), the timestamped CBBA without the relay table (§2.2), the channel model (§3.1), the issuer repeat on limited links and the `M_DONE` re-send (§3.3).
+
 ## 7. Tests (WP9)
 
 `tests/cbba/test_cbba.cpp` (spec 07 §5.11):

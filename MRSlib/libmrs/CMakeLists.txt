@@ -11,6 +11,7 @@ else()
 	set(MRS_WEBOTS_DEFAULT OFF)
 endif()
 option(MRS_BUILD_WEBOTS "Build the Webots platform (needs WEBOTS_HOME)" ${MRS_WEBOTS_DEFAULT})
+option(MRS_BUILD_ARDUPILOT "Build the ArduPilot platform (MAVLink, UDP; spec 14)" ON)
 
 # Spec examples: test data and the robot files the Webots controllers copy (spec 07 §4).
 get_filename_component(MRS_SPEC_EXAMPLES "${CMAKE_CURRENT_SOURCE_DIR}/../../MRS_Projects/Spatial3D/spec/examples" ABSOLUTE)
@@ -39,6 +40,10 @@ add_subdirectory(sim)
 
 if(MRS_BUILD_WEBOTS)
 	add_subdirectory(platforms/webots)
+endif()
+
+if(MRS_BUILD_ARDUPILOT)
+	add_subdirectory(platforms/ardupilot)
 endif()
 
 if(MRS_BUILD_TOOLS)

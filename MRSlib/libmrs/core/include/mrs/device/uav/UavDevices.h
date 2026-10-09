@@ -47,6 +47,15 @@ namespace MRS {
 				bool local_ = false;
 			};
 
+			// V_VEL3: ENU velocity from a source that estimates it, such as an autopilot (spec 14 §5).
+			class Velocity : public Sensor {
+			public:
+				void Sample(double t, std::vector<View>& out) override;
+
+			protected:
+				void OnConfigure() override;
+			};
+
 			// V_MAG: heading = atan2(n_y, n_x) of the body-frame north vector, wrapped to [0, 2π).
 			class Compass : public Sensor {
 			public:
@@ -79,7 +88,8 @@ namespace MRS {
 				std::size_t count_ = 0;
 			};
 
-			// Energy store, K_Q energy_wh, and V_BAT from its port (energy Wh, optional voltage V).
+			// Energy store, K_Q energy_wh, and V_BAT from its port (energy Wh, optional voltage V). A port
+			// that knows only the remaining fraction reads -1, voltage, remaining (an autopilot, spec 14 §3).
 			class Battery : public StorageDevice {
 			public:
 				void Sample(double t, std::vector<View>& out) override;
@@ -170,7 +180,8 @@ namespace MRS {
 				void Expand(const DeviceRegistry& registry) override;
 			};
 
-			// quadrotor.*: expands to m_fl, m_fr, m_rl, m_rr, fcu and imu (spec 04 §3).
+			// quadrotor.*: expands to m_fl, m_fr, m_rl, m_rr, fcu and imu (spec 04 §3). The fcu is
+			// fcu.<platform> when the registry has it (spec 14 §4), otherwise fcu.default.
 			class Quadrotor : public ComplexDevice {
 			public:
 				void Expand(const DeviceRegistry& registry) override;

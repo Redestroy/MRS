@@ -30,7 +30,9 @@ MRSlib/
                            controllers/mrs_worldview_check: the WP3 ground-truth check;
                            controllers/mrs_uav and mrs_issuer: the WP5 team controllers;
                            worlds/mavic_team.wbt: three Mavics and the issuer
-    platforms/ardupilot/   later (WP10)
+    platforms/ardupilot/   ArduPilotPlatform, GuidedFcu, UdpTransport, MockAutopilot (mrs_ardupilot,
+                           WP10, spec 14); tools/mrs_ardupilot_uav and mrs_operator;
+                           third_party/mavlink: MAVLink's C headers, common dialect
     behaviours/            .mrsb files
     tools/                 mrs_fmt (check a file, print its canonical form);
                            mrs_port2021 (convert a 2021 task set, WP5);
@@ -47,6 +49,8 @@ MRSlib/
       sim/                 planner, generators, oracle form, M_PLAN, one run per condition (WP6)
       tree/                decomposer, derived states, generators, GeoJSON, payload devices,
                            idle at layer and the 3-UAV coverage acceptance run (WP7)
+      sta/, cbba/          units and MRS-STA (WP8); CBBA, LDTA² and the channel (WP9)
+      ardupilot/           ArduPilot platform, GUIDED fcu and UDP, on the mock autopilot (WP10)
 MRS_Projects/Spatial3D/
   README.md
   docs/                    plan and design notes
@@ -55,6 +59,7 @@ MRS_Projects/Spatial3D/
   experiments/uav_spatial/ ported 2021 task sets and the 5-UAV mission (WP5); analyze.py
                            and the WP6 results (spec 10)
   experiments/uav_trees/   GeoJSON examples for the generators (WP7, spec 11 §4.3)
+  experiments/uav_ardupilot/ SITL runs: run_sitl.sh and the WP10 results (spec 14 §9)
 .github/workflows/spatial3d.yml
 ```
 
@@ -70,9 +75,9 @@ MRS_Projects/Spatial3D/
 | Language | C++17. No compiler extensions (`CMAKE_CXX_EXTENSIONS OFF`) |
 | Compilers | MSVC 2022 (v143), GCC ≥ 11, Clang ≥ 14 |
 | Warnings | MSVC `/W4 /permissive-`, GCC and Clang `-Wall -Wextra -Wpedantic`. Warnings are errors in CI |
-| Dependencies | `core` and `algorithms`: the C++ standard library only. No Boost. `platforms/webots`: the Webots C++ API from `WEBOTS_HOME`. `platforms/ardupilot`: MAVLink C headers, vendored |
-| Targets | `mrs_core`, `mrs_algorithms` (static libraries), `mrs_webots` (optional), `mrs_tests` |
-| Options | `MRS_BUILD_TESTS` (ON), `MRS_BUILD_TOOLS` (ON), `MRS_WARNINGS_AS_ERRORS` (OFF; ON in CI), `MRS_BUILD_WEBOTS` (AUTO: ON when `WEBOTS_HOME` is set) |
+| Dependencies | `core` and `algorithms`: the C++ standard library only. No Boost. `platforms/webots`: the Webots C++ API from `WEBOTS_HOME`. `platforms/ardupilot`: MAVLink C headers (c_library_v2, common dialect), vendored in `third_party/mavlink`; Winsock (`ws2_32`) on Windows |
+| Targets | `mrs_core`, `mrs_algorithms` (static libraries), `mrs_webots` (optional), `mrs_ardupilot`, `mrs_tests` |
+| Options | `MRS_BUILD_TESTS` (ON), `MRS_BUILD_TOOLS` (ON), `MRS_WARNINGS_AS_ERRORS` (OFF; ON in CI), `MRS_BUILD_WEBOTS` (AUTO: ON when `WEBOTS_HOME` is set), `MRS_BUILD_ARDUPILOT` (ON), `MRS_MAVLINK_DIR` (the vendored headers) |
 | Exports | No DLL macros in `core`. The C API (later) is a separate target with its own export macro |
 | Formatting | `.clang-format` at `MRSlib/libmrs/`, based on the existing code style (tabs, braces on the same line) |
 | Text I/O | Number formatting and parsing use `<charconv>` (`std::to_chars`, `std::from_chars`), so results do not depend on the locale |
@@ -223,6 +228,10 @@ In Webots, `platforms/webots/controllers/mrs_worldview_check` compares the same 
 
 `tests/cbba/` checks spec 13; the cases are listed in spec 13 §7.
 
-### 5.12 Out of scope for WP0
+### 5.12 ArduPilot platform tests (WP10)
+
+`tests/ardupilot/` checks spec 14 against `MockAutopilot`; the cases are listed in spec 14 §11. SITL runs are not in CI (spec 14 §9).
+
+### 5.13 Out of scope for WP0
 
 Condition evaluation, the executor, devices and the worldview get their own tests in WP1–WP3. WP0 only checks that every object can be read and written exactly.
