@@ -168,7 +168,13 @@ Requirements say what a robot needs to take a task. They are checked by the dump
 | `R_I` | Robot | `id robot` | the robot's name is `robot` (`r<id>`, spec 06 §2), for example the landing leaf of one robot (spec 11 §3.6) | static |
 | `R_C` | Runtime condition | `C` | the condition is TRUE on every tick from `STARTED` to the end | runtime (§8.5) |
 
-**Implicit requirements.** Every field read by the task's conditions and functions, and every action code it uses, is added automatically as an `R_F` (with `max_age` = the field's default, spec 05 §3) and an `R_A`. A task author only writes the requirements that cannot be derived: roles, resources, affinity, runtime conditions, and fields read inside registry functions not covered by their registration.
+**Implicit requirements.** Every field read by the task's conditions and functions, and every action code it uses, is added automatically as an `R_F` (with `max_age` = the field's default, spec 05 §3) and an `R_A`. A task author only writes the requirements that cannot be derived: roles, resources, affinity, runtime conditions, and fields read inside registry functions not covered by their registration. A `C_V V_DET` condition reads `det.<class>`.
+
+### 5.1 Knowing is not measuring
+
+A robot with a radio can **know** world fields and detections from its peers (spec 15 §2.4), so they are in its profile's fields. That is enough for a task that only reads them, for example one that starts once a person has been detected. It is not enough for a task that must **make** them true: the robot cannot find a person by hoping a peer will (JB, 2026-10-10). So the fields of a task's **end condition** (and, for a `T_B`, of its `until`; for a complex task, of every child's) must be among the profile's **measured** fields, those its own devices provide (spec 04 §7). Mission fields (`target.*`, `task.*`, `home.*`, `layer.*`, `time`) are exempt, as for `R_F`.
+
+A library behaviour's `until` is a placeholder (§7), so the check uses the placeholder: an entry meant to find detections writes a `C_V V_DET` placeholder and so needs a robot that measures them.
 
 ## 6. Complex tasks and tree links
 
@@ -231,7 +237,9 @@ A behaviour library maps **condition codes** to **behaviour tasks** that make th
 
 | Code | Slots | Meaning |
 |---|---|---|
-| `B_E` | `id name`, `code fulfils`, `id qualifier`, `num priority`, `T behaviour` | Library entry. `fulfils` is a condition code (for example `C_P3`). `qualifier` narrows it: for `C_?` it is the predicate name that the behaviour makes TRUE (for example `airborne`); for every other code it is `any`. `behaviour` is normally a `T_B` |
+| `B_E` | `id name`, `code fulfils`, `id qualifier`, `num priority`, `T behaviour` | Library entry. `fulfils` is a condition code (for example `C_P3`). `qualifier` narrows it: for `C_?` it is the predicate name that the behaviour makes TRUE (for example `airborne`); `sync` marks a **sync behaviour** (spec 15 §2.5); for every other code it is `any`. `behaviour` is normally a `T_B` |
+
+A sync entry is a candidate only when the condition reads world fields that peers may know (spec 15 §2.5); it is also looked up when the condition is UNKNOWN (§8.1).
 
 Lookup: for an unmet condition with code `c`, the executor takes the entries with `fulfils = c` (and, for `C_?`, `qualifier` equal to the predicate name, with the predicate's wanted value `T`) whose static requirements the robot meets, and picks the highest `priority`. Ties go to the first entry in the file. A `C_?` condition that wants a predicate to be `F` has no behaviour in version 0.1; write it with the opposite predicate instead (`landed T`, not `airborne F`).
 
@@ -283,7 +291,7 @@ On each tick, with worldview `w` and mission time `t`:
 3. If `τ` is `QUEUED` or `STARTED`: evaluate its start condition.
    * TRUE: set `τ` to `IN_PROGRESS` and continue with step 4 **in the same tick**.
    * FALSE: if `τ` is `QUEUED`, find a behaviour for the start condition (§7), bind it, push it, set `τ` to `STARTED`, and run step 2 for the pushed behaviour in the same tick. If `τ` is already `STARTED`, the behaviour on top of it is still running; do nothing more for `τ`.
-   * UNKNOWN: do nothing this tick. After `start_unknown_timeout` (default 5 s), end `τ` as `FAILED` with reason `MISSING_FIELD`.
+   * UNKNOWN: if the condition reads world fields peers may know and a sync entry (§7) not yet tried for it fits, bind and push it as for FALSE. Otherwise do nothing this tick. After `start_unknown_timeout` (default 5 s) from the first UNKNOWN, end `τ` as `FAILED` with reason `MISSING_FIELD`.
 4. If `τ` is `IN_PROGRESS`: take its current action (§8.2), evaluate it if parametric, and dispatch it.
 5. Write the journal if any task state changed (spec 06 §8).
 
@@ -349,6 +357,7 @@ A task's `R_C` conditions, and those of every task below it on the stack, are ev
 | `IMPOSSIBLE` | The task executed `A_I` |
 | `PREEMPTED_OUT` | The task was replaced and returned to the pool |
 | `ABORTED` | The operator aborted it |
+| `NOT_KNOWN` | `A_SY` asked no peer, or no answer made the condition TRUE before its timeout (spec 15 §2.5). Not categorical: the task goes back to the pool |
 
 `FAILED` tasks go to the dump rule (spec 06 §5), which decides whether another robot may try them.
 

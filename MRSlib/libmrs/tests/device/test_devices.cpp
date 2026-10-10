@@ -83,7 +83,7 @@ TEST_CASE("the Webots Mavic is built from its definition file and port map") {
 	CHECK(self.robot_type == "mavic2pro");
 	CHECK(self.id == 1);
 	CHECK(self.roles == std::vector<std::string>{"camera_uav"});
-	CHECK(self.actions == std::set<std::string>{"A_MOT", "A_TO", "A_LD", "A_HD", "A_PXY", "A_PZY", "A_VXY", "A_VZY", "A_L"});
+	CHECK(self.actions == std::set<std::string>{"A_MOT", "A_TO", "A_LD", "A_HD", "A_PXY", "A_PZY", "A_VXY", "A_VZY", "A_L", "A_SY"});
 	CHECK(self.views == std::set<std::string>{"V_ATT", "V_RATE", "V_GEO", "V_MAG", "V_BAT", "V_PEER", "V_FLD", "V_DET"});
 	CHECK(self.Capacity("energy_wh") == doctest::Approx(50));
 	bool broadcast = false;

@@ -30,6 +30,7 @@ namespace MRS {
 			case FailReason::IMPOSSIBLE: return "IMPOSSIBLE";
 			case FailReason::PREEMPTED_OUT: return "PREEMPTED_OUT";
 			case FailReason::ABORTED: return "ABORTED";
+			case FailReason::NOT_KNOWN: return "NOT_KNOWN";
 			}
 			return "?";
 		}
@@ -66,11 +67,11 @@ namespace MRS {
 				return f == "time";
 			}
 
-			// "pose.enu.x" is provided when the profile lists "pose.enu" (or the component itself).
-			bool Provides(const CapabilityProfile& p, const std::string& field) {
+			// "pose.enu.x" is provided when the set lists "pose.enu" (or the component itself).
+			bool Provides(const std::set<std::string>& fields, const std::string& field) {
 				std::string f = field;
 				while (true) {
-					if (p.fields.count(f)) return true;
+					if (fields.count(f)) return true;
 					auto dot = f.rfind('.');
 					if (dot == std::string::npos) return false;
 					f.resize(dot);
@@ -114,12 +115,21 @@ namespace MRS {
 			if (requirements_) CollectActions(*requirements_, out);
 		}
 
+		void Task::ProducedFields(std::vector<std::string>& out) const { end_->Fields(out); }
+
 		bool Task::MeetsStaticRequirements(const CapabilityProfile& profile) const {
 			std::vector<std::string> fields, actions;
 			RequiredFields(fields);
 			RequiredActions(actions);
 			for (const auto& f : fields)
-				if (!IsMissionField(f) && !Provides(profile, f)) return false;
+				if (!IsMissionField(f) && !Provides(profile.fields, f)) return false;
+			// What the task must produce, the robot must measure: a field it only hears from peers
+			// does not make it capable (spec 03 §5.1).
+			std::vector<std::string> produced;
+			ProducedFields(produced);
+			const auto& measured = profile.measured ? *profile.measured : profile.fields;
+			for (const auto& f : produced)
+				if (!IsMissionField(f) && !Provides(measured, f)) return false;
 			for (const auto& a : actions)
 				if (!profile.actions.count(a)) return false;
 			return !requirements_ || RolesMet(*requirements_, profile);
@@ -154,6 +164,11 @@ namespace MRS {
 			if (base_) base_->RequiredActions(out);
 		}
 
+		void Behaviour::ProducedFields(std::vector<std::string>& out) const {
+			Task::ProducedFields(out);
+			if (until_) until_->Fields(out);
+		}
+
 		ComplexTask::ComplexTask(const ComplexTask& other) : Task(other), k_(other.k_) {
 			for (const auto& c : other.children_) children_.push_back(c->Clone());
 		}
@@ -166,6 +181,11 @@ namespace MRS {
 		void ComplexTask::RequiredActions(std::vector<std::string>& out) const {
 			Task::RequiredActions(out);
 			for (const auto& c : children_) c->RequiredActions(out);
+		}
+
+		void ComplexTask::ProducedFields(std::vector<std::string>& out) const {
+			Task::ProducedFields(out);
+			for (const auto& c : children_) c->ProducedFields(out);
 		}
 	}
 }

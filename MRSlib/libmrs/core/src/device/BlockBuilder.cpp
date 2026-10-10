@@ -38,7 +38,7 @@ namespace MRS {
 
 		Actuator* ActuatorBlock::Route(const ActionMapEntry& entry) const {
 			const std::string& code = entry.action.code;
-			if (code == "A_N" || code == "A_W" || code == "A_I") return nullptr;
+			if (code == "A_N" || code == "A_W" || code == "A_I" || code == "A_SY") return nullptr;
 			if (entry.target == "any") {
 				auto it = default_.find(code);
 				return it == default_.end() ? nullptr : it->second;

@@ -31,7 +31,7 @@ Branch: `spatial-3d`. Status: **WP8 done** (WP0–WP8). Library code is in [`MRS
 | 12 | [Splittable trees and MRS-STA](spec/12_STA.md) | Units (trees split only where they can be split), MRS-STA with the active-task stack, tree-task sets and evaluation v2 (WP8) |
 | 13 | [CBBA, LDTA² and the communication budget](spec/13_CBBA_LDTA2.md) | CBBA, LDTA², the bitrate-limited channel and message pacing, evaluation v3 (WP9) |
 | 14 | [The ArduPilot platform](spec/14_ArduPilot.md) | MAVLink ports, the GUIDED-mode flight control unit, pass-through processing, UDP between agents, the mock autopilot, SITL runs (WP10) |
-| 15 | [Worldview sync, relative positions and repulsion](spec/15_Sync_and_Neighbours.md) | Sharing world fields and detections (M_SYNC, ask a peer), the ranging sensor, neighbours, the repulsion processor and its opt-in use (WP11) |
+| 15 | [Worldview sync, relative positions and repulsion](spec/15_Sync_and_Neighbours.md) | Sharing world fields and detections (M_SYNC, ask a peer), the ranging sensor, neighbours, the repulsion processor and its opt-in use, the sync behaviour and the capability guard (WP11) |
 
 ## WP0 acceptance (from the plan)
 

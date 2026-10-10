@@ -25,9 +25,17 @@ namespace MRS {
 					}
 				}
 			}
+			// What the robot measures: its own sensors, and the peers' own states, which their
+			// owners broadcast (spec 15 §2.5).
+			std::set<std::string> own = m.views;
+			if (messages) own.insert("V_PEER");
+			m.measured = catalog.Resolve(own).fields;
 			// Peer messages decode to views: STATE to V_PEER, shared world fields and detections to
-			// V_FLD and V_DET (spec 15 §2.4).
-			if (messages) m.views.insert({"V_PEER", "V_FLD", "V_DET"});
+			// V_FLD and V_DET (spec 15 §2.4). With them the robot can also ask peers (A_SY).
+			if (messages) {
+				m.views.insert({"V_PEER", "V_FLD", "V_DET"});
+				m.actions.insert("A_SY");
+			}
 			auto resolution = catalog.Resolve(m.views);
 			m.fields = std::move(resolution.fields);
 			m.processors = std::move(resolution.active);
@@ -45,6 +53,7 @@ namespace MRS {
 			Task::CapabilityProfile p;
 			p.actions = actions;
 			p.fields = fields;
+			p.measured = measured;
 			p.roles.insert(roles.begin(), roles.end());
 			p.robot = "r" + std::to_string(id);
 			return p;

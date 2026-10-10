@@ -550,7 +550,7 @@ namespace MRS {
 					return;
 				}
 				if (code == "A_FN") {
-					std::string target = c.Code('A', [](const std::string& a) { return IsLeafAction(a) && a != "A_N" && a != "A_I"; });
+					std::string target = c.Code('A', [](const std::string& a) { return IsLeafAction(a) && a != "A_N" && a != "A_I" && a != "A_SY"; });
 					const auto n = static_cast<std::size_t>(Device::ValueCount(Device::FindAction(target)->layout));
 					c.Labels("F", n, n);
 					return;
@@ -806,7 +806,7 @@ namespace MRS {
 					std::set<std::pair<std::string, std::string>> entries;
 					for (std::size_t k = 0; k + 1 < rec.fields.size(); k += 2) {
 						const Record& a = rec.children.at(rec.fields[k + 1].ref);
-						if (a.code == "A_MAP" || a.code == "A_N" || a.code == "A_W" || a.code == "A_I")
+						if (a.code == "A_MAP" || a.code == "A_N" || a.code == "A_W" || a.code == "A_I" || a.code == "A_SY")
 							fail_child(a, "A_MAP: " + a.code + " is not allowed inside a map");
 						const std::string& produced = a.code == "A_FN" ? a.fields.at(0).s : a.code;
 						if (!entries.insert({rec.fields[k].s, produced}).second)

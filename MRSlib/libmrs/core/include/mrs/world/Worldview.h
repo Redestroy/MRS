@@ -26,6 +26,19 @@ namespace MRS {
 		// rank after every other source of a field, and are never sent on.
 		inline bool IsPeerSource(const std::string& source) { return source.rfind("peer:", 0) == 0; }
 
+		// A field about the robot itself or the mission, which each robot has its own of and which
+		// is never synced (spec 15 §2.1); every other field is a world field that peers may share.
+		inline bool IsSelfStateField(const std::string& path) {
+			static const char* kSelf[] = {"pose",    "vel",   "acc",     "att",  "rate",   "alt",    "heading",
+			                              "battery", "geo",   "airborne", "landed", "armed", "home",  "layer",
+			                              "geofence", "peer", "rel",     "sync", "repulse", "time", "payload",
+			                              "target",  "task"};
+			const std::string head = path.substr(0, path.find('.'));
+			for (const char* s : kSelf)
+				if (head == s) return true;
+			return false;
+		}
+
 		// Something in the world (spec 05 §5.4).
 		struct SemanticObject {
 			std::string id;   // "r2", "det.person.1"

@@ -47,6 +47,7 @@ namespace MRS {
 				{"A_N", "NULL", ArgLayout::NONE},
 				{"A_W", "WAIT", ArgLayout::F64},
 				{"A_I", "IMPOSSIBLE", ArgLayout::NONE},
+				{"A_SY", "SYNC", ArgLayout::F64},
 				{"A_L", "LED", ArgLayout::U32X2},
 				{"A_TO", "TAKEOFF", ArgLayout::F32X2},
 				{"A_LD", "LAND", ArgLayout::F32X2},

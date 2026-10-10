@@ -12,15 +12,6 @@ namespace MRS {
 		using Protocol::FieldType;
 
 		namespace {
-			// Fields about the robot itself, which M_STATE carries or each robot has its own of (spec 15 §2.1).
-			bool SelfState(const std::string& path) {
-				static const char* kSelf[] = {"pose", "vel", "acc", "att", "rate", "alt", "heading", "battery", "geo", "airborne",
-				                              "landed", "armed", "home", "layer", "geofence", "peer", "rel", "sync", "repulse", "time",
-				                              "payload"};
-				const std::string head = path.substr(0, path.find('.'));
-				return std::find(std::begin(kSelf), std::end(kSelf), head) != std::end(kSelf);
-			}
-
 			bool IsDetections(const std::string& prefix) { return prefix.rfind("det", 0) == 0; }
 
 			// "det.person.3" -> "person".
@@ -57,9 +48,9 @@ namespace MRS {
 				}
 				return out;
 			}
-			if (SelfState(prefix)) return out;
+			if (Environment::IsSelfStateField(prefix)) return out;
 			for (const auto& path : w.PathsWithPrefix(prefix)) {
-				if (SelfState(path)) continue;
+				if (Environment::IsSelfStateField(path)) continue;
 				const auto e = w.Raw(path);
 				if (!e || !e->valid || !std::holds_alternative<double>(e->value)) continue;
 				if (t - e->stamp > w.MaxAge(path)) continue;
@@ -119,6 +110,20 @@ namespace MRS {
 			for (const auto& entry : c_.sync) r.fields.push_back(Field::MakeText(FieldType::Id, entry.prefix));
 			messenger_.Post(r);
 			++stats_.info_requests;
+		}
+
+		int MrsLayer::AskPeers(const std::vector<std::string>& topics, double t) {
+			int asked = 0;
+			for (const Peer* p : peers_.Alive(t, c_.peer_timeout)) {
+				if (p->name == self_ || p->name.empty() || p->name[0] != 'r') continue;  // robots only
+				auto r = messenger_.Begin("M_INFOREQ", p->name, t);
+				r.fields.push_back(Field::MakeInt(static_cast<std::int64_t>(topics.size())));
+				for (const auto& topic : topics) r.fields.push_back(Field::MakeText(FieldType::Id, topic));
+				messenger_.Post(r);
+				++stats_.info_requests;
+				++asked;
+			}
+			return asked;
 		}
 
 		void MrsLayer::OnInfoRequest(const Comm::Message& m, double t) {

@@ -176,3 +176,39 @@ C_1: C_N/
 C_2: C_N/
 A_1: A_HD 0 0/
 A_2: A_N/
+
+# Ask the peers (spec 15 §2.5): for a condition on world fields or detections that is FALSE or
+# UNKNOWN, ask every live peer for them and wait up to 2 s. Only what arrives can make the
+# condition TRUE; no answer fails with NOT_KNOWN, and the next entry (if any) is tried.
+B: B_E sync.view C_V sync 50 T_1/
+T_1: T_B 0 1 0 C_1 C_2 C_3 T_1/
+C_1: C_N/
+C_2: C_N/
+C_3: C_N/
+T_1: T_A 0 1 0 C_1 C_2 A_1..2/
+C_1: C_N/
+C_2: C_N/
+A_1: A_SY 2/
+A_2: A_N/
+
+B: B_E sync.field C_m sync 50 T_1/
+T_1: T_B 0 1 0 C_1 C_2 C_3 T_1/
+C_1: C_N/
+C_2: C_N/
+C_3: C_N/
+T_1: T_A 0 1 0 C_1 C_2 A_1..2/
+C_1: C_N/
+C_2: C_N/
+A_1: A_SY 2/
+A_2: A_N/
+
+B: B_E sync.logic C_L sync 50 T_1/
+T_1: T_B 0 1 0 C_1 C_2 C_3 T_1/
+C_1: C_N/
+C_2: C_N/
+C_3: C_N/
+T_1: T_A 0 1 0 C_1 C_2 A_1..2/
+C_1: C_N/
+C_2: C_N/
+A_1: A_SY 2/
+A_2: A_N/

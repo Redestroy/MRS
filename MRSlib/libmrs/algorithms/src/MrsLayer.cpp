@@ -49,6 +49,7 @@ namespace MRS {
 			robot_.SetJournalEnd(false);
 			robot_.SetTaskListener([this](const Task::TaskEvent& e, double t) { robot_events_.push_back({e, t}); });
 			robot_.SetEventListener([this](const Robot::RaisedEvent& e) { raised_.push_back(e); });
+			robot_.Executor().SetSync([this](const std::vector<std::string>& topics, double t) { return AskPeers(topics, t); });
 			if (robot_.HasMission()) messenger_.SetMission(robot_.MissionId());
 			AllocatorContext ctx;
 			ctx.pool = &pool_;

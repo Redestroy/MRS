@@ -65,6 +65,7 @@ A_4: A_L 3 16711680/          # LED mask 0b11, colour 0xFF0000
 | `A_N` | NULL | `NONE` | | Ends the task (spec 03 §8). Never sent to an actuator |
 | `A_W` | WAIT | `F64` | duration s | Completes when at least `duration` seconds have passed since the action started. Handled by the executor, not an actuator |
 | `A_I` | IMPOSSIBLE | `NONE` | | The task cannot be done by this robot; the executor ends it as `FAILED` with reason `IMPOSSIBLE` |
+| `A_SY` | SYNC | `F64` | timeout (s) | Handled by the executor: ask the live peers for the world fields of the condition the task works towards, then wait for the answer; `FAILED` with reason `NOT_KNOWN` when no peer was asked or the timeout passes first (spec 15 §2.5) |
 | `A_L` | LED | `U32X2` | mask, colour `0xRRGGBB` | Set the LEDs selected by the bit mask. Colour 0 is off |
 
 ### 4.2 Flight actions (the generic flight-capable machine)
@@ -124,7 +125,7 @@ A_2: A_PZY 15 1.57/
 
 * Slots are pairs of a **target** and an action label.
 * The target is either the name of a device node in the robot's tree (spec 04), for example `m_fl`, or the identifier `any`, which routes the entry by its action code (spec 04 §4).
-* Entries MUST be leaf actions or parametric actions (`A_FN`). Nested `A_MAP`, `A_N`, `A_W` and `A_I` are not allowed inside a map.
+* Entries MUST be leaf actions or parametric actions (`A_FN`). Nested `A_MAP`, `A_N`, `A_W`, `A_I` and `A_SY` are not allowed inside a map.
 * Two entries MUST NOT address the same target with the same code.
 * The executor delivers the whole map in one tick. If any entry has no actuator that accepts it, the whole map is rejected and the task fails with reason `NO_ACTUATOR`.
 
@@ -148,7 +149,7 @@ F_2: F_L 1 1 0 target.y/
 
 This reads `target.x` and `target.y` from the worldview each tick (`1·w[x] + 0`).
 
-* The first slot is the action code to produce. It MUST NOT be `A_MAP`, `A_FN`, `A_N` or `A_I`.
+* The first slot is the action code to produce. It MUST NOT be `A_MAP`, `A_FN`, `A_N`, `A_I` or `A_SY`.
 * Then one function per text value of that code's layout: 1 for `I64`/`F64`, 2 for the `X2` layouts, 0 for `NONE`.
 * **Evaluation:** the executor evaluates every function of the active action **every tick**, immediately before dispatch, with the current worldview and mission time (spec 03 §8). The results are packed by the layout rules (§2).
 * Integer layouts round half away from zero, then saturate to the integer range.

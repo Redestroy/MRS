@@ -89,14 +89,16 @@ namespace MRS {
 			void Unassign(double t);
 			void AfterRobot(double t);
 			void SendState(double t);
-			double Budget(double t) const;
-			void Redone(const std::string& id, double t);  // M_DONE again for a repeated task we did  // this robot's share of the channel, bit/s; 0: no limit
+			double Budget(double t) const;                  // this robot's share of the channel, bit/s; 0: no limit
+			void Redone(const std::string& id, double t);  // M_DONE again for a repeated task we did
 			void SendProfile(double t);
 			// Worldview sync (spec 15 §2, MrsSync.cpp).
 			void SendSync(double t);
 			void OnShared(const Comm::Message& m);
 			void OnInfoRequest(const Comm::Message& m, double t);
 			void AskPeer(const std::string& peer, double t);
+			// A_SY (spec 15 §2.5): M_INFOREQ for these topics to every live peer robot; returns how many.
+			int AskPeers(const std::vector<std::string>& topics, double t);
 			// Views of the fields or detections under prefix; keys (if given) gets each one's path or object id.
 			std::vector<Environment::View> SharedViews(const std::string& prefix, bool own_only, bool changed_only, double t,
 			                                           std::vector<std::string>* keys = nullptr);

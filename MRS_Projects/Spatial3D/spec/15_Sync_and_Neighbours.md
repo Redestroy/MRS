@@ -1,6 +1,6 @@
 # 15 Worldview sync, relative positions and repulsion
 
-Status: **WP11**, spec version `0.1`. Plan reference: §6.5 (optional worldview content), §6.6 (worldview synchronisation), §8.6 (communication), §11 (WP11). Builds on specs [04](04_Devices_and_Ports.md) (devices), [05](05_Worldview.md) (worldview), [06](06_Messages.md) (messages), [08](08_Robot_and_Flight.md) (safety supervisor) and [09](09_MRS_Layer.md) (MRS layer).
+Status: **WP11**, spec version `0.2` (0.2 adds the sync behaviour and the capability guard, §2.5). Plan reference: §6.5 (optional worldview content), §6.6 (worldview synchronisation), §8.6 (communication), §11 (WP11). Builds on specs [04](04_Devices_and_Ports.md) (devices), [05](05_Worldview.md) (worldview), [06](06_Messages.md) (messages), [08](08_Robot_and_Flight.md) (safety supervisor) and [09](09_MRS_Layer.md) (MRS layer).
 
 ## 1. Scope
 
@@ -51,6 +51,37 @@ The MRS layer turns every received `V_FLD` and `V_DET` (from `M_SYNC` or `M_INFO
 * `V_FLD` goes to the new **`WorldviewSyncProcessor`**. It writes `sync.rN.<path>`, stamped with the view's stamp. When the robot's own chain neither provides nor offers `<path>` (or a prefix of it), it also **offers** `<path>` with source `peer:rN` (spec 05 §5.1), so a robot without the sensor gets the field from the freshest peer, and a robot with it uses its own.
 
 Sources named `peer:…` rank after every other source of a field, whatever the source order (amends spec 05 §5.1). A field that came from a peer is never sent on, so values do not circle the team.
+
+### 2.5 Asking when a condition needs it, without assuming
+
+JB (2026-10-10): a robot that can learn a view from its peers should, when a condition on it is not TRUE, try to sync before giving up; and this must never turn into "some other robot probably has this, so it is doable".
+
+**Which conditions.** A condition's **shared topics** are the fields it reads (spec 03 §5) that are world fields, not the robot's own state or the mission (the list of §2.1 plus `target` and `task`). A `C_V V_DET` reads `det.<class>`; a `C_m` reads its field; a `C_L` its children's. A condition with no shared topics (a pose, a predicate, the battery, a peer's state) has nothing to ask for.
+
+**The sync behaviour.** Library entries with the qualifier `sync` (spec 03 §7) for `C_V`, `C_m` and `C_L`, priority 50, so they are tried before any entry that does the work itself:
+
+```
+B: B_E sync.view C_V sync 50 T_1/
+T_1: T_B 0 1 0 C_1 C_2 C_3 T_1/
+C_1: C_N/
+C_2: C_N/
+C_3: C_N/
+T_1: T_A 0 1 0 C_1 C_2 A_1..2/
+C_1: C_N/
+C_2: C_N/
+A_1: A_SY 2/
+A_2: A_N/
+```
+
+The executor pushes it when a start condition with shared topics is FALSE (as any library behaviour) or UNKNOWN (spec 03 §8.1). Its `until` is the unmet condition. `A_SY timeout` (spec 02) is handled by the executor: on its first tick it hands the condition's shared topics to the MRS layer, which sends one `M_INFOREQ` with them to every live peer robot (§2.3); then it waits. Peers answer with `M_INFO` as in §2.3, and the answers come in with source `peer:rN` (§2.4).
+
+**What it can and cannot conclude.**
+
+* The condition becomes TRUE only by being evaluated TRUE on what actually arrived; the behaviour then ends at once (its `until`) and the task starts. A fact from a peer is still subject to its `max_age`.
+* No peer to ask, or no answer that makes the condition TRUE within the timeout (2 s): the behaviour fails with `NOT_KNOWN` (spec 03 §8.7). The executor takes the next library entry for the condition, if there is one the robot can run; otherwise the task fails with `NOT_KNOWN`, which is not categorical, so the task goes back to the pool for a robot that knows or can find out. Each sync entry is tried once per start condition. For an UNKNOWN condition the `start_unknown_timeout` still runs from the first UNKNOWN, so asking never extends it.
+* Silence is never read as "a peer has it". `A_SY` needs the messages capability (the self model adds it with any `K_M`), so a robot without a radio has no sync entry and behaves as before.
+
+**The capability guard.** Knowing a field from peers counts for the conditions a task **reads**: a robot with a radio may take a task that starts once a person was detected, because it can learn the detection. It does not count for what a task must **make true**: the fields of its end condition (and of a `T_B`'s `until`) must be **measured** by the robot's own devices (spec 03 §5.1, spec 04 §7). A radio-only Mavic therefore cannot take a search whose end condition is a detection; a Mavic with a camera can. The same check filters library entries, so a future "search until found" behaviour for `C_V V_DET` will be chosen only by robots that can detect.
 
 ## 3. Relative positions
 
@@ -124,3 +155,6 @@ Makespan changes by less than 1%. The breaches left under open MRS-RTA are most 
 * the ranging sensor reports peers within range only, with the right sign; `rel.rN.enu` is written;
 * `Neighbours` prefers a fresh relative measurement over peer states;
 * repulsion: zero without neighbours, pointing away, stronger when closer, zero beyond the radius, small for a peer one layer up, and the supervisor hook moves a setpoint only when enabled.
+* the sync behaviour: a FALSE detection condition asks the peers for `det.person`; an answer that makes it TRUE starts the task; no answer fails it with `NOT_KNOWN` after the timeout; no peer to ask fails it at once; an UNKNOWN world field is asked for once and still fails with `MISSING_FIELD` after `start_unknown_timeout`; a condition on the robot's own state asks nothing;
+* the capability guard: the radio-only Mavic provides but does not measure `det`, can take a task that starts on a detection, cannot take one that ends on a detection unless `det` is measured; without a radio it has neither the field nor a sync entry;
+* two UAVs on QuadSim: r2 needs a detection only r1 holds (not broadcast); r2's sync behaviour gets it from r1 and the task succeeds; for a class nobody holds the task fails with `NOT_KNOWN` and no detection appears.

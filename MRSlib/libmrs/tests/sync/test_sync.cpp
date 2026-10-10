@@ -1,11 +1,13 @@
 // WP11 tests (spec 15 §6): worldview sync, the ranging sensor and relative positions, and the
-// repulsion processor with its opt-in use in the safety supervisor.
+// repulsion processor with its opt-in use in the safety supervisor; the sync behaviour and the
+// capability guard (spec 15 §2.5).
 #include <cmath>
 #include <memory>
 #include <string>
 #include <vector>
 #include "doctest.h"
 #include "../protocol/TestFiles.h"
+#include "../task/Harness.h"
 #include "mrs/comm/Messenger.h"
 #include "mrs/protocol/Parser.h"
 #include "mrs/protocol/Writer.h"
@@ -17,6 +19,8 @@
 using namespace MRS;
 using Environment::View;
 using Environment::WorldModel;
+using Task::FailReason;
+using Task::TaskState;
 
 namespace {
 	Sim::RobotFiles Files() {
@@ -267,4 +271,189 @@ TEST_CASE("the repulsion processor writes repulse.*, and the supervisor uses it 
 	// On the ground the setpoints are left alone.
 	w.SetBool("airborne", false, 2.0, "flight");
 	CHECK(Values(on.Filter(One("A_PXY", 10, 5), 2.0))[0] == doctest::Approx(10));
+}
+
+namespace {
+	const char* kDetectionStart = "T: T_A op.1 1 0 C_1 C_2 A_1/ C_1: C_V V_1/ V_1: V_DET 0 person 10 20 0 0.9/ C_2: C_N/ A_1: A_N/";
+
+	struct SyncFixture {
+		Task::FunctionRegistry registry;
+		Task::TaskFactory factory{registry};
+		Task::BehaviourLibrary library;
+		Environment::Worldview w;
+		Test::ScriptedSink sink;
+		std::vector<std::vector<std::string>> asked;  // topics of every A_SY
+		int peers = 2;
+		double t = 0.0;
+
+		SyncFixture() {
+			Task::RegisterUavFunctions(registry);
+			library.PopulateFromFile((Test::ExamplesDir() / "uav_behaviours.mrsb").string(), factory);
+		}
+
+		std::vector<Task::TaskEvent> Run(Task::TaskExecutor& ex, double seconds, const std::function<void()>& each = {}) {
+			std::vector<Task::TaskEvent> events;
+			for (double end = t + seconds; t < end && !ex.Empty(); t += 0.5) {
+				if (each) each();
+				auto r = ex.Tick(w, t);
+				events.insert(events.end(), r.events.begin(), r.events.end());
+			}
+			return events;
+		}
+
+		void Hook(Task::TaskExecutor& ex) {
+			ex.SetSync([this](const std::vector<std::string>& topics, double) {
+				asked.push_back(topics);
+				return peers;
+			});
+		}
+	};
+
+	const Task::TaskEvent* Final(const std::vector<Task::TaskEvent>& events, const std::string& id) {
+		const Task::TaskEvent* out = nullptr;
+		for (const auto& e : events)
+			if (e.task_id == id) out = &e;
+		return out;
+	}
+}
+
+TEST_CASE("the sync behaviour asks the peers, and only an answer makes the condition TRUE") {
+	SyncFixture f;
+	Task::TaskExecutor ex(f.library, f.sink);
+	f.Hook(ex);
+	ex.Push(Test::OneTask(f.factory, kDetectionStart));
+
+	SUBCASE("a peer answers") {
+		auto events = f.Run(ex, 1.0);
+		REQUIRE(f.asked.size() == 1);
+		CHECK(f.asked[0] == std::vector<std::string>{"det.person"});
+		CHECK_FALSE(ex.Empty());  // waiting for the answer
+		// The answer arrives: a detection with a peer source, as the MRS layer injects it.
+		f.w.SetVec3("det.person.1.enu", 10.5, 20, 0, f.t, "peer:r2");
+		events = f.Run(ex, 1.0);
+		REQUIRE(Final(events, "sync.view"));
+		CHECK(Final(events, "sync.view")->state == TaskState::SUCCEEDED);
+		CHECK(Final(events, "op.1")->state == TaskState::SUCCEEDED);
+		CHECK(f.asked.size() == 1);
+	}
+	SUBCASE("no answer: NOT_KNOWN after the timeout, never assumed") {
+		auto events = f.Run(ex, 5.0);
+		CHECK(f.asked.size() == 1);
+		REQUIRE(Final(events, "op.1"));
+		CHECK(Final(events, "sync.view")->reason == FailReason::NOT_KNOWN);
+		CHECK(Final(events, "op.1")->state == TaskState::FAILED);
+		CHECK(Final(events, "op.1")->reason == FailReason::NOT_KNOWN);
+		CHECK(f.t <= 3.0);
+	}
+	SUBCASE("no peer to ask: NOT_KNOWN at once") {
+		f.peers = 0;
+		auto events = f.Run(ex, 1.0);  // the behaviour fails in the first tick, the task in the next
+		REQUIRE(Final(events, "op.1"));
+		CHECK(Final(events, "op.1")->state == TaskState::FAILED);
+		CHECK(Final(events, "op.1")->reason == FailReason::NOT_KNOWN);
+	}
+}
+
+TEST_CASE("an UNKNOWN world field is asked for; the robot's own state is not") {
+	SyncFixture f;
+	Task::TaskExecutor ex(f.library, f.sink);
+	f.Hook(ex);
+	SUBCASE("world field") {
+		ex.Push(Test::OneTask(f.factory, "T: T_A op.1 1 0 C_1 C_2 A_1/ C_1: C_m wind.speed lt 10 0/ C_2: C_N/ A_1: A_N/"));
+		f.Run(ex, 1.0);
+		REQUIRE(f.asked.size() == 1);
+		CHECK(f.asked[0] == std::vector<std::string>{"wind.speed"});
+		f.w.SetScalar("wind.speed", 3.0, f.t, "peer:r3");
+		auto events = f.Run(ex, 1.0);
+		REQUIRE(Final(events, "op.1"));
+		CHECK(Final(events, "sync.field")->state == TaskState::SUCCEEDED);
+		CHECK(Final(events, "op.1")->state == TaskState::SUCCEEDED);
+	}
+	SUBCASE("a stale field that stays unknown still fails with MISSING_FIELD") {
+		ex.Push(Test::OneTask(f.factory, "T: T_A op.1 1 0 C_1 C_2 A_1/ C_1: C_m wind.speed lt 10 0/ C_2: C_N/ A_1: A_N/"));
+		auto events = f.Run(ex, 10.0);
+		CHECK(f.asked.size() == 1);  // asked once, not again
+		REQUIRE(Final(events, "op.1"));
+		CHECK(Final(events, "op.1")->reason == FailReason::MISSING_FIELD);
+	}
+	SUBCASE("own state") {
+		ex.Push(Test::OneTask(f.factory, "T: T_A op.1 1 0 C_1 C_2 A_1/ C_1: C_m battery.remaining gt 0.5 0/ C_2: C_N/ A_1: A_N/"));
+		auto events = f.Run(ex, 10.0);
+		CHECK(f.asked.empty());
+		REQUIRE(Final(events, "op.1"));
+		CHECK(Final(events, "op.1")->reason == FailReason::MISSING_FIELD);
+	}
+}
+
+TEST_CASE("knowing from peers is not measuring: the capability guard") {
+	Task::FunctionRegistry registry;
+	Task::RegisterUavFunctions(registry);
+	Task::TaskFactory factory{registry};
+	auto uses = Test::OneTask(factory, kDetectionStart);
+	// A search: fly a pattern until a person is detected (the end condition).
+	auto finds = Test::OneTask(factory, "T: T_A op.2 1 0 C_1 C_2 A_1/ C_1: C_N/ C_2: C_V V_1/ V_1: V_DET 0 person 10 20 0 0.9/ A_1: A_HD 0 0/");
+
+	// The Webots Mavic has a radio and no camera: it can know detections, not make them.
+	Sim::Team team(Files(), Config(1));
+	const auto& self = team.robots[0]->robot.self;
+	CHECK(self.Provides("det"));
+	CHECK_FALSE(self.measured.count("det"));
+	CHECK(self.measured.count("pose.enu"));
+	CHECK(self.measured.count("peer"));
+	CHECK(self.Accepts("A_SY"));
+	const auto radio = self.ToProfile();
+	CHECK(uses->MeetsStaticRequirements(radio));
+	CHECK_FALSE(finds->MeetsStaticRequirements(radio));
+
+	auto camera = radio;
+	camera.measured->insert("det");
+	CHECK(finds->MeetsStaticRequirements(camera));
+
+	// Without a radio a robot neither knows nor asks.
+	Task::CapabilityProfile alone;
+	alone.fields = alone.measured.emplace(*radio.measured);
+	alone.actions = radio.actions;
+	alone.actions.erase("A_SY");
+	CHECK_FALSE(uses->MeetsStaticRequirements(alone));
+	Task::BehaviourLibrary library;
+	library.PopulateFromFile((Test::ExamplesDir() / "uav_behaviours.mrsb").string(), factory);
+	CHECK(library.Find(uses->StartCondition(), &radio));
+	CHECK(library.Find(uses->StartCondition(), &radio)->name == "sync.view");
+	CHECK_FALSE(library.Find(uses->StartCondition(), &alone));
+}
+
+TEST_CASE("a UAV asks its peer for a detection it needs, and gets only what the peer holds") {
+	Sim::Team team(Files(), Config(2));
+	team.Run(2.0, false);  // first contact; nothing to share yet
+	// r1 heard of a person from a robot that has since left (source peer:r9), so it does not broadcast it.
+	team.robots[0]->ctl->InjectViews({Detection(team.Time(), 10, 20, "peer:r9")});
+	team.Run(1.0, false);
+	auto& r2 = *team.robots[1]->ctl;
+	REQUIRE(r2.World().Object("det.person.1") == nullptr);
+
+	Task::FunctionRegistry registry;
+	Task::TaskFactory factory{registry};
+	auto final_state = [&](const std::string& id) -> const Task::TaskEvent* {
+		const Task::TaskEvent* out = nullptr;
+		for (const auto& e : r2.TaskLog())
+			if (e.event.task_id == id) out = &e.event;
+		return out;
+	};
+	SUBCASE("the peer knows") {
+		r2.Executor().Push(Test::OneTask(factory, kDetectionStart));
+		team.Run(3.0, false);
+		REQUIRE(final_state("op.1"));
+		CHECK(final_state("sync.view")->state == TaskState::SUCCEEDED);
+		CHECK(final_state("op.1")->state == TaskState::SUCCEEDED);
+		REQUIRE(r2.World().Object("det.person.1"));
+		CHECK(r2.World().Object("det.person.1")->source == "peer:r1");
+	}
+	SUBCASE("nobody knows") {
+		r2.Executor().Push(Test::OneTask(factory, "T: T_A op.1 1 0 C_1 C_2 A_1/ C_1: C_V V_1/ V_1: V_DET 0 car 10 20 0 0.9/ C_2: C_N/ A_1: A_N/"));
+		team.Run(4.0, false);
+		REQUIRE(final_state("op.1"));
+		CHECK(final_state("op.1")->state == TaskState::FAILED);
+		CHECK(final_state("op.1")->reason == FailReason::NOT_KNOWN);
+		CHECK(r2.World().Object("det.car.1") == nullptr);
+	}
 }

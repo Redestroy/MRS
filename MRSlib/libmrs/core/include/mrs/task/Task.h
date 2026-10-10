@@ -30,7 +30,8 @@ namespace MRS {
 			ACTUATOR_FAILED,
 			IMPOSSIBLE,
 			PREEMPTED_OUT,
-			ABORTED
+			ABORTED,
+			NOT_KNOWN
 		};
 
 		const char* TaskStateName(TaskState s);
@@ -40,6 +41,9 @@ namespace MRS {
 		struct CapabilityProfile {
 			std::set<std::string> actions;  // action codes
 			std::set<std::string> fields;   // worldview fields it can provide, e.g. "pose.enu"
+			// The fields it provides from its own devices, not only from peers (spec 03 §5.1).
+			// Unset: the same as fields.
+			std::optional<std::set<std::string>> measured;
 			std::set<std::string> roles;
 			std::string robot;  // "r<id>", for R_I
 		};
@@ -80,6 +84,10 @@ namespace MRS {
 			// Implicit and explicit requirements (spec 03 §5).
 			virtual void RequiredFields(std::vector<std::string>& out) const;
 			virtual void RequiredActions(std::vector<std::string>& out) const;
+			// Fields the task must make true through its own work: those of its end condition (a
+			// behaviour's until too, and the children's for a complex task). The robot must measure
+			// them itself; knowing them from peers is not enough (spec 03 §5.1).
+			virtual void ProducedFields(std::vector<std::string>& out) const;
 			bool MeetsStaticRequirements(const CapabilityProfile& profile) const;
 
 			// The record the task was built from, with the current state in its state slot
@@ -144,6 +152,7 @@ namespace MRS {
 			void SetBase(std::unique_ptr<ATask> base) { base_ = std::move(base); }
 			void RequiredFields(std::vector<std::string>& out) const override;
 			void RequiredActions(std::vector<std::string>& out) const override;
+			void ProducedFields(std::vector<std::string>& out) const override;
 
 		private:
 			std::shared_ptr<const Condition> until_;
@@ -164,6 +173,7 @@ namespace MRS {
 			void SetRequiredSuccesses(long long k) { k_ = k; }
 			void RequiredFields(std::vector<std::string>& out) const override;
 			void RequiredActions(std::vector<std::string>& out) const override;
+			void ProducedFields(std::vector<std::string>& out) const override;
 
 		private:
 			std::vector<std::unique_ptr<Task>> children_;

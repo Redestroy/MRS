@@ -241,12 +241,14 @@ The head builds the self model after port assignment. It contains:
 
 * `robot_type`, `id` and `role` list;
 * every capability of every **available** node (`K_A`, `K_V`, `K_M`, `K_Q`), with the node name that provides it;
-* the views the robot produces: every `K_V`, plus `V_PEER` when it has any `K_M` (peer `STATE` messages decode to `V_PEER`);
-* the worldview fields the robot can provide, from the processor catalog (spec 05 §5.2).
+* the views the robot produces: every `K_V`, plus `V_PEER`, `V_FLD` and `V_DET` when it has any `K_M` (peer `STATE` messages decode to `V_PEER`, shared world fields and detections to `V_FLD` and `V_DET`, spec 15 §2.4);
+* the action codes: every `K_A`, plus `A_SY` when it has any `K_M` (it can ask peers, spec 15 §2.5);
+* the worldview fields the robot can provide, from the processor catalog (spec 05 §5.2);
+* the **measured** fields: the part of those the robot provides from its own devices, computed the same way from its `K_V` views plus `V_PEER` (a peer's own state, broadcast by that peer), without the shared `V_FLD` and `V_DET` (spec 03 §5.1).
 
 The field list is computed to a fixed point: start with `time`; a catalog processor is **active** when at least one of its subscribed views is produced (or it subscribes to none) and every field in its `Needs()` is already provided; an active processor adds its `Provides()`, its `Offers()` fields, and those of its optional outputs whose view is produced. Repeat until nothing changes. An offered field is provided when any of its sources is active; the worldview picks among them at run time (spec 05 §5.1).
 
-`ToProfile()` gives the task layer's capability profile: action codes, fields and roles.
+`ToProfile()` gives the task layer's capability profile: action codes, fields, measured fields and roles.
 
 The self model is sent to peers as a `PROFILE` message (spec 06 §4).
 
