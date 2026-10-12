@@ -1,0 +1,15 @@
+# A robot's own identity map (spec 16 §3). It is checked before the device's descriptor,
+# the library and the registry, so one line here reassigns a swapped or unknown device.
+@: MRS 0.2/
+
+# The GNSS module was replaced by a newer revision that the library does not know yet.
+I: I_M "ublox:neo-m9n:*" gnss.serial 1 rate_hz 10/
+
+# A motor block of revision 2, with a higher motor speed limit.
+I: I_M "acme:motor_block:2" part.motor_block 1 motor.max_speed 520/
+
+# One unit, by serial, gets its own calibration.
+I: I_M "acme:motor_block:2@A13F07" part.motor_block 2 motor.max_speed 520 encoder.offset 0.013/
+
+# A display the robot has but does not use.
+I: I_M "cyberbotics:display" ignore 0/

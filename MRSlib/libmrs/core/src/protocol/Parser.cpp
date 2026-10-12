@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "mrs/device/Action.h"
+#include "mrs/device/Identity.h"
 
 namespace MRS {
 	namespace Protocol {
@@ -346,6 +347,27 @@ namespace MRS {
 					if (!allowed.count(v)) Fail(ErrorClass::Slot, t->offset, raw_.header, rec_.code + ": '" + v + "' is not an allowed value");
 				}
 
+				// A string in the identity format; `pattern` also allows a rev of * (spec 16 §2.1).
+				void IdentityStr(bool pattern) {
+					const Token* t = Peek();
+					if (!t || t->type != Tok::Str) SlotError("expected an identity string");
+					const bool ok = pattern ? Device::IdentityPattern::Parse(t->str).has_value() : Device::Identity::Parse(t->str).has_value();
+					if (!ok) SlotError("\"" + t->str + "\" is not an identity" + (pattern ? " pattern" : ""));
+					Push(Field::MakeText(FieldType::Str, t->str));
+				}
+
+				// A string, or nothing if the next slot is not a string.
+				bool OptStr() {
+					const Token* t = Peek();
+					if (!t || t->type != Tok::Str) return false;
+					Push(Field::MakeText(FieldType::Str, t->str));
+					return true;
+				}
+
+				void Str() {
+					if (!OptStr()) SlotError("expected a string");
+				}
+
 				void IdOrStr() {
 					const Token* t = Peek();
 					if (t && t->type == Tok::Str) {
@@ -630,6 +652,26 @@ namespace MRS {
 			const std::set<std::string> kPortTypes = {"GPIO", "PWM", "ADC", "UART", "I2C", "SPI",
 			                                          "CAN",  "UDP", "TCP", "MAVLINK", "SIM"};
 
+			// Identity map entries and device reports (spec 16 §3.1).
+			void IdentitySlots(Cursor& c, const std::string& code) {
+				if (code == "I_M") {
+					c.IdentityStr(true);
+					c.Id();
+					c.Params();
+				} else if (code == "I_U") {
+					c.Id();       // provider
+					c.IdOrStr();  // address
+					c.Id();       // port type
+					c.Str();      // identity, possibly empty
+					c.OptStr();   // descriptor
+				} else if (code == "I_R") {
+					c.IdIn({"missing", "swapped", "updated", "changed", "extra"});
+					c.Id();
+					c.Str();
+					c.Str();
+				}
+			}
+
 			void PortSlots(Cursor& c, const std::string& code) {
 				if (code == "P_A") {
 					c.Id();  // node
@@ -767,6 +809,7 @@ namespace MRS {
 					add({"D_H", "D_J", "D_X", "D_S", "D_A", "D_C", "D_M"}, DeviceSlots);
 					add({"P_R", "P_A"}, PortSlots);
 					add({"K_A", "K_V", "K_M", "K_Q"}, CapabilitySlots);
+					add({"I_M", "I_U", "I_R"}, IdentitySlots);
 					add({"H_M"}, HeaderSlots);
 					add({"L_D"}, TimelineSlots);
 					add({"J_H", "J_T", "J_K", "J_C", "J_E"}, JournalSlots);
@@ -787,7 +830,7 @@ namespace MRS {
 				return s.codes.count(code) != 0 && s.reserved.count(code) == 0;
 			}
 
-			const std::string kKindsWithCode = "TCRAFVDPKMHLJB";
+			const std::string kKindsWithCode = "TCRAFVDPKMHLJBI";
 
 			// Checks that need the children's codes.
 			void PostCheck(const Record& rec, const std::string& header) {

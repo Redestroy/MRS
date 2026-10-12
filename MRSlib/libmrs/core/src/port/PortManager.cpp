@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "mrs/BuildError.h"
+#include "mrs/device/Identity.h"
 #include "mrs/protocol/Parser.h"
 
 namespace MRS {
@@ -108,7 +109,7 @@ namespace MRS {
 						}
 						std::vector<const PortInfo*> matches;
 						for (const auto& p : scanned())
-							if (p.type == r.type && p.identity == identity) matches.push_back(&p);
+							if (p.type == r.type && Device::IdentityMatches(identity, p.identity)) matches.push_back(&p);
 						if (matches.size() != 1) {
 							unresolved(matches.empty() ? "no scanned " + std::string(PortTypeName(r.type)) + " port reports identity " + identity
 							                           : std::to_string(matches.size()) + " scanned ports report identity " + identity);
