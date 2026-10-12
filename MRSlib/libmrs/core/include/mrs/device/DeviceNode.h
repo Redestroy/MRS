@@ -73,6 +73,14 @@ namespace MRS {
 			// True for nodes a complex device created (spec 04 §3).
 			bool IsVirtual() const { return virtual_; }
 			void SetVirtual(bool v) { virtual_ = v; }
+			// The part this node was included from (spec 16 §6.2), with the parameters the definition gave;
+			// empty for a node not included from a part.
+			const std::string& Part() const { return part_; }
+			const Params& PartParams() const { return part_params_; }
+			void SetPart(std::string part, Params given) {
+				part_ = std::move(part);
+				part_params_ = std::move(given);
+			}
 
 		protected:
 			virtual void OnConfigure() {}
@@ -95,6 +103,8 @@ namespace MRS {
 			DeviceNode* parent_ = nullptr;
 			std::vector<std::unique_ptr<DeviceNode>> children_;
 			bool virtual_ = false;
+			std::string part_;
+			Params part_params_;
 		};
 
 		// Edge: produces views.
@@ -182,6 +192,13 @@ namespace MRS {
 			// The platform part of the type key: "webots" for "quadrotor.webots".
 			std::string Platform() const;
 			DeviceNode& AddVirtual(const DeviceRegistry& registry, const std::string& type_key, const std::string& name, Params params);
+		};
+
+		// group.default: a complex device made only of its explicit children (spec 16 §6.1). It has no
+		// capabilities and no ports of its own.
+		class GroupDevice : public ComplexDevice {
+		public:
+			void Expand(const DeviceRegistry&) override {}
 		};
 	}
 }

@@ -364,7 +364,7 @@ namespace MRS {
 			}
 
 			void RegisterUavDevices(DeviceRegistry& r) {
-				r.Register<HeadNode>("head.default");
+				RegisterBaseDevices(r);
 				r.Register<FlightControlUnit>("fcu.default");
 				r.Register<Quadrotor>("quadrotor.webots", {{"motor_fl", StrValue("front left propeller")},
 				                                           {"motor_fr", StrValue("front right propeller")},

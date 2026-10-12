@@ -25,6 +25,11 @@ namespace MRS {
 			return node;
 		}
 
+		void RegisterBaseDevices(DeviceRegistry& r) {
+			r.Register<HeadNode>("head.default");
+			r.Register<GroupDevice>("group.default");
+		}
+
 		std::string DeviceRegistry::Match(const Identity& id) const {
 			std::string best;
 			int best_spec = -1;

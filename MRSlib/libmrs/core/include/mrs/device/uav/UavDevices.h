@@ -197,7 +197,7 @@ namespace MRS {
 				void Expand(const DeviceRegistry& registry) override;
 			};
 
-			// head.default, fcu.default and the .webots keys of spec 04 §3.1.
+			// The base keys (head.default, group.default), fcu.default and the .webots keys of spec 04 §3.1.
 			void RegisterUavDevices(DeviceRegistry& registry);
 		}
 	}

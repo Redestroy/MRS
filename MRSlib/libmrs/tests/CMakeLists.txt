@@ -8,6 +8,7 @@ add_executable(mrs_tests
 	task/test_executor.cpp
 	device/test_devices.cpp
 	device/test_identity.cpp
+	device/test_parts.cpp
 	world/test_worldview.cpp
 	flight/test_flight.cpp
 	team/test_team.cpp

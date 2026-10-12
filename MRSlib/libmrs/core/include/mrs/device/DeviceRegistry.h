@@ -42,5 +42,8 @@ namespace MRS {
 			};
 			std::map<std::string, Entry> entries_;
 		};
+
+		// The platform-independent keys: head.default and group.default (spec 16 §6.1).
+		void RegisterBaseDevices(DeviceRegistry& registry);
 	}
 }

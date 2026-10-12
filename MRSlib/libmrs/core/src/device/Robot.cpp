@@ -8,18 +8,36 @@
 namespace MRS {
 	namespace Device {
 		Robot BuildRobot(std::string_view definition_text, const DeviceRegistry& registry, Port::IPlatform& platform,
-		                 const Port::PortMap* port_map, const Environment::ProcessorCatalog& catalog) {
+		                 const BuildOptions& options) {
 			auto result = Protocol::Parse(definition_text);
 			if (!result.Ok())
 				throw BuildError("definition: " + std::string(Protocol::ErrorClassName(result.error->error_class)) + " at byte " +
 				                 std::to_string(result.error->offset) + ": " + result.error->message);
-			return BuildRobot(result.document, registry, platform, port_map, catalog);
+			return BuildRobot(result.document, registry, platform, options);
+		}
+
+		Robot BuildRobot(std::string_view definition_text, const DeviceRegistry& registry, Port::IPlatform& platform,
+		                 const Port::PortMap* port_map, const Environment::ProcessorCatalog& catalog) {
+			BuildOptions options;
+			options.port_map = port_map;
+			options.catalog = &catalog;
+			return BuildRobot(definition_text, registry, platform, options);
 		}
 
 		Robot BuildRobot(const Protocol::Document& definition, const DeviceRegistry& registry, Port::IPlatform& platform,
 		                 const Port::PortMap* port_map, const Environment::ProcessorCatalog& catalog) {
+			BuildOptions options;
+			options.port_map = port_map;
+			options.catalog = &catalog;
+			return BuildRobot(definition, registry, platform, options);
+		}
+
+		Robot BuildRobot(const Protocol::Document& definition, const DeviceRegistry& registry, Port::IPlatform& platform,
+		                 const BuildOptions& options) {
+			const Port::PortMap* port_map = options.port_map;
+			const auto& catalog = options.catalog ? *options.catalog : Environment::ProcessorCatalog::Default();
 			Robot robot;
-			robot.tree = TreeBuilder(registry).Build(definition);
+			robot.tree = TreeBuilder(registry, options.library).Build(definition);
 			const auto nodes = robot.tree.Nodes();
 
 			std::vector<Port::NodePorts> requirements;

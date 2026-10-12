@@ -17,6 +17,13 @@ namespace MRS {
 			std::string reason;
 		};
 
+		// Optional inputs of BuildRobot.
+		struct BuildOptions {
+			const Port::PortMap* port_map = nullptr;      // the robot's .mrsp
+			const DeviceLibrary* library = nullptr;       // parts and library identity maps (spec 16 §6)
+			const Environment::ProcessorCatalog* catalog = nullptr;  // null: the default catalog
+		};
+
 		struct Robot {
 			DeviceTree tree;
 			Port::PortReport ports;
@@ -29,6 +36,10 @@ namespace MRS {
 		// unresolved or unopened port, or one that fails to start, is unavailable. 4. Propagates
 		// unavailability to dependants. 5. Builds the blocks and the self model.
 		// Throws BuildError for definition errors; unavailable nodes are faults, not errors.
+		Robot BuildRobot(const Protocol::Document& definition, const DeviceRegistry& registry, Port::IPlatform& platform,
+		                 const BuildOptions& options);
+		Robot BuildRobot(std::string_view definition_text, const DeviceRegistry& registry, Port::IPlatform& platform,
+		                 const BuildOptions& options);
 		Robot BuildRobot(const Protocol::Document& definition, const DeviceRegistry& registry, Port::IPlatform& platform,
 		                 const Port::PortMap* port_map = nullptr,
 		                 const Environment::ProcessorCatalog& catalog = Environment::ProcessorCatalog::Default());

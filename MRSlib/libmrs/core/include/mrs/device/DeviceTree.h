@@ -8,6 +8,7 @@
 
 #include "mrs/device/DeviceNode.h"
 #include "mrs/device/DeviceRegistry.h"
+#include "mrs/device/Library.h"
 #include "mrs/protocol/Record.h"
 
 namespace MRS {
@@ -37,7 +38,9 @@ namespace MRS {
 
 		class TreeBuilder {
 		public:
-			explicit TreeBuilder(const DeviceRegistry& registry) : registry_(registry) {}
+			// `library` supplies the parts that part.<name> type keys include (spec 16 §6.2).
+			explicit TreeBuilder(const DeviceRegistry& registry, const DeviceLibrary* library = nullptr)
+			    : registry_(registry), library_(library) {}
 
 			// Builds the tree: one top-level D_H; every node created through the registry with a kind that
 			// matches its code; K and P_R overrides; complex nodes expanded; joint rules and unique names
@@ -46,8 +49,11 @@ namespace MRS {
 			DeviceTree Build(std::string_view mrsd_text) const;
 
 		private:
-			std::unique_ptr<DeviceNode> BuildNode(const Protocol::Record& rec) const;
+			std::unique_ptr<DeviceNode> BuildNode(const Protocol::Record& rec, int depth = 0) const;
+			// The D_X record a part include stands for: the part with the include's name, parameters and sub-records.
+			Protocol::Record ExpandPart(const Protocol::Record& include, int depth) const;
 			const DeviceRegistry& registry_;
+			const DeviceLibrary* library_;
 		};
 	}
 }

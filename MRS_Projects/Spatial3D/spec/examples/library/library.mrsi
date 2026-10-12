@@ -1,0 +1,4 @@
+# Library identity map (spec 16 §3.2): what the library knows about devices by identity.
+@: MRS 0.2/
+I: I_M "acme:motor_block:*" part.motor_block 0/
+I: I_M "acme:motor:*" motor.mock 0/
