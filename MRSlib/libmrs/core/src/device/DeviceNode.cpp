@@ -28,7 +28,8 @@ namespace MRS {
 		}
 
 		void DeviceNode::Configure(std::string name, std::string type_key, Params params) {
-			name_ = std::move(name);
+			name_ = name;
+			local_name_ = std::move(name);
 			type_key_ = std::move(type_key);
 			params_ = std::move(params);
 			try {
@@ -36,6 +37,11 @@ namespace MRS {
 			} catch (const BuildError& e) {
 				throw BuildError("node " + name_ + ": " + e.what());
 			}
+		}
+
+		void DeviceNode::SetFullName(std::string full) {
+			name_ = std::move(full);
+			for (auto& c : capabilities_) c.node = name_;
 		}
 
 		void DeviceNode::Declare(Capability capability) {

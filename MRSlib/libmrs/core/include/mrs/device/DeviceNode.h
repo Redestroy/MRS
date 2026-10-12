@@ -30,7 +30,12 @@ namespace MRS {
 			DeviceNode& operator=(const DeviceNode&) = delete;
 
 			NodeKind Kind() const { return kind_; }
+			// The full name (spec 16 §5): the names of the D_X ancestors and the local name, joined by '.'.
+			// Equal to the local name until the tree builder places the node.
 			const std::string& Name() const { return name_; }
+			const std::string& LocalName() const { return local_name_; }
+			// Called by the tree builder; also updates the node name of the capabilities.
+			void SetFullName(std::string full);
 			const std::string& TypeKey() const { return type_key_; }
 			const Params& GetParams() const { return params_; }
 
@@ -79,6 +84,7 @@ namespace MRS {
 		private:
 			NodeKind kind_;
 			std::string name_;
+			std::string local_name_;
 			std::string type_key_;
 			Params params_;
 			std::vector<Capability> capabilities_;

@@ -10,10 +10,24 @@ namespace MRS {
 		using Protocol::FieldType;
 		using Protocol::Record;
 
-		DeviceNode* DeviceTree::Find(const std::string& name) const {
-			for (DeviceNode* node : Nodes())
-				if (node->Name() == name) return node;
-			return nullptr;
+		bool NameMatches(const std::string& full, const std::string& ref) {
+			if (full == ref) return true;
+			return !ref.empty() && full.size() > ref.size() && full.compare(full.size() - ref.size(), ref.size(), ref) == 0 &&
+			       full[full.size() - ref.size() - 1] == '.';
+		}
+
+		std::vector<DeviceNode*> DeviceTree::Matches(const std::string& ref) const {
+			std::vector<DeviceNode*> out;
+			for (DeviceNode* node : Nodes()) {
+				if (node->Name() == ref) return {node};
+				if (NameMatches(node->Name(), ref)) out.push_back(node);
+			}
+			return out;
+		}
+
+		DeviceNode* DeviceTree::Find(const std::string& ref) const {
+			const auto matches = Matches(ref);
+			return matches.size() == 1 ? matches[0] : nullptr;
 		}
 
 		std::vector<DeviceNode*> DeviceTree::Nodes() const {
@@ -51,6 +65,16 @@ namespace MRS {
 			if (!head_node) throw BuildError("type " + head->fields.at(1).s + " is not a head node");
 			root.release();
 			DeviceTree tree{std::unique_ptr<HeadNode>(head_node)};
+
+			// Full names (spec 16 §5): a node inside a complex device is named after it.
+			std::function<void(DeviceNode&, const std::string&)> place = [&](DeviceNode& n, const std::string& scope) {
+				if (n.LocalName().find('.') != std::string::npos)
+					throw BuildError("node name " + n.LocalName() + " contains '.', which only full names may have");
+				n.SetFullName(scope.empty() ? n.LocalName() : scope + "." + n.LocalName());
+				const std::string inner = n.Kind() == NodeKind::Complex ? n.Name() : scope;
+				for (const auto& child : n.Children()) place(*child, inner);
+			};
+			place(tree.Head(), "");
 
 			std::set<std::string> names;
 			for (DeviceNode* node : tree.Nodes()) {

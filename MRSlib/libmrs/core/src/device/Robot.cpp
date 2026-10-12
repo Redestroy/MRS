@@ -1,5 +1,7 @@
 #include "mrs/device/Robot.h"
 
+#include <optional>
+
 #include "mrs/BuildError.h"
 #include "mrs/protocol/Parser.h"
 
@@ -23,8 +25,18 @@ namespace MRS {
 			std::vector<Port::NodePorts> requirements;
 			for (DeviceNode* node : nodes)
 				if (!node->PortRequirements().empty()) requirements.push_back({node->Name(), node->PortRequirements()});
+			// Port map entries may name nodes by a short name (spec 16 §5); assignment uses full names.
+			std::optional<Port::PortMap> resolved_map;
+			if (port_map) {
+				resolved_map = *port_map;
+				for (auto& e : resolved_map->entries) {
+					const auto matches = robot.tree.Matches(e.node);
+					if (matches.size() > 1) throw BuildError("port map: node name " + e.node + " is ambiguous");
+					if (matches.size() == 1) e.node = matches[0]->Name();
+				}
+			}
 			Port::PortManager manager(platform);
-			robot.ports = manager.Assign(requirements, port_map);
+			robot.ports = manager.Assign(requirements, resolved_map ? &*resolved_map : nullptr);
 
 			for (const auto& u : robot.ports.unresolved)
 				robot.tree.Find(u.node)->SetUnavailable("port " + u.requirement + ": " + u.reason);

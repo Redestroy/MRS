@@ -12,6 +12,10 @@
 
 namespace MRS {
 	namespace Device {
+		// True when `ref` names the node with full name `full`: the full name itself or a '.'-suffix of it
+		// (spec 16 §5).
+		bool NameMatches(const std::string& full, const std::string& ref);
+
 		class DeviceTree {
 		public:
 			DeviceTree() = default;
@@ -19,7 +23,11 @@ namespace MRS {
 
 			HeadNode& Head() const { return *head_; }
 			bool Empty() const { return !head_; }
-			DeviceNode* Find(const std::string& name) const;
+			// The node a reference names (spec 16 §5): its full name, or a '.'-suffix that matches exactly one
+			// node. Null when no node or several match.
+			DeviceNode* Find(const std::string& ref) const;
+			// Every node the reference matches: the exact full name alone if there is one, else all suffix matches.
+			std::vector<DeviceNode*> Matches(const std::string& ref) const;
 			// Every node, depth first, the head first.
 			std::vector<DeviceNode*> Nodes() const;
 

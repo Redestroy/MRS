@@ -299,7 +299,7 @@ namespace MRS {
 		bool RobotController::FlightCritical() const {
 			for (const auto& f : robot_.faults)
 				for (const char* n : kFlightCritical)
-					if (f.node == n) return true;
+					if (Device::NameMatches(f.node, n)) return true;
 			return fcu_ && !robot_.self.Provides("pose.enu");
 		}
 
