@@ -32,6 +32,7 @@ Branch: `spatial-3d`. Status: **WP8 done** (WP0–WP8). Library code is in [`MRS
 | 13 | [CBBA, LDTA² and the communication budget](spec/13_CBBA_LDTA2.md) | CBBA, LDTA², the bitrate-limited channel and message pacing, evaluation v3 (WP9) |
 | 14 | [The ArduPilot platform](spec/14_ArduPilot.md) | MAVLink ports, the GUIDED-mode flight control unit, pass-through processing, UDP between agents, the mock autopilot, SITL runs (WP10) |
 | 15 | [Worldview sync, relative positions and repulsion](spec/15_Sync_and_Neighbours.md) | Sharing world fields and detections (M_SYNC, ask a peer), the ranging sensor, neighbours, the repulsion processor and its opt-in use, the sync behaviour and the capability guard (WP11) |
+| 16 | [Device identity, discovery and bench mode](spec/16_Device_Discovery_and_Bench.md) | Draft, version 0.2: identities and identity maps for unknown and swapped devices, joints as port providers, open port types, scoped names, parts and the device library, discovery, the boot check, bench mode, C API touchpoints |
 
 ## WP0 acceptance (from the plan)
 

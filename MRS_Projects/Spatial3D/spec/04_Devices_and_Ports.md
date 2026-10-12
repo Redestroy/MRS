@@ -1,6 +1,6 @@
 # 04 Devices and ports
 
-Status: **draft for WP0, updated in WP2**, spec version `0.1`. Grammar: [01](01_Protocol_Grammar.md). Plan reference: §4 (port layer) and §5 (device tree).
+Status: **draft for WP0, updated in WP2**, spec version `0.1`. Version 0.2 additions (device identity, port providers, scoped names, parts, discovery, bench mode) are in spec [16](16_Device_Discovery_and_Bench.md). Grammar: [01](01_Protocol_Grammar.md). Plan reference: §4 (port layer) and §5 (device tree).
 
 ## 1. Device tree
 
@@ -255,3 +255,4 @@ The self model is sent to peers as a `PROFILE` message (spec 06 §4).
 ## 8. Notes for later versions
 
 * **Richer device metadata (JB, 2026-10-06).** Later versions may let devices report more detailed metadata, such as model, interface, rates and calibration, which would allow better self-configuration of the tree and the port map. This is beyond the current work packages. In version 0.1 the definition file, the port map and the `identity` a scan reports are the only sources.
+* **Spec 16 (2026-10-12).** The base mechanism for this is now specified in [spec 16](16_Device_Discovery_and_Bench.md): identities and identity maps (`.mrsi`) for unknown and swapped devices, joints that provide ports for their subtree, open port types, scoped node names, parts and a device library, discovery from a port scan, the boot check, and bench mode. Where spec 16 changes a rule of this spec (names in §1, port types in §6.1, the identity format in §6.3), spec 16 applies.

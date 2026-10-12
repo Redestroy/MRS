@@ -155,6 +155,8 @@ version-body   = "MRS" number ;                      (* kind "@": "@: MRS 0.1/" 
 | `.mrsj` | Task journal (spec 06 §8) |
 | `.mrsm` | Message log: one `M` record per line (spec 06 §2) |
 | `.mrsp` | Port map: one `P_A` record per assigned port requirement (spec 04 §6.2) |
+| `.mrsi` | Identity map: `I_M` records (spec 16 §3, version 0.2) |
+| `.mrsr` | Device report: `I_U` and `I_R` records (spec 16 §7, version 0.2) |
 
 ### 3.5 Writer rules (canonical form)
 
@@ -190,6 +192,7 @@ A parser MUST accept any valid input, not only the canonical form.
 | `L` | Timeline entry | yes | spec 06 |
 | `J` | Journal entry | yes | spec 06 |
 | `B` | Behaviour-library entry | yes | spec 03 §7 |
+| `I` | Identity map entry or device report (version 0.2) | yes | spec 16 |
 
 All other letters are **reserved**.
 
@@ -208,6 +211,7 @@ The full list of codes, with links to their slot definitions:
 | `D`, `P`, `K` | spec 04 |
 | `M`, `H`, `L`, `J` | spec 06 |
 | `B` | `B_E` (spec 03 §7) |
+| `I` | `I_M`, `I_U`, `I_R` (spec 16 §3, version 0.2) |
 
 ## 5. Errors
 
