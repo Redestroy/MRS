@@ -57,6 +57,12 @@ namespace MRS {
 
 		PortManager::PortManager(IPlatform& platform) { providers_[kPlatformProvider] = &platform; }
 
+		std::vector<std::string> PortManager::ProviderNames() const {
+			std::vector<std::string> out;
+			for (const auto& p : providers_) out.push_back(p.first);
+			return out;
+		}
+
 		void PortManager::AddProvider(const std::string& name, IPortProvider& provider) { providers_[name] = &provider; }
 
 		const std::vector<PortInfo>& PortManager::Scan(const std::string& provider) {
@@ -166,7 +172,10 @@ namespace MRS {
 				for (const auto& p : Scan(provider)) {
 					if (p.type != a.type) continue;
 					type_listed = true;
-					if (p.address == a.address) present = true;
+					if (p.address == a.address) {
+						present = true;
+						a.identity = p.identity;
+					}
 				}
 				if (type_listed && !present) {
 					unresolved("port " + PortName(a.type, a.address) + " is not present");
@@ -199,6 +208,8 @@ namespace MRS {
 				Device::Params params;
 				for (const auto& p : a.params.Items())
 					if (p.key != "identity" && p.key != "req" && p.key != "via") params.Add(p.key, p.value);
+				// The identity found there, so that the boot check can tell a swapped device (spec 16 §7.3).
+				if (!a.identity.empty()) params.Add("identity", Device::StrValue(a.identity));
 				if (a.provider != kPlatformProvider) params.Add("via", Device::IdValue(a.provider));
 				for (auto& f : params.ToFields()) rec.fields.push_back(std::move(f));
 				doc.records.push_back(std::move(rec));

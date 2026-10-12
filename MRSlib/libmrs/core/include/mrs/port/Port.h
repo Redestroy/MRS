@@ -83,6 +83,7 @@ namespace MRS {
 			Device::Params params;
 			AssignmentSource source = AssignmentSource::PortMap;
 			std::string provider = kPlatformProvider;  // the provider that opens it (spec 16 §4.2)
+			std::string identity;  // what the provider's scan reported at the address, if anything (spec 16 §7.3)
 		};
 
 		// An open port. Implementations override what their type supports; the rest fail.

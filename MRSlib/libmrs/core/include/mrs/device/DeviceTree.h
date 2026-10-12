@@ -1,6 +1,7 @@
 #pragma once
 // The device tree and its builder from a .mrsd definition (spec 04 §1-§3).
 #include <functional>
+#include <map>
 #include <memory>
 #include <string>
 #include <string_view>
@@ -53,12 +54,17 @@ namespace MRS {
 			DeviceTree Build(const Protocol::Document& definition) const;
 			DeviceTree Build(std::string_view mrsd_text) const;
 
+			// Parameters from the identity of the device at a node's port, by full node name: merged over the
+			// registry defaults and under the definition's parameters (spec 16 §3.3, §7.3).
+			void SetIdentityParams(std::map<std::string, Params> params) { identity_params_ = std::move(params); }
+
 		private:
-			std::unique_ptr<DeviceNode> BuildNode(const Protocol::Record& rec, int depth = 0) const;
+			std::unique_ptr<DeviceNode> BuildNode(const Protocol::Record& rec, int depth = 0, const std::string& scope = {}) const;
 			// The D_X record a part include stands for: the part with the include's name, parameters and sub-records.
 			Protocol::Record ExpandPart(const Protocol::Record& include, int depth) const;
 			const DeviceRegistry& registry_;
 			const DeviceLibrary* library_;
+			std::map<std::string, Params> identity_params_;
 		};
 	}
 }

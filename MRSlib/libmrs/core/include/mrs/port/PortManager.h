@@ -55,6 +55,7 @@ namespace MRS {
 			// A provider joint that is ready to scan and open ports (spec 16 §4.1).
 			void AddProvider(const std::string& name, IPortProvider& provider);
 			bool HasProvider(const std::string& name) const { return providers_.count(name) != 0; }
+			std::vector<std::string> ProviderNames() const;
 
 			// Assigns every requirement (spec 04 §6.3), as a fresh assignment. Throws BuildError for a port map entry that
 			// matches no requirement or has another type, and for an exclusive port given twice.

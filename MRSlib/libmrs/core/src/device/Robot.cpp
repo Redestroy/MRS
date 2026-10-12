@@ -1,6 +1,8 @@
 #include "mrs/device/Robot.h"
 
 #include <map>
+#include <set>
+#include <tuple>
 #include <optional>
 
 #include "mrs/BuildError.h"
@@ -33,12 +35,29 @@ namespace MRS {
 			return BuildRobot(definition, registry, platform, options);
 		}
 
-		Robot BuildRobot(const Protocol::Document& definition, const DeviceRegistry& registry, Port::IPlatform& platform,
-		                 const BuildOptions& options) {
+		namespace {
+			const Port::PortInfo* Scanned(Port::PortManager& manager, const std::string& provider, const Port::PortType& type,
+			                              const std::string& address) {
+				for (const auto& p : manager.Scan(provider))
+					if (p.type == type && p.address == address) return &p;
+				return nullptr;
+			}
+
+			std::string TypeOf(const DeviceNode& node) { return node.Part().empty() ? node.TypeKey() : kPartPrefix + node.Part(); }
+
+			// One build. `identity_params` go to TreeBuilder; `updates` gets the parameters of updated devices.
+			Robot BuildOnce(const Protocol::Document& definition, const DeviceRegistry& registry, Port::IPlatform& platform,
+			                const BuildOptions& options, const std::map<std::string, Params>& identity_params,
+			                std::map<std::string, Params>& updates) {
 			const Port::PortMap* port_map = options.port_map;
 			const auto& catalog = options.catalog ? *options.catalog : Environment::ProcessorCatalog::Default();
+			std::vector<const IdentityMap*> library_maps;
+			if (options.library) library_maps = options.library->Maps();
+			const IdentityResolver resolver(registry, options.identity_map, library_maps);
 			Robot robot;
-			robot.tree = TreeBuilder(registry, options.library).Build(definition);
+			TreeBuilder builder(registry, options.library);
+			builder.SetIdentityParams(identity_params);
+			robot.tree = builder.Build(definition);
 			const auto nodes = robot.tree.Nodes();
 
 			// Each node's requirements, with the provider joints above it, nearest first (spec 16 §4.2).
@@ -86,7 +105,41 @@ namespace MRS {
 				}
 				Port::PortReport report;
 				manager.AssignNode(np, map, report);
-				for (const auto& u : report.unresolved) node->SetUnavailable("port " + u.requirement + ": " + u.reason);
+				// The boot check (spec 16 §7.3): the identity the port map saved against what is there now.
+				auto saved = [&](const std::string& requirement) -> std::string {
+					const Port::PortAssignment* e = map ? map->Find(node->Name(), requirement) : nullptr;
+					return e ? e->params.Text("identity") : std::string();
+				};
+				for (const auto& u : report.unresolved) {
+					const std::string expected = saved(u.requirement);
+					if (!expected.empty() && u.reason.find("is not present") != std::string::npos)
+						robot.check.push_back({"missing", node->Name(), expected, ""});
+					node->SetUnavailable("port " + u.requirement + ": " + u.reason);
+				}
+				for (const auto& a : report.assigned) {
+					const std::string expected = saved(a.requirement);
+					if (expected.empty() || expected == a.identity) continue;
+					const auto exp = Identity::Parse(expected), found = Identity::Parse(a.identity);
+					if (exp && found && exp->vendor == found->vendor && exp->model == found->model && exp->rev == found->rev) {
+						robot.check.push_back({"swapped", node->Name(), expected, a.identity});
+						continue;
+					}
+					std::optional<IdentityMatch> match;
+					try {
+						const auto* info = Scanned(manager, a.provider, a.type, a.address);
+						match = resolver.Resolve(a.identity, info ? info->descriptor : std::string());
+					} catch (const BuildError&) {
+						match.reset();
+					}
+					if (match && !match->Ignored() && match->type == TypeOf(*node)) {
+						robot.check.push_back({"updated", node->Name(), expected, a.identity});
+						if (!match->params.Empty()) updates[node->Name()] = match->params;
+					} else {
+						robot.check.push_back({"changed", node->Name(), expected, a.identity});
+						node->SetUnavailable("port " + a.requirement + ": device changed from " + expected + " to " +
+						                     (a.identity.empty() ? std::string("an unknown device") : a.identity));
+					}
+				}
 				for (auto& a : report.assigned) {
 					if (node->Available()) {
 						auto port = manager.Open(a);
@@ -110,6 +163,21 @@ namespace MRS {
 			for (DeviceNode* node : nodes)
 				if (auto* joint = dynamic_cast<ProviderJoint*>(node); joint && joint->Available()) robot.providers.push_back(joint);
 
+			// Devices that are there and known but used by no node (spec 16 §7.3, `extra`).
+			std::set<std::tuple<std::string, Port::PortType, std::string>> used;
+			for (const auto& a : robot.ports.assigned) used.insert({a.provider, a.type, a.address});
+			for (const auto& provider : manager.ProviderNames())
+				for (const auto& p : manager.Scan(provider)) {
+					if (used.count({provider, p.type, p.address})) continue;
+					std::optional<IdentityMatch> match;
+					try {
+						match = resolver.Resolve(p.identity, p.descriptor);
+					} catch (const BuildError&) {
+						match.reset();
+					}
+					if (match && !match->Ignored()) robot.check.push_back({"extra", provider, p.address, p.identity});
+				}
+
 			// Dependants of unavailable nodes are unavailable too, to a fixed point.
 			bool changed = true;
 			while (changed) {
@@ -130,6 +198,29 @@ namespace MRS {
 			robot.blocks = BuildBlocks(robot.tree);
 			robot.self = SelfModel::Build(robot.tree, catalog);
 			return robot;
+			}
+		}
+
+		Robot BuildRobot(const Protocol::Document& definition, const DeviceRegistry& registry, Port::IPlatform& platform,
+		                 const BuildOptions& options) {
+			std::map<std::string, Params> updates;
+			{
+				Robot robot = BuildOnce(definition, registry, platform, options, {}, updates);
+				if (updates.empty()) return robot;
+			}
+			// An updated device's own information takes effect (spec 16 §7.3): the first build is released
+			// and the robot is built again with it.
+			std::map<std::string, Params> again;
+			return BuildOnce(definition, registry, platform, options, updates, again);
+		}
+
+		Protocol::Record CheckFinding::ToRecord() const {
+			Protocol::Record rec;
+			rec.kind = 'I';
+			rec.code = "I_R";
+			rec.fields = {Protocol::Field::MakeText(Protocol::FieldType::Id, result), Protocol::Field::MakeText(Protocol::FieldType::Id, node),
+			              Protocol::Field::MakeText(Protocol::FieldType::Str, expected), Protocol::Field::MakeText(Protocol::FieldType::Str, found)};
+			return rec;
 		}
 
 		void UpdateProviders(Robot& robot, double t) {

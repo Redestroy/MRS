@@ -11,6 +11,8 @@ add_executable(mrs_tests
 	device/test_parts.cpp
 	device/test_writer.cpp
 	device/test_providers.cpp
+	device/test_check.cpp
+	device/test_discovery.cpp
 	world/test_worldview.cpp
 	flight/test_flight.cpp
 	team/test_team.cpp

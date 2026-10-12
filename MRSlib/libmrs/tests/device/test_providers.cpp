@@ -84,7 +84,7 @@ TEST_CASE("a joint provides the ports of its subtree") {
 	// The written port map says which provider, and reads back.
 	const auto doc = Port::PortManager::WritePortMap(robot.ports);
 	const std::string text = Protocol::Write(doc);
-	CHECK(text.find("P: P_A left motor CAN \"node12\" 1 via can0/") != std::string::npos);
+	CHECK(text.find("P: P_A left motor CAN \"node12\" 2 identity \"acme:motor:3\" via can0/") != std::string::npos);
 	const auto map = Port::PortMap::FromDocument(doc);
 	auto host2 = Host();
 	auto again = Device::BuildRobot(kRover, registry, host2, &map);

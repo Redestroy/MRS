@@ -17,9 +17,20 @@ namespace MRS {
 			std::string reason;
 		};
 
+		// One finding of the boot check (spec 16 §7.3), an I_R record. For `extra`, `node` is the provider and
+		// `expected` the port's address.
+		struct CheckFinding {
+			std::string result;  // missing, swapped, updated, changed, extra
+			std::string node;
+			std::string expected;
+			std::string found;
+			Protocol::Record ToRecord() const;
+		};
+
 		// Optional inputs of BuildRobot.
 		struct BuildOptions {
 			const Port::PortMap* port_map = nullptr;      // the robot's .mrsp
+			const IdentityMap* identity_map = nullptr;    // the robot's .mrsi (spec 16 §3)
 			const DeviceLibrary* library = nullptr;       // parts and library identity maps (spec 16 §6)
 			const Environment::ProcessorCatalog* catalog = nullptr;  // null: the default catalog
 		};
@@ -31,6 +42,7 @@ namespace MRS {
 			Blocks blocks;
 			SelfModel self;
 			std::vector<Port::IPortProvider*> providers;  // the available provider joints, in tree order (spec 16 §4)
+			std::vector<CheckFinding> check;              // the boot check (spec 16 §7.3)
 		};
 
 		// Per-tick work of the provider joints, before sensors are sampled (spec 16 §4.1).

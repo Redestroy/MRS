@@ -184,7 +184,7 @@ namespace MRS {
 			return out;
 		}
 
-		std::unique_ptr<DeviceNode> TreeBuilder::BuildNode(const Record& rec, int depth) const {
+		std::unique_ptr<DeviceNode> TreeBuilder::BuildNode(const Record& rec, int depth, const std::string& scope) const {
 			const std::string& type = rec.fields.at(1).s;
 			if (type.rfind(kPartPrefix, 0) == 0) {
 				std::size_t next = 0;
@@ -201,7 +201,7 @@ namespace MRS {
 					if (sub.kind == 'D') ++part_children;
 				for (const auto& sub : rec.children)
 					if (sub.kind == 'D') --part_children;
-				auto node = BuildNode(expanded, depth + 1);
+				auto node = BuildNode(expanded, depth + 1, scope);
 				std::function<void(DeviceNode&)> mark = [&](DeviceNode& n) {
 					n.SetFromPart(true);
 					for (const auto& c : n.Children()) mark(*c);
@@ -235,7 +235,11 @@ namespace MRS {
 				joint->SetInterface(type);
 				joint->CheckInterface();
 			} else {
-				node = registry_.Create(type, name, params);
+				const std::string full = scope.empty() ? name : scope + "." + name;
+				auto it = identity_params_.find(full);
+				Params merged = it == identity_params_.end() ? Params{} : it->second;
+				merged.Merge(params);
+				node = registry_.Create(type, name, merged);
 				if (node->Kind() != kind)
 					throw BuildError("node " + name + ": " + type + " is a " + NodeCode(node->Kind()) + ", not a " + rec.code);
 			}
@@ -265,7 +269,8 @@ namespace MRS {
 			}
 
 			if (auto* complex = dynamic_cast<ComplexDevice*>(node.get())) complex->Expand(registry_);
-			for (const Record* child : children) node->AddChild(BuildNode(*child, depth));
+			const std::string inner = kind == NodeKind::Complex ? (scope.empty() ? name : scope + "." + name) : scope;
+			for (const Record* child : children) node->AddChild(BuildNode(*child, depth, inner));
 			if (auto* joint = dynamic_cast<JointNode*>(node.get())) joint->CheckChildren();
 			return node;
 		}
