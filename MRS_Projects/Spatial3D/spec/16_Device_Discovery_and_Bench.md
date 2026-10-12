@@ -318,6 +318,14 @@ JB (2026-10-12): what happens when commands stop is chosen by the user or by the
 * `BuildError` becomes an error code and message; faults and check findings are lists of records.
 * The bench commands of §8.2 are the first slice of the C API.
 
+The bench slice is implemented in `MRSlib/libmrs/capi` (header `mrs/mrs.h`, library `mrs_c`; static by default, shared with `MRS_CAPI_SHARED=ON` for bindings):
+
+* Status codes `MRS_OK`, `MRS_ERR_ARGUMENT`, `MRS_ERR_PARSE`, `MRS_ERR_BUILD`, `MRS_ERR_NOT_FOUND`, `MRS_ERR_INTERNAL`; the message is `mrs_last_error()` (per thread). Strings the library returns are freed with `mrs_free()`.
+* `mrs_registry_create("uav")` (device sets `base`, `uav`); `mrs_platform_create` from a table of callbacks (`scan`, `open`, `read`, `write`, `send`, `receive`, `close`, `time`, `step`, `port_types`). A scan is text, one port per line: type, address, identity, descriptor, separated by tabs.
+* `mrs_bench_build(mrsd, mrsp, mrsi, settings, registry, platform)`, then `apply` (one leaf `A` record as text), `sample` (`V` records), `nodes` and `faults` (tab-separated lines), `check` (`I_R`), `self` (`K` records), `stop`, `step`, `time`, and the raw ports `open_raw`, `read`, `write`, `send`, `receive`, `close`.
+* Text given without a version line is read as version 0.2.
+* Not in this slice: user-written device classes as callbacks, discovery, and the Python package.
+
 ## 10. Protocol changes
 
 * Kind `I` with codes `I_M`, `I_U`, `I_R` (§3.1). A version 0.1 parser rejects them as unknown codes; files that use them SHOULD start with `@: MRS 0.2/`.
@@ -328,7 +336,7 @@ JB (2026-10-12): what happens when commands stop is chosen by the user or by the
 
 ## 11. Implementation order
 
-*Note (non-normative).* A suggested order, each step with its tests:
+*Note (non-normative).* A suggested order, each step with its tests. Steps 1–8 were implemented in this order on 2026-10-12.
 
 1. Identity format and pattern matching; kind `I` in the parser and writer; `.mrsi` loading; registry identities (§2, §3).
 2. Scoped names and suffix resolution (§5), with the existing examples still passing.
