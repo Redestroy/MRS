@@ -266,7 +266,7 @@ Bench mode lets a user build part of a robot and command its devices directly, b
 
 | Command | Behaviour |
 |---|---|
-| `Apply(node, action)` | One `A` record (with sub-records) sent to the named node through the actuator block's routing (spec 04 §4.2). Returns the action status |
+| `Apply(node, action, [timeout], [on_timeout])` | One `A` record (with sub-records) sent to the named node through the actuator block's routing (spec 04 §4.2). Returns the action status. `timeout` and `on_timeout` override the bench settings for this command (§8.4) |
 | `Sample(node)` | The node's new views as `V` records |
 | `Nodes()`, `Faults()`, `Self()`, `Check()` | The tree with full names, the faults, the self model, the boot check findings |
 | `OpenRaw(provider, port_type, address, params)` | Opens a port that no node holds, for testing wiring before a device class exists. Refused for a port a node already holds exclusively |
@@ -278,7 +278,24 @@ Bench mode lets a user build part of a robot and command its devices directly, b
 
 * An action argument outside a `min` or `max` limit of the node's `K_A` is `REJECTED`.
 * The **motion codes** `A_MOT A_TO A_LD A_HD A_PXY A_PZY A_VXY A_VZY A_GMB` are `REJECTED` unless the bench was built with them in its `allow` list.
-* **Dead man:** if an actuator receives no bench command for `bench_timeout` seconds (default 0.5), it is put in its safe state. `Actuator::Safe()` is new; by default it does nothing. Motors go to zero; the flight control unit holds or lands as it does on `setpoint_timeout`.
+* Timeouts are user or command defined (§8.4); `Stop()` always puts every actuator in its safe state.
+
+### 8.4 Command timeout
+
+JB (2026-10-12): what happens when commands stop is chosen by the user or by the command, not fixed. The choices err on caution, but longer times and continuing the last action are available.
+
+* Every bench command to an actuator starts that actuator's **command timeout**. The timeout and what happens when it runs out come from the command (`timeout`, `on_timeout`) when given, otherwise from the bench settings `bench_timeout` (s, default 5) and `bench_on_timeout` (default `default`). A timeout of 0 means none.
+* `on_timeout` is one of:
+
+| Value | Behaviour |
+|---|---|
+| `default` | The actuator's own timeout behaviour, `Actuator::OnTimeout()`. Each class defines it, erring on caution: motors go to zero, the flight control unit holds or lands as it does on `setpoint_timeout`, LEDs and the payload latch keep their state. The base class calls `Safe()` |
+| `safe` | `Actuator::Safe()`: the actuator's safest state, the same as `Stop()` gives |
+| `continue` | The last action keeps being applied until a new command or `Stop()` |
+
+* `Actuator::Safe()` and `Actuator::OnTimeout()` are new. `Safe()` does nothing in the base class; a class whose actuator can do harm MUST override it.
+* A new command to the actuator restarts its timeout with that command's settings.
+* *Note:* an E-stop, an interrupt that puts every actuator in its safe state from outside the command stream (a hardware button or a separate channel), may be added later. It is not part of version 0.2.
 * The safety supervisor and the task executor do not run in bench mode. *Note:* that is why bench mode is a build flag and not a switch on a running robot.
 
 ## 9. C API touchpoints
@@ -287,7 +304,7 @@ Bench mode lets a user build part of a robot and command its devices directly, b
 
 * Everything crosses the boundary as protocol text: `.mrsd`, `.mrsp`, `.mrsi`, descriptors, `A`, `V`, `I_U` and `I_R` records. The ABI stays small.
 * Opaque handles for the registry, the library, a platform or provider, and a robot. Nodes are addressed by name (§5). The tree is fixed after build, so names stay valid for the robot's lifetime.
-* User-written **device classes** are a table of callbacks (`configure`, `start`, `sample`, `apply`, `update`, `safe`) registered under a type key, with optional identities.
+* User-written **device classes** are a table of callbacks (`configure`, `start`, `sample`, `apply`, `update`, `safe`, `on_timeout`) registered under a type key, with optional identities.
 * User-written **providers** are a table of callbacks (`scan`, `open`, `read`, `write`, `send`, `receive`, `update`) with their port type names (§4.5).
 * `BuildError` becomes an error code and message; faults and check findings are lists of records.
 * The bench commands of §8.2 are the first slice of the C API.
@@ -313,12 +330,12 @@ Bench mode lets a user build part of a robot and command its devices directly, b
 7. Bench mode (§8).
 8. The C API, starting with the bench slice (§9).
 
-## 12. Defaults chosen here, for review
+## 12. Defaults chosen here
 
-These were not asked explicitly and follow from the rules above. Each can be changed.
+These were not asked explicitly and follow from the rules above. JB accepted 1–4 on 2026-10-12 for now; upgraded logic may change them later. JB changed 5: rejection stays, timeouts are user or command defined (§8.4).
 
 1. A device that now resolves to another type key is not substituted: its node is unavailable until the mapping is changed (§7.3).
 2. A device's own descriptor ranks above the library and below the robot's own map (§3.2).
 3. The runtime reports differences but never rewrites the robot's files (§7.3).
 4. Parts take parameters only through `<local>.<key>` overrides; there is no templating (§6.2).
-5. Bench mode rejects out-of-limit and motion actions unless allowed, and stops actuators after 0.5 s without a command (§8.3).
+5. Bench mode rejects out-of-limit and motion actions unless allowed (§8.3). When commands stop, the user or the command chooses what happens: the actuator's own cautious default, its safe state, or continuing the last action (§8.4).
