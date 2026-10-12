@@ -1,5 +1,6 @@
 #include "mrs/device/Robot.h"
 
+#include <map>
 #include <optional>
 
 #include "mrs/BuildError.h"
@@ -40,9 +41,16 @@ namespace MRS {
 			robot.tree = TreeBuilder(registry, options.library).Build(definition);
 			const auto nodes = robot.tree.Nodes();
 
+			// Each node's requirements, with the provider joints above it, nearest first (spec 16 §4.2).
 			std::vector<Port::NodePorts> requirements;
-			for (DeviceNode* node : nodes)
-				if (!node->PortRequirements().empty()) requirements.push_back({node->Name(), node->PortRequirements()});
+			std::map<const DeviceNode*, std::size_t> index;
+			for (DeviceNode* node : nodes) {
+				Port::NodePorts np{node->Name(), node->PortRequirements(), {}};
+				for (DeviceNode* up = node->Parent(); up; up = up->Parent())
+					if (dynamic_cast<ProviderJoint*>(up)) np.providers.push_back(up->Name());
+				index[node] = requirements.size();
+				requirements.push_back(std::move(np));
+			}
 			// Port map entries may name nodes by a short name (spec 16 §5); assignment uses full names.
 			std::optional<Port::PortMap> resolved_map;
 			if (port_map) {
@@ -53,24 +61,54 @@ namespace MRS {
 					if (matches.size() == 1) e.node = matches[0]->Name();
 				}
 			}
+			const Port::PortMap* map = resolved_map ? &*resolved_map : nullptr;
 			Port::PortManager manager(platform);
-			robot.ports = manager.Assign(requirements, resolved_map ? &*resolved_map : nullptr);
+			manager.CheckMap(requirements, map);
 
-			for (const auto& u : robot.ports.unresolved)
-				robot.tree.Find(u.node)->SetUnavailable("port " + u.requirement + ": " + u.reason);
-			for (const auto& a : robot.ports.assigned) {
-				DeviceNode* node = robot.tree.Find(a.node);
-				if (!node->Available()) continue;
-				auto port = manager.Open(a);
-				if (!port) {
-					node->SetUnavailable("port " + a.requirement + ": " + Port::PortTypeName(a.type) + " \"" + a.address +
-					                     "\" did not open");
+			// In tree order: a provider joint gets its ports and starts before its subtree is assigned.
+			for (DeviceNode* node : nodes) {
+				const auto& np = requirements[index[node]];
+				for (const auto& name : np.providers) {
+					const DeviceNode* provider = robot.tree.Find(name);
+					if (provider && !provider->Available()) {
+						node->SetUnavailable("provider " + name + " is unavailable");
+						break;
+					}
+				}
+				if (!node->Available() || np.requirements.empty()) {
+					if (node->Available()) {
+						if (auto* joint = dynamic_cast<ProviderJoint*>(node)) {
+							if (!joint->Start()) joint->SetUnavailable(joint->FaultReason().empty() ? "did not start" : joint->FaultReason());
+							else manager.AddProvider(joint->Name(), *joint);
+						}
+					}
 					continue;
 				}
-				node->AttachPort(a.requirement, std::move(port));
+				Port::PortReport report;
+				manager.AssignNode(np, map, report);
+				for (const auto& u : report.unresolved) node->SetUnavailable("port " + u.requirement + ": " + u.reason);
+				for (auto& a : report.assigned) {
+					if (node->Available()) {
+						auto port = manager.Open(a);
+						if (!port)
+							node->SetUnavailable("port " + a.requirement + ": " + Port::PortTypeName(a.type) + " \"" + a.address +
+							                     "\" did not open");
+						else
+							node->AttachPort(a.requirement, std::move(port));
+					}
+					robot.ports.assigned.push_back(std::move(a));
+				}
+				for (auto& u : report.unresolved) robot.ports.unresolved.push_back(std::move(u));
+				if (auto* joint = dynamic_cast<ProviderJoint*>(node); joint && joint->Available()) {
+					if (!joint->Start()) joint->SetUnavailable(joint->FaultReason().empty() ? "did not start" : joint->FaultReason());
+					else manager.AddProvider(joint->Name(), *joint);
+				}
 			}
 			for (DeviceNode* node : nodes)
-				if (node->Available() && !node->Start()) node->SetUnavailable(node->FaultReason().empty() ? "did not start" : node->FaultReason());
+				if (node->Available() && !dynamic_cast<ProviderJoint*>(node) && !node->Start())
+					node->SetUnavailable(node->FaultReason().empty() ? "did not start" : node->FaultReason());
+			for (DeviceNode* node : nodes)
+				if (auto* joint = dynamic_cast<ProviderJoint*>(node); joint && joint->Available()) robot.providers.push_back(joint);
 
 			// Dependants of unavailable nodes are unavailable too, to a fixed point.
 			bool changed = true;
@@ -92,6 +130,10 @@ namespace MRS {
 			robot.blocks = BuildBlocks(robot.tree);
 			robot.self = SelfModel::Build(robot.tree, catalog);
 			return robot;
+		}
+
+		void UpdateProviders(Robot& robot, double t) {
+			for (Port::IPortProvider* p : robot.providers) p->Update(t);
 		}
 	}
 }

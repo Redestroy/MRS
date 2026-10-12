@@ -11,6 +11,7 @@
 
 #include "mrs/device/Action.h"
 #include "mrs/device/Identity.h"
+#include "mrs/port/Port.h"
 
 namespace MRS {
 	namespace Protocol {
@@ -368,6 +369,14 @@ namespace MRS {
 					if (!OptStr()) SlotError("expected a string");
 				}
 
+				// A port type name (spec 16 §4.5).
+				void PortTypeId() {
+					const Token* t = Peek();
+					std::string v = Id();
+					if (!Port::PortType::FromName(v))
+						Fail(ErrorClass::Slot, t->offset, raw_.header, rec_.code + ": '" + v + "' is not a port type name");
+				}
+
 				void IdOrStr() {
 					const Token* t = Peek();
 					if (t && t->type == Tok::Str) {
@@ -649,9 +658,6 @@ namespace MRS {
 				if (code == "D_X") c.Labels("D");
 			}
 
-			const std::set<std::string> kPortTypes = {"GPIO", "PWM", "ADC", "UART", "I2C", "SPI",
-			                                          "CAN",  "UDP", "TCP", "MAVLINK", "SIM"};
-
 			// Identity map entries and device reports (spec 16 §3.1).
 			void IdentitySlots(Cursor& c, const std::string& code) {
 				if (code == "I_M") {
@@ -661,7 +667,7 @@ namespace MRS {
 				} else if (code == "I_U") {
 					c.Id();       // provider
 					c.IdOrStr();  // address
-					c.Id();       // port type
+					c.PortTypeId();
 					c.Str();      // identity, possibly empty
 					c.OptStr();   // descriptor
 				} else if (code == "I_R") {
@@ -677,7 +683,7 @@ namespace MRS {
 					c.Id();  // node
 					c.Id();  // requirement
 				}
-				c.IdIn(kPortTypes);
+				c.PortTypeId();
 				c.IdOrStr();
 				if (code == "P_R") c.Bool();
 				c.Params();

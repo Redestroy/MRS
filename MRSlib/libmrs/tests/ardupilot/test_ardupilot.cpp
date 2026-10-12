@@ -15,6 +15,7 @@
 #include "mrs/device/Robot.h"
 #include "mrs/device/uav/UavDevices.h"
 #include "mrs/platform/ArduPilotPlatform.h"
+#include "mrs/platform/AutopilotJoint.h"
 #include "mrs/platform/GuidedFcu.h"
 #include "mrs/platform/MockAutopilot.h"
 #include "mrs/platform/UdpTransport.h"
@@ -196,6 +197,68 @@ TEST_CASE("one copter on ArduPilot flies liftoff, fly-to, LED flash and landing 
 	CHECK_FALSE(c.Fcu()->Armed());
 	CHECK(c.ap.Targets() > 10);  // GUIDED position targets
 	CHECK(c.ap.MaxSpeedSeen() <= 8.0 + 0.1);  // max_speed_xy, sent as DO_CHANGE_SPEED
+}
+
+namespace {
+	// A host whose TCP port reaches the mock autopilot instead of a socket.
+	class LoopbackHost : public Platform::HostPlatform {
+	public:
+		explicit LoopbackHost(Platform::MockAutopilot& ap) : HostPlatform({0.02, Platform::ClockMode::MANUAL, -1.0}), ap_(ap) {}
+		std::unique_ptr<Port::Port> Open(const Port::PortAssignment& a) override {
+			if (a.type != Port::PortType::TCP || a.address != "127.0.0.1:5760") return nullptr;
+			return std::make_unique<Platform::ByteLinkPort>(a, ap_.TakeLink());
+		}
+
+	private:
+		Platform::MockAutopilot& ap_;
+	};
+}
+
+TEST_CASE("the autopilot as a provider joint flies the same tasks (spec 16 §4.6)") {
+	Platform::MockAutopilot ap(AutopilotAt(1));
+	LoopbackHost host(ap);
+	Device::DeviceRegistry devices;
+	Device::Uav::RegisterUavDevices(devices);
+	Platform::RegisterArduPilotDevices(devices);
+	Task::FunctionRegistry functions;
+	Task::RegisterUavFunctions(functions);
+	Task::TaskFactory factory(functions);
+	Task::BehaviourLibrary library;
+	library.PopulateFromFile((Test::ExamplesDir() / "uav_behaviours.mrsb").string(), factory);
+	const auto map = Port::PortMap::Parse(Test::ReadFile(Test::ExamplesDir() / "quad_ardupilot_host.mrsp"));
+	auto robot = Device::BuildRobot(Test::ReadFile(Test::ExamplesDir() / "quad_ardupilot_host.mrsd"), devices, host, &map);
+	REQUIRE(robot.faults.empty());
+	REQUIRE(robot.providers.size() == 1);
+	for (const auto& a : robot.ports.assigned) CHECK(a.provider == (a.node == "ap" ? "platform" : "ap"));
+	auto* joint = dynamic_cast<Platform::AutopilotJoint*>(robot.tree.Find("ap"));
+	REQUIRE(joint);
+	REQUIRE(joint->Engine());
+
+	Robot::ControllerConfig cc;
+	cc.robot = "r1";
+	cc.robot_id = 1;
+	Robot::RobotController ctl(robot, library, functions, cc);
+	ctl.SetMission(Record(Header(1)));
+	REQUIRE(ctl.AddTasks(Test::ReadFile(Test::ExamplesDir() / "uav_single_flight.mrst")) == 3);
+	bool done = false;
+	while (host.Time() < 200.0 && !done) {
+		ctl.Tick(host.Time());  // updates the joint, which pumps the link
+		done = ctl.ListDone();
+		ap.Step(0.02);
+		host.Step();
+	}
+	REQUIRE(done);
+	for (const char* id : {"sf.1", "sf.2", "sf.3"}) {
+		CAPTURE(id);
+		CHECK(ctl.StateOf(id) == Task::TaskState::SUCCEEDED);
+	}
+	CHECK(joint->Engine()->State().heartbeat);
+	CHECK(std::hypot(ap.Position()[1] + 10.0 - 40.0, ap.Position()[0] + 5.0 - 20.0) < 1.5);
+	// The autopilot's scan reports its identity once it has heard a heartbeat.
+	bool identified = false;
+	for (const auto& p : joint->Scan())
+		if (p.identity == "ardupilot:autopilot") identified = true;
+	CHECK(identified);
 }
 
 TEST_CASE("a takeoff that cannot arm fails after arm_timeout") {

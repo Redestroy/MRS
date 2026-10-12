@@ -13,6 +13,7 @@ namespace MRS {
 	namespace Test {
 		struct MockDevice {
 			std::string identity;
+			std::string descriptor;
 			std::vector<double> sample;  // what Read returns
 			bool fresh = false;          // Read succeeds once per Push
 			std::vector<std::vector<double>> writes;
@@ -68,6 +69,7 @@ namespace MRS {
 			void Remove(Port::PortType type, const std::string& address) { devices_.erase({type, address}); }
 			MockDevice& Get(const std::string& address, Port::PortType type = Port::PortType::SIM) { return *devices_.at({type, address}); }
 			int scans = 0;
+			std::vector<Port::PortType> types;  // empty: the built-in types
 
 			// The Webots Mavic 2 Pro devices, plus an emitter and receiver in bodySlot.
 			static MockPlatform Mavic() {
@@ -82,7 +84,7 @@ namespace MRS {
 			std::vector<Port::PortInfo> Scan() override {
 				++scans;
 				std::vector<Port::PortInfo> out;
-				for (const auto& d : devices_) out.push_back({d.first.first, d.first.second, d.second->identity});
+				for (const auto& d : devices_) out.push_back({d.first.first, d.first.second, d.second->identity, d.second->descriptor});
 				return out;
 			}
 			std::unique_ptr<Port::Port> Open(const Port::PortAssignment& a) override {
@@ -92,6 +94,7 @@ namespace MRS {
 				it->second->opened_with = a.params;
 				return std::make_unique<MockPort>(a, it->second);
 			}
+			std::vector<Port::PortType> PortTypes() const override { return types; }
 			double Time() const override { return time_; }
 			bool Step() override {
 				time_ += 0.008;

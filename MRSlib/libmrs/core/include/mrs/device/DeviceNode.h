@@ -171,20 +171,29 @@ namespace MRS {
 			std::int64_t id_ = 0;
 		};
 
-		// A link with an interface and connection rules (spec 04 §2.2). Not in the registry:
-		// the `type` slot of D_J is the interface kind.
+		// A link with an interface and connection rules (spec 04 §2.2). A plain joint is not in the registry:
+		// the `type` slot of D_J is the interface kind. A joint with parameter `provider <key>` is created from
+		// that registry key and provides ports for its subtree (spec 16 §4.1).
 		class JointNode : public DeviceNode {
 		public:
 			JointNode() : DeviceNode(NodeKind::Joint) {}
-			const std::string& Interface() const { return TypeKey(); }
+			const std::string& Interface() const { return interface_; }
+			// Set by the tree builder from the type slot; CheckInterface validates it.
+			void SetInterface(std::string interface_kind) { interface_ = std::move(interface_kind); }
+			void CheckInterface() const;
+			// True for the interfaces that carry data (bus, mech_bus, mech_bus_elec).
+			bool CarriesData() const;
 			const std::string& Frame() const { return frame_; }
 			// Throws BuildError if the children break the rules.
 			void CheckChildren() const;
 
 		protected:
-			void OnConfigure() override;
+			void OnConfigure() final;
+			// Further configuration of a joint subclass (a provider).
+			virtual void OnJointConfigure() {}
 
 		private:
+			std::string interface_;
 			std::int64_t max_children_ = 0;
 			std::set<std::string> accepts_;
 			std::string frame_;
@@ -202,6 +211,10 @@ namespace MRS {
 			std::string Platform() const;
 			DeviceNode& AddVirtual(const DeviceRegistry& registry, const std::string& type_key, const std::string& name, Params params);
 		};
+
+		// A joint that scans and opens ports for its subtree (spec 16 §4). Its own port requirements are resolved
+		// by the provider above it. It is started before its subtree's ports are assigned.
+		class ProviderJoint : public JointNode, public Port::IPortProvider {};
 
 		// group.default: a complex device made only of its explicit children (spec 16 §6.1). It has no
 		// capabilities and no ports of its own.

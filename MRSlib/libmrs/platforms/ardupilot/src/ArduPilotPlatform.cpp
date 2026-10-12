@@ -150,7 +150,7 @@ namespace MRS {
 
 		std::vector<P::PortInfo> ArduPilotPlatform::Scan() {
 			std::vector<P::PortInfo> out;
-			const std::string identity = state_.heartbeat ? "ardupilot" : "";
+			const std::string identity = state_.heartbeat ? "ardupilot:autopilot" : "";  // spec 16 §2.1
 			for (const auto& ch : kChannels) out.push_back({P::PortType::MAVLINK, ch.address, identity});
 			out.push_back({P::PortType::MAVLINK, "GUIDED", identity});
 			for (int k = 1; k <= 8; ++k) out.push_back({P::PortType::MAVLINK, "SERVO:" + std::to_string(k), identity});

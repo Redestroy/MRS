@@ -30,7 +30,11 @@ namespace MRS {
 			std::vector<Fault> faults;
 			Blocks blocks;
 			SelfModel self;
+			std::vector<Port::IPortProvider*> providers;  // the available provider joints, in tree order (spec 16 §4)
 		};
+
+		// Per-tick work of the provider joints, before sensors are sampled (spec 16 §4.1).
+		void UpdateProviders(Robot& robot, double t);
 
 		// 1. Builds the tree. 2. Assigns ports (port map, address, scan). 3. Opens them; a node with an
 		// unresolved or unopened port, or one that fails to start, is unavailable. 4. Propagates

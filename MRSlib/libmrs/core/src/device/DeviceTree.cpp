@@ -55,7 +55,9 @@ namespace MRS {
 				rec.kind = 'D';
 				rec.code = NodeCode(n.Kind());
 				rec.fields = {Field::MakeText(FieldType::Id, n.LocalName()),
-				              Field::MakeText(FieldType::Id, n.Part().empty() ? n.TypeKey() : kPartPrefix + n.Part())};
+				              Field::MakeText(FieldType::Id, n.Kind() == NodeKind::Joint ? static_cast<const JointNode&>(n).Interface()
+				                                             : n.Part().empty()            ? n.TypeKey()
+				                                                                           : kPartPrefix + n.Part())};
 				for (auto& f : n.DefinedParams().ToFields()) rec.fields.push_back(std::move(f));
 				auto add = [&rec](Record sub) {
 					rec.fields.push_back(Field::MakeRef(rec.children.size()));
@@ -220,8 +222,18 @@ namespace MRS {
 
 			std::unique_ptr<DeviceNode> node;
 			if (kind == NodeKind::Joint) {
-				node.reset(new JointNode());
-				node->Configure(name, type, params);
+				const std::string provider = params.Text("provider");
+				if (provider.empty()) {
+					node.reset(new JointNode());
+					node->Configure(name, type, params);
+				} else {
+					node = registry_.Create(provider, name, params);
+					if (!dynamic_cast<ProviderJoint*>(node.get()))
+						throw BuildError("joint " + name + ": " + provider + " is not a provider joint");
+				}
+				auto* joint = static_cast<JointNode*>(node.get());
+				joint->SetInterface(type);
+				joint->CheckInterface();
 			} else {
 				node = registry_.Create(type, name, params);
 				if (node->Kind() != kind)

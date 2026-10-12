@@ -138,15 +138,24 @@ namespace MRS {
 			if (id_ < 1) throw BuildError("head needs an id >= 1");
 		}
 
-		void JointNode::OnConfigure() {
+		void JointNode::CheckInterface() const {
 			static const std::set<std::string> interfaces = {"mech", "bus", "elec", "mech_bus", "mech_bus_elec"};
-			if (!interfaces.count(Interface())) throw BuildError("unknown joint interface " + Interface());
+			if (!interfaces.count(interface_)) throw BuildError("joint " + Name() + ": unknown joint interface " + interface_);
+			if (dynamic_cast<const ProviderJoint*>(this) && !CarriesData())
+				throw BuildError("joint " + Name() + ": a provider joint needs an interface that carries data, not " + interface_);
+		}
+
+		bool JointNode::CarriesData() const { return interface_ == "bus" || interface_ == "mech_bus" || interface_ == "mech_bus_elec"; }
+
+		void JointNode::OnConfigure() {
+			if (interface_.empty()) interface_ = TypeKey();
 			max_children_ = GetParams().Int("max_children", 0);
 			for (const auto& code : GetParams().Texts("accepts")) {
 				if (!NodeKindFromCode(code) || code == "D_H") throw BuildError("accepts " + code + " is not a child node code");
 				accepts_.insert(code);
 			}
 			frame_ = GetParams().Text("frame");
+			OnJointConfigure();
 		}
 
 		void JointNode::CheckChildren() const {

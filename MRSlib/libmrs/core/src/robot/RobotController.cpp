@@ -215,6 +215,7 @@ namespace MRS {
 
 			// 1. The fcu's armed state, then the views (spec 08 §3.1 steps 1-2).
 			if (fcu_) model_.world.SetBool("armed", fcu_->Armed(), t, "fcu");
+			Device::UpdateProviders(robot_, t);
 			auto views = robot_.blocks.sensors.Sample(t);
 			for (auto& v : injected_) views.push_back(std::move(v));
 			injected_.clear();
