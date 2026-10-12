@@ -52,14 +52,19 @@ namespace MRS {
 
 		DeviceLibrary DeviceLibrary::FromEnvironment() {
 			std::vector<std::filesystem::path> folders;
-			const char* env = std::getenv("MRS_LIBRARY");
-			if (!env) return {};
 #ifdef _WIN32
+			char* env = nullptr;
+			std::size_t length = 0;
+			if (_dupenv_s(&env, &length, "MRS_LIBRARY") != 0 || !env) return {};
+			const std::string value(env);
+			std::free(env);
 			const char separator = ';';
 #else
+			const char* env = std::getenv("MRS_LIBRARY");
+			if (!env) return {};
+			const std::string value(env);
 			const char separator = ':';
 #endif
-			std::string value(env);
 			std::size_t start = 0;
 			while (start <= value.size()) {
 				const auto end = value.find(separator, start);
