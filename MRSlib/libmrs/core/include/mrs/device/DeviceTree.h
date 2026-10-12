@@ -32,6 +32,11 @@ namespace MRS {
 			// Every node, depth first, the head first.
 			std::vector<DeviceNode*> Nodes() const;
 
+			// The definition of the tree in canonical form (spec 16 §7.1): virtual nodes and nodes a part brought in
+			// are left out, part includes are written as includes, parameters are those the definition gave.
+			// Building the result gives the same tree.
+			Protocol::Document ToDocument() const;
+
 		private:
 			std::unique_ptr<HeadNode> head_;
 		};

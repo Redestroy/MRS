@@ -73,14 +73,21 @@ namespace MRS {
 			// True for nodes a complex device created (spec 04 §3).
 			bool IsVirtual() const { return virtual_; }
 			void SetVirtual(bool v) { virtual_ = v; }
-			// The part this node was included from (spec 16 §6.2), with the parameters the definition gave;
-			// empty for a node not included from a part.
-			const std::string& Part() const { return part_; }
-			const Params& PartParams() const { return part_params_; }
-			void SetPart(std::string part, Params given) {
-				part_ = std::move(part);
-				part_params_ = std::move(given);
+			// What the definition said about this node, for the tree writer (spec 16 §7.1): its parameters without
+			// registry defaults, and its K and P_R sub-records.
+			const Params& DefinedParams() const { return defined_params_; }
+			const std::vector<Protocol::Record>& DefinedOverrides() const { return defined_overrides_; }
+			void SetDefinition(Params params, std::vector<Protocol::Record> overrides) {
+				defined_params_ = std::move(params);
+				defined_overrides_ = std::move(overrides);
 			}
+			// The part this node was included from (spec 16 §6.2); empty for a node not included from a part.
+			// The include's parameters and sub-records are then the DefinedParams and DefinedOverrides.
+			const std::string& Part() const { return part_; }
+			void SetPart(std::string part) { part_ = std::move(part); }
+			// True for a node that a part brought in below its include; the writer leaves it to the part.
+			bool FromPart() const { return from_part_; }
+			void SetFromPart(bool v) { from_part_ = v; }
 
 		protected:
 			virtual void OnConfigure() {}
@@ -103,8 +110,10 @@ namespace MRS {
 			DeviceNode* parent_ = nullptr;
 			std::vector<std::unique_ptr<DeviceNode>> children_;
 			bool virtual_ = false;
+			Params defined_params_;
+			std::vector<Protocol::Record> defined_overrides_;
 			std::string part_;
-			Params part_params_;
+			bool from_part_ = false;
 		};
 
 		// Edge: produces views.

@@ -43,6 +43,36 @@ namespace MRS {
 			return out;
 		}
 
+		Protocol::Document DeviceTree::ToDocument() const {
+			Protocol::Document doc;
+			Record version;
+			version.kind = '@';
+			version.fields = {Field::MakeText(FieldType::Id, "MRS"), Field::MakeNum(0.2)};
+			doc.records.push_back(version);
+			if (!head_) return doc;
+			std::function<Record(const DeviceNode&)> write = [&](const DeviceNode& n) {
+				Record rec;
+				rec.kind = 'D';
+				rec.code = NodeCode(n.Kind());
+				rec.fields = {Field::MakeText(FieldType::Id, n.LocalName()),
+				              Field::MakeText(FieldType::Id, n.Part().empty() ? n.TypeKey() : kPartPrefix + n.Part())};
+				for (auto& f : n.DefinedParams().ToFields()) rec.fields.push_back(std::move(f));
+				auto add = [&rec](Record sub) {
+					rec.fields.push_back(Field::MakeRef(rec.children.size()));
+					rec.children.push_back(std::move(sub));
+				};
+				// Slot order: P*, K*, then D* (spec 04 §2.1).
+				for (char kind : {'P', 'K'})
+					for (const auto& sub : n.DefinedOverrides())
+						if (sub.kind == kind) add(sub);
+				for (const auto& child : n.Children())
+					if (!child->IsVirtual() && !child->FromPart()) add(write(*child));
+				return rec;
+			};
+			doc.records.push_back(write(*head_));
+			return doc;
+		}
+
 		DeviceTree TreeBuilder::Build(std::string_view mrsd_text) const {
 			auto result = Protocol::Parse(mrsd_text);
 			if (!result.Ok())
@@ -157,8 +187,30 @@ namespace MRS {
 			if (type.rfind(kPartPrefix, 0) == 0) {
 				std::size_t next = 0;
 				Params given = Params::FromFields(rec.fields, 2, &next);
-				auto node = BuildNode(ExpandPart(rec, depth), depth + 1);
-				node->SetPart(type.substr(std::string(kPartPrefix).size()), std::move(given));
+				std::vector<Record> overrides;
+				std::size_t part_children = 0;  // the part's own D children come first among the explicit ones
+				for (std::size_t k = next; k < rec.fields.size(); ++k) {
+					if (rec.fields[k].type != FieldType::Ref) continue;
+					const Record& sub = rec.children.at(rec.fields[k].ref);
+					if (sub.kind != 'D') overrides.push_back(sub);
+				}
+				const Record expanded = ExpandPart(rec, depth);
+				for (const auto& sub : expanded.children)
+					if (sub.kind == 'D') ++part_children;
+				for (const auto& sub : rec.children)
+					if (sub.kind == 'D') --part_children;
+				auto node = BuildNode(expanded, depth + 1);
+				std::function<void(DeviceNode&)> mark = [&](DeviceNode& n) {
+					n.SetFromPart(true);
+					for (const auto& c : n.Children()) mark(*c);
+				};
+				std::size_t seen = 0;
+				for (const auto& child : node->Children()) {
+					if (child->IsVirtual()) continue;
+					if (seen++ < part_children) mark(*child);
+				}
+				node->SetPart(type.substr(std::string(kPartPrefix).size()));
+				node->SetDefinition(std::move(given), std::move(overrides));
 				return node;
 			}
 			const NodeKind kind = *NodeKindFromCode(rec.code);
@@ -169,7 +221,7 @@ namespace MRS {
 			std::unique_ptr<DeviceNode> node;
 			if (kind == NodeKind::Joint) {
 				node.reset(new JointNode());
-				node->Configure(name, type, std::move(params));
+				node->Configure(name, type, params);
 			} else {
 				node = registry_.Create(type, name, params);
 				if (node->Kind() != kind)
@@ -177,6 +229,11 @@ namespace MRS {
 			}
 
 			std::vector<const Record*> children;
+			std::vector<Record> overrides;
+			for (std::size_t k = next; k < rec.fields.size(); ++k)
+				if (rec.fields[k].type == FieldType::Ref && rec.children.at(rec.fields[k].ref).kind != 'D')
+					overrides.push_back(rec.children.at(rec.fields[k].ref));
+			node->SetDefinition(params, std::move(overrides));
 			for (std::size_t k = next; k < rec.fields.size(); ++k) {
 				if (rec.fields[k].type != FieldType::Ref) continue;
 				const Record& sub = rec.children.at(rec.fields[k].ref);
