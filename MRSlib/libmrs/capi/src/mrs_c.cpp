@@ -173,6 +173,15 @@ struct mrs_bench {
 	Device::Bench bench;
 };
 
+// Outside the extern "C" block: it throws, and MSVC assumes extern "C" functions do not (/EHsc).
+namespace {
+	Port::Port& RawPort(mrs_bench* bench, int handle) {
+		Port::Port* p = bench->bench.Raw(handle);
+		if (!p) throw NotFound{"no raw port " + std::to_string(handle)};
+		return *p;
+	}
+}
+
 extern "C" {
 
 const char* mrs_version(void) { return "0.2.0"; }
@@ -363,14 +372,6 @@ mrs_status mrs_bench_open_raw(mrs_bench* bench, const char* provider, const char
 		*handle = h;
 		return MRS_OK;
 	});
-}
-
-namespace {
-	Port::Port& RawPort(mrs_bench* bench, int handle) {
-		Port::Port* p = bench->bench.Raw(handle);
-		if (!p) throw NotFound{"no raw port " + std::to_string(handle)};
-		return *p;
-	}
 }
 
 mrs_status mrs_raw_read(mrs_bench* bench, int handle, double* values, int capacity, int* count) {
