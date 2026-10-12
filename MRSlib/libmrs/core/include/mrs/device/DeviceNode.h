@@ -131,6 +131,12 @@ namespace MRS {
 			virtual ActionStatus Apply(const Action& action, double t) = 0;
 			// Runs every control tick, after dispatch.
 			virtual void Update(double t) { (void)t; }
+			// The actuator's safest state (spec 16 §8.4): what Stop() gives in bench mode. Nothing in the
+			// base class; a class whose actuator can do harm overrides it.
+			virtual void Safe(double t) { (void)t; }
+			// When commands stop arriving (spec 16 §8.4, `default`). Each class errs on caution; the base
+			// class calls Safe().
+			virtual void OnTimeout(double t) { Safe(t); }
 			// Parameter `default T`: gets `any` actions whose code several actuators accept.
 			bool IsDefault() const { return GetParams().Bool("default", false); }
 		};

@@ -18,8 +18,18 @@ namespace MRS {
 				Port::Port* port = GetPort("motor");
 				const double speed = Device::UnpackReals(Device::ArgLayout::F64, action.arg).at(0);
 				if (!port || !port->Write({speed})) return Device::ActionStatus::FAILED;
+				++applied;
 				return Device::ActionStatus::DONE;
 			}
+			void Safe(double) override {
+				++safes;
+				if (Port::Port* port = GetPort("motor")) port->Write({0.0});
+			}
+			void OnTimeout(double t) override {
+				++timeouts;
+				Actuator::OnTimeout(t);
+			}
+			int applied = 0, safes = 0, timeouts = 0;
 
 		protected:
 			void OnConfigure() override {

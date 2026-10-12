@@ -55,6 +55,7 @@ namespace MRS {
 			if (options.library) library_maps = options.library->Maps();
 			const IdentityResolver resolver(registry, options.identity_map, library_maps);
 			Robot robot;
+			robot.bench = options.bench;
 			TreeBuilder builder(registry, options.library);
 			builder.SetIdentityParams(identity_params);
 			robot.tree = builder.Build(definition);

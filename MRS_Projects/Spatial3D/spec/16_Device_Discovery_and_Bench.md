@@ -265,7 +265,9 @@ Bench mode lets a user build part of a robot and command its devices directly, b
 
 ### 8.1 Building
 
-`BuildRobot` takes a flag `bench`. A bench robot is built like any other (tree, ports, start, availability, blocks, self model), but it MUST NOT be given to a `RobotController`, and a robot built without the flag does not accept bench commands. A definition MAY be as small as a head with one joint and one device.
+`BuildRobot` takes a flag `bench` (`BuildOptions::bench`). A bench robot is built like any other (tree, ports, start, availability, blocks, self model), but it MUST NOT be given to a `RobotController` (the constructor refuses it), and a robot built without the flag does not accept bench commands (`Bench` refuses it). A definition MAY be as small as a head with one joint and one device.
+
+The commands are methods of `Device::Bench`, which owns the robot. Its settings (`BenchSettings`) are `timeout`, `on_timeout` and the `allow` list, or the parameters `bench_timeout`, `bench_on_timeout` and `allow` (one id per code) through `BenchSettings::FromParams`.
 
 ### 8.2 Commands
 
@@ -281,7 +283,7 @@ Bench mode lets a user build part of a robot and command its devices directly, b
 
 ### 8.3 Safety
 
-* An action argument outside a `min` or `max` limit of the node's `K_A` is `REJECTED`.
+* An action argument outside a `min` or `max` limit of the node's `K_A` is `REJECTED`. Each value of the argument is checked against the limits named exactly `min` and `max`; other limits (such as the fcu's `max_climb`) are the class's own to enforce.
 * The **motion codes** `A_MOT A_TO A_LD A_HD A_PXY A_PZY A_VXY A_VZY A_GMB` are `REJECTED` unless the bench was built with them in its `allow` list.
 * Timeouts are user or command defined (§8.4); `Stop()` always puts every actuator in its safe state.
 
@@ -296,10 +298,12 @@ JB (2026-10-12): what happens when commands stop is chosen by the user or by the
 |---|---|
 | `default` | The actuator's own timeout behaviour, `Actuator::OnTimeout()`. Each class defines it, erring on caution: motors go to zero, the flight control unit holds or lands as it does on `setpoint_timeout`, LEDs and the payload latch keep their state. The base class calls `Safe()` |
 | `safe` | `Actuator::Safe()`: the actuator's safest state, the same as `Stop()` gives |
-| `continue` | The last action keeps being applied until a new command or `Stop()` |
+| `continue` | The last action is applied again at every `Step()` until a new command or `Stop()` |
 
 * `Actuator::Safe()` and `Actuator::OnTimeout()` are new. `Safe()` does nothing in the base class; a class whose actuator can do harm MUST override it.
-* A new command to the actuator restarts its timeout with that command's settings.
+* A new command to the actuator restarts its timeout with that command's settings. A command the actuator rejects starts nothing.
+* The timeout is in platform time and is checked at each `Step()`, after sampling and before the actuators' `Update`.
+* *Note:* before its timeout runs out, an action lasts as long as the class makes it last. A velocity setpoint to the fcu turns into a position hold after the fcu's own `setpoint_timeout` (0.5 s) unless it is repeated, which `continue` does.
 * *Note:* an E-stop, an interrupt that puts every actuator in its safe state from outside the command stream (a hardware button or a separate channel), may be added later. It is not part of version 0.2.
 * The safety supervisor and the task executor do not run in bench mode. *Note:* that is why bench mode is a build flag and not a switch on a running robot.
 

@@ -14,6 +14,7 @@ add_library(mrs_core STATIC
 	src/device/SelfModel.cpp
 	src/device/Robot.cpp
 	src/device/Discovery.cpp
+	src/device/Bench.cpp
 	src/device/uav/UavDevices.cpp
 	src/device/uav/FlightControlUnit.cpp
 	src/port/Port.cpp

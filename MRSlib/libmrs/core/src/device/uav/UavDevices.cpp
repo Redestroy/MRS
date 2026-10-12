@@ -50,6 +50,10 @@ namespace MRS {
 				return ActionStatus::DONE;
 			}
 
+			void RotorMotor::Safe(double) {
+				if (Port::Port* port = GetPort("motor"); port && port->Write({0.0})) speed_ = 0.0;
+			}
+
 			// --- Sensors ---------------------------------------------------------------------
 
 			void Imu::OnConfigure() {

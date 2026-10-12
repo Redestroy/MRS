@@ -33,6 +33,7 @@ namespace MRS {
 			const IdentityMap* identity_map = nullptr;    // the robot's .mrsi (spec 16 §3)
 			const DeviceLibrary* library = nullptr;       // parts and library identity maps (spec 16 §6)
 			const Environment::ProcessorCatalog* catalog = nullptr;  // null: the default catalog
+			bool bench = false;  // a bench robot (spec 16 §8.1): for Bench, never for a RobotController
 		};
 
 		struct Robot {
@@ -43,6 +44,7 @@ namespace MRS {
 			SelfModel self;
 			std::vector<Port::IPortProvider*> providers;  // the available provider joints, in tree order (spec 16 §4)
 			std::vector<CheckFinding> check;              // the boot check (spec 16 §7.3)
+			bool bench = false;                           // built for bench mode (spec 16 §8.1)
 		};
 
 		// Per-tick work of the provider joints, before sensors are sampled (spec 16 §4.1).

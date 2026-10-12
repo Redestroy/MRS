@@ -70,6 +70,15 @@ namespace MRS {
 				yaw_cmd_ = s.yaw;
 			}
 
+			void FlightControlUnit::Safe(double t) {
+				if (Armed() && mode_ != FcuMode::LANDING) Apply({"A_LD", *PackArgument(ArgLayout::F32X2, std::vector<double>{0.0, 0.0})}, t);
+			}
+
+			void FlightControlUnit::OnTimeout(double t) {
+				if (mode_ == FcuMode::FLY || mode_ == FcuMode::TAKEOFF)
+					Apply({"A_HD", *PackArgument(ArgLayout::F32X2, std::vector<double>{0.0, 0.0})}, t);
+			}
+
 			ActionStatus FlightControlUnit::Apply(const Action& action, double t) {
 				if (!HasCapability(CapabilityKind::Action, action.code)) return ActionStatus::REJECTED;
 				const auto v = UnpackReals(ArgLayout::F32X2, action.arg);

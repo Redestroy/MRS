@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include "mrs/BuildError.h"
+
 namespace MRS {
 	namespace Robot {
 		const char* ControllerEventName(ControllerEvent e) {
@@ -17,6 +19,12 @@ namespace MRS {
 		namespace {
 			const char* kSafetyPrefix = "safety.";
 			const char* kFlightCritical[] = {"m_fl", "m_fr", "m_rl", "m_rr", "fcu"};
+
+			// A bench robot is commanded directly, without safety supervisor or executor (spec 16 §8.1).
+			Device::Robot& NotBench(Device::Robot& robot) {
+				if (robot.bench) throw BuildError("a bench robot cannot be given to a RobotController (spec 16 §8.1)");
+				return robot;
+			}
 
 			Device::Uav::FlightControlUnit* FindFcu(Device::Robot& robot) {
 				auto* node = dynamic_cast<Device::Uav::FlightControlUnit*>(robot.tree.Find("fcu"));
@@ -44,7 +52,7 @@ namespace MRS {
 
 		RobotController::RobotController(Device::Robot& robot, Task::BehaviourLibrary library, const Task::FunctionRegistry& registry,
 		                                 ControllerConfig config)
-		    : robot_(robot),
+		    : robot_(NotBench(robot)),
 		      library_(std::move(library)),
 		      factory_(registry),
 		      c_(std::move(config)),
