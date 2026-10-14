@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include "mrs/BuildError.h"
+
 namespace MRS {
 	namespace Robot {
 		const char* ControllerEventName(ControllerEvent e) {
@@ -17,6 +19,12 @@ namespace MRS {
 		namespace {
 			const char* kSafetyPrefix = "safety.";
 			const char* kFlightCritical[] = {"m_fl", "m_fr", "m_rl", "m_rr", "fcu"};
+
+			// A bench robot is commanded directly, without safety supervisor or executor (spec 16 §8.1).
+			Device::Robot& NotBench(Device::Robot& robot) {
+				if (robot.bench) throw BuildError("a bench robot cannot be given to a RobotController (spec 16 §8.1)");
+				return robot;
+			}
 
 			Device::Uav::FlightControlUnit* FindFcu(Device::Robot& robot) {
 				auto* node = dynamic_cast<Device::Uav::FlightControlUnit*>(robot.tree.Find("fcu"));
@@ -44,7 +52,7 @@ namespace MRS {
 
 		RobotController::RobotController(Device::Robot& robot, Task::BehaviourLibrary library, const Task::FunctionRegistry& registry,
 		                                 ControllerConfig config)
-		    : robot_(robot),
+		    : robot_(NotBench(robot)),
 		      library_(std::move(library)),
 		      factory_(registry),
 		      c_(std::move(config)),
@@ -215,6 +223,7 @@ namespace MRS {
 
 			// 1. The fcu's armed state, then the views (spec 08 §3.1 steps 1-2).
 			if (fcu_) model_.world.SetBool("armed", fcu_->Armed(), t, "fcu");
+			Device::UpdateProviders(robot_, t);
 			auto views = robot_.blocks.sensors.Sample(t);
 			for (auto& v : injected_) views.push_back(std::move(v));
 			injected_.clear();
@@ -299,7 +308,7 @@ namespace MRS {
 		bool RobotController::FlightCritical() const {
 			for (const auto& f : robot_.faults)
 				for (const char* n : kFlightCritical)
-					if (f.node == n) return true;
+					if (Device::NameMatches(f.node, n)) return true;
 			return fcu_ && !robot_.self.Provides("pose.enu");
 		}
 

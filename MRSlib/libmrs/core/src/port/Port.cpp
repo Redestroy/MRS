@@ -1,28 +1,26 @@
 #include "mrs/port/Port.h"
 
+#include <algorithm>
+
 namespace MRS {
 	namespace Port {
-		namespace {
-			struct Name {
-				PortType type;
-				const char* name;
-			};
-			const Name kNames[] = {{PortType::GPIO, "GPIO"}, {PortType::PWM, "PWM"},         {PortType::ADC, "ADC"},
-			                       {PortType::UART, "UART"}, {PortType::I2C, "I2C"},         {PortType::SPI, "SPI"},
-			                       {PortType::CAN, "CAN"},   {PortType::UDP, "UDP"},         {PortType::TCP, "TCP"},
-			                       {PortType::MAVLINK, "MAVLINK"}, {PortType::SIM, "SIM"}};
+		std::optional<PortType> PortType::FromName(std::string_view name) {
+			if (name.empty() || name.size() > 15 || !(name[0] >= 'A' && name[0] <= 'Z')) return std::nullopt;
+			for (char c : name)
+				if (!((c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'))) return std::nullopt;
+			return PortType(std::string(name).c_str());
 		}
 
-		const char* PortTypeName(PortType type) {
-			for (const auto& n : kNames)
-				if (n.type == type) return n.name;
-			return "SIM";
+		bool PortType::BuiltIn() const {
+			for (const PortType* t : {&GPIO, &PWM, &ADC, &UART, &I2C, &SPI, &CAN, &UDP, &TCP, &MAVLINK, &SIM})
+				if (*this == *t) return true;
+			return false;
 		}
 
-		std::optional<PortType> ParsePortType(std::string_view name) {
-			for (const auto& n : kNames)
-				if (name == n.name) return n.type;
-			return std::nullopt;
+		bool IPortProvider::Offers(const PortType& type) const {
+			const auto types = PortTypes();
+			if (types.empty()) return type.BuiltIn();
+			return std::find(types.begin(), types.end(), type) != types.end();
 		}
 	}
 }

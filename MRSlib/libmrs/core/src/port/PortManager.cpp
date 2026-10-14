@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "mrs/BuildError.h"
+#include "mrs/device/Identity.h"
 #include "mrs/protocol/Parser.h"
 
 namespace MRS {
@@ -50,96 +51,146 @@ namespace MRS {
 			std::string Where(const std::string& node, const std::string& requirement) { return node + "." + requirement; }
 
 			std::string PortName(PortType type, const std::string& address) {
-				return std::string(PortTypeName(type)) + " \"" + address + "\"";
+				return PortTypeName(type) + " \"" + address + "\"";
+			}
+		}
+
+		PortManager::PortManager(IPlatform& platform) { providers_[kPlatformProvider] = &platform; }
+
+		std::vector<std::string> PortManager::ProviderNames() const {
+			std::vector<std::string> out;
+			for (const auto& p : providers_) out.push_back(p.first);
+			return out;
+		}
+
+		void PortManager::AddProvider(const std::string& name, IPortProvider& provider) { providers_[name] = &provider; }
+
+		const std::vector<PortInfo>& PortManager::Scan(const std::string& provider) {
+			auto it = scans_.find(provider);
+			if (it != scans_.end()) return it->second;
+			std::vector<PortInfo> ports;
+			if (auto p = providers_.find(provider); p != providers_.end()) ports = p->second->Scan();
+			for (auto& info : ports) info.provider = provider;
+			return scans_[provider] = std::move(ports);
+		}
+
+		std::unique_ptr<Port> PortManager::Open(const PortAssignment& assignment) {
+			auto it = providers_.find(assignment.provider);
+			return it == providers_.end() ? nullptr : it->second->Open(assignment);
+		}
+
+		void PortManager::CheckMap(const std::vector<NodePorts>& nodes, const PortMap* map) const {
+			// Every map entry must name an existing requirement of the same type.
+			if (!map) return;
+			for (const auto& e : map->entries) {
+				const PortRequirement* found = nullptr;
+				for (const auto& n : nodes)
+					if (n.node == e.node)
+						for (const auto& r : n.requirements)
+							if (r.name == e.requirement) found = &r;
+				if (!found) throw BuildError("port map: " + Where(e.node, e.requirement) + " is not a port requirement of the robot");
+				if (found->type != e.type)
+					throw BuildError("port map: " + Where(e.node, e.requirement) + " is " + PortTypeName(found->type) + ", not " +
+					                 PortTypeName(e.type));
 			}
 		}
 
 		PortReport PortManager::Assign(const std::vector<NodePorts>& nodes, const PortMap* map) {
-			// Every map entry must name an existing requirement of the same type.
-			if (map) {
-				for (const auto& e : map->entries) {
-					const PortRequirement* found = nullptr;
-					for (const auto& n : nodes)
-						if (n.node == e.node)
-							for (const auto& r : n.requirements)
-								if (r.name == e.requirement) found = &r;
-					if (!found) throw BuildError("port map: " + Where(e.node, e.requirement) + " is not a port requirement of the robot");
-					if (found->type != e.type)
-						throw BuildError("port map: " + Where(e.node, e.requirement) + " is " + PortTypeName(found->type) + ", not " +
-						                 PortTypeName(e.type));
-				}
-			}
-
-			std::optional<std::vector<PortInfo>> scan;
-			auto scanned = [&]() -> const std::vector<PortInfo>& {
-				if (!scan) scan = platform_.Scan();
-				return *scan;
-			};
-
+			CheckMap(nodes, map);
+			uses_.clear();  // a fresh assignment
 			PortReport report;
-			struct Use {
-				std::string where;
-				bool exclusive;
-			};
-			std::map<std::pair<PortType, std::string>, std::vector<Use>> uses;
+			for (const auto& n : nodes) AssignNode(n, map, report);
+			return report;
+		}
 
-			for (const auto& n : nodes) {
-				for (const auto& r : n.requirements) {
-					PortAssignment a;
-					a.node = n.node;
-					a.requirement = r.name;
-					a.type = r.type;
-					a.exclusive = r.exclusive;
-					a.params = r.params;
-					auto unresolved = [&](std::string reason) { report.unresolved.push_back({n.node, r.name, std::move(reason)}); };
+		void PortManager::AssignNode(const NodePorts& n, const PortMap* map, PortReport& report) {
+			std::vector<std::string> chain = n.providers;
+			chain.push_back(kPlatformProvider);
+			for (const auto& r : n.requirements) {
+				auto unresolved = [&](std::string reason) { report.unresolved.push_back({n.node, r.name, std::move(reason)}); };
 
-					if (const PortAssignment* e = map ? map->Find(n.node, r.name) : nullptr) {
-						a.address = e->address;
-						a.params.Merge(e->params);
-						a.source = AssignmentSource::PortMap;
-					} else if (r.address != "any") {
-						a.address = r.address;
-						a.source = AssignmentSource::Address;
-					} else {
-						const std::string identity = r.params.Text("identity");
-						if (identity.empty()) {
-							unresolved("address any needs a port map entry or an identity to scan for");
-							continue;
-						}
-						std::vector<const PortInfo*> matches;
-						for (const auto& p : scanned())
-							if (p.type == r.type && p.identity == identity) matches.push_back(&p);
-						if (matches.size() != 1) {
-							unresolved(matches.empty() ? "no scanned " + std::string(PortTypeName(r.type)) + " port reports identity " + identity
-							                           : std::to_string(matches.size()) + " scanned ports report identity " + identity);
-							continue;
-						}
-						a.address = matches[0]->address;
-						a.source = AssignmentSource::Scan;
+				// The nearest provider that offers the type (spec 16 §4.2).
+				std::string provider;
+				bool missing = false;
+				for (const auto& name : chain) {
+					auto it = providers_.find(name);
+					if (it == providers_.end()) {
+						missing = true;
+						provider = name;
+						break;
 					}
-
-					// A port the scan does not list is not there.
-					bool type_listed = false, present = false;
-					for (const auto& p : scanned()) {
-						if (p.type != a.type) continue;
-						type_listed = true;
-						if (p.address == a.address) present = true;
+					if (it->second->Offers(r.type)) {
+						provider = name;
+						break;
 					}
-					if (type_listed && !present) {
-						unresolved("port " + PortName(a.type, a.address) + " is not present");
+				}
+				if (provider.empty())
+					throw BuildError(Where(n.node, r.name) + ": no provider offers port type " + PortTypeName(r.type));
+				if (missing) {
+					unresolved("provider " + provider + " is unavailable");
+					continue;
+				}
+
+				PortAssignment a;
+				a.node = n.node;
+				a.requirement = r.name;
+				a.type = r.type;
+				a.exclusive = r.exclusive;
+				a.params = r.params;
+				a.provider = provider;
+
+				if (const PortAssignment* e = map ? map->Find(n.node, r.name) : nullptr) {
+					const std::string via = e->params.Text("via", kPlatformProvider);
+					if (via != provider)
+						throw BuildError("port map: " + Where(n.node, r.name) + " says via " + via + ", but its provider is " + provider);
+					a.address = e->address;
+					a.params.Merge(e->params);
+					a.source = AssignmentSource::PortMap;
+				} else if (r.address != "any") {
+					a.address = r.address;
+					a.source = AssignmentSource::Address;
+				} else {
+					const std::string identity = r.params.Text("identity");
+					if (identity.empty()) {
+						unresolved("address any needs a port map entry or an identity to scan for");
 						continue;
 					}
-
-					auto& list = uses[{a.type, a.address}];
-					for (const auto& u : list)
-						if (u.exclusive || a.exclusive)
-							throw BuildError("port " + PortName(a.type, a.address) + " is given to both " + u.where + " and " +
-							                 Where(a.node, a.requirement));
-					list.push_back({Where(a.node, a.requirement), a.exclusive});
-					report.assigned.push_back(std::move(a));
+					std::vector<const PortInfo*> matches;
+					for (const auto& p : Scan(provider))
+						if (p.type == r.type && Device::IdentityMatches(identity, p.identity)) matches.push_back(&p);
+					if (matches.size() != 1) {
+						unresolved(matches.empty() ? "no scanned " + PortTypeName(r.type) + " port reports identity " + identity
+						                           : std::to_string(matches.size()) + " scanned ports report identity " + identity);
+						continue;
+					}
+					a.address = matches[0]->address;
+					a.source = AssignmentSource::Scan;
 				}
+
+				// A port the scan does not list is not there.
+				bool type_listed = false, present = false;
+				for (const auto& p : Scan(provider)) {
+					if (p.type != a.type) continue;
+					type_listed = true;
+					if (p.address == a.address) {
+						present = true;
+						a.identity = p.identity;
+					}
+				}
+				if (type_listed && !present) {
+					unresolved("port " + PortName(a.type, a.address) + " is not present");
+					continue;
+				}
+
+				// Exclusive ports are exclusive per provider (spec 16 §4.2).
+				auto& list = uses_[{provider, a.type, a.address}];
+				for (const auto& u : list)
+					if (u.exclusive || a.exclusive)
+						throw BuildError("port " + PortName(a.type, a.address) + " is given to both " + u.where + " and " +
+						                 Where(a.node, a.requirement));
+				list.push_back({Where(a.node, a.requirement), a.exclusive});
+				report.assigned.push_back(std::move(a));
 			}
-			return report;
 		}
 
 		Protocol::Document PortManager::WritePortMap(const PortReport& report) {
@@ -156,7 +207,10 @@ namespace MRS {
 				              Field::MakeText(FieldType::Id, PortTypeName(a.type)), Field::MakeText(FieldType::Str, a.address)};
 				Device::Params params;
 				for (const auto& p : a.params.Items())
-					if (p.key != "identity" && p.key != "req") params.Add(p.key, p.value);
+					if (p.key != "identity" && p.key != "req" && p.key != "via") params.Add(p.key, p.value);
+				// The identity found there, so that the boot check can tell a swapped device (spec 16 §7.3).
+				if (!a.identity.empty()) params.Add("identity", Device::StrValue(a.identity));
+				if (a.provider != kPlatformProvider) params.Add("via", Device::IdValue(a.provider));
 				for (auto& f : params.ToFields()) rec.fields.push_back(std::move(f));
 				doc.records.push_back(std::move(rec));
 			}

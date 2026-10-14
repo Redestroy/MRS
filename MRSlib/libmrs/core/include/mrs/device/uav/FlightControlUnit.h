@@ -42,6 +42,11 @@ namespace MRS {
 				ActionStatus Apply(const Action& action, double t) override;
 				// The cascade of spec 08 §2.3, one control tick.
 				void Update(double t) override;
+				// Airborne: land where it is (A_LD). On the ground: nothing.
+				void Safe(double t) override;
+				// Flying or taking off: hold where it is (A_HD 0), as when velocity setpoints stop. Landing
+				// goes on.
+				void OnTimeout(double t) override;
 				std::vector<const DeviceNode*> DependsOn() const override;
 
 				void SetMotors(std::array<RotorMotor*, 4> motors) { motors_ = motors; }

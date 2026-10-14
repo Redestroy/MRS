@@ -41,7 +41,7 @@ identity = vendor ":" model [ ":" rev ] [ "@" serial ]
 
 A **pattern** is an identity where `rev` MAY be `*` or left out and the serial MAY be left out. A pattern matches an identity when vendor and model are equal, the rev is equal or not constrained, and the serial is equal or not constrained. Its **specificity** is the number of constrained parts among rev and serial (0, 1 or 2).
 
-The identity in spec 04 §6.3 (`identity` parameter of a requirement, `PortInfo::identity`) uses this format from version 0.2 on, and matching there is pattern matching. An empty identity means "unknown".
+The identity in spec 04 §6.3 (`identity` parameter of a requirement, `PortInfo::identity`) uses this format from version 0.2 on, and matching there is pattern matching. An empty identity means "unknown". A version 0.1 free-form identity (not in this format, for example `GPS`) still matches, but only an exactly equal identity.
 
 ### 2.2 Descriptor
 
@@ -155,7 +155,7 @@ A node depends on every provider between it and the platform. If a provider join
 
 Port types are names, not a closed enum (JB decision 3).
 
-* A name is upper-case letters and digits, starting with a letter, with no `_` (so it never reads as a code): `UART`, `MAVLINK`, `ROS2`.
+* A name is 1 to 15 upper-case letters and digits, starting with a letter, with no `_` (so it never reads as a code): `UART`, `MAVLINK`, `ROS2`.
 * The names of spec 04 §6.1 stay built in: `GPIO PWM ADC UART I2C SPI CAN UDP TCP MAVLINK SIM`.
 * Any other name is valid in a file when some provider in the tree offers it (`PortTypes()`); otherwise the requirement is a build error at port assignment.
 
@@ -165,7 +165,7 @@ Port types are names, not a closed enum (JB decision 3).
 
 The ArduPilot platform of spec 14 becomes a provider joint, `autopilot.mavlink`, with one requirement (`link`, port type `UDP` or `UART`) on the platform. Its scan reports the same MAVLink ports as today (spec 14 §3). The robot's platform is then the host (the companion computer, or a host platform for SITL), so a robot can carry other providers next to the autopilot.
 
-Until that change is implemented, `ArduPilotPlatform` remains a root platform and `quad_ardupilot.mrsd` stays valid as written. The clock modes of spec 14 (autopilot boot time, wall clock) move to the host platform when the split is made.
+Implemented as `AutopilotJoint` (`autopilot.mavlink`, scan identity `ardupilot:autopilot`), with parameters `link` (the address of its link) and `link_type` (`TCP`, `UDP` or `UART`; default `TCP`). It runs the spec 14 engine on a manual clock, advanced by the joint's per-tick update. `HostPlatform` is the matching host for SITL: TCP, or UDP where the address `in:<port>` means listening, with a wall or manual clock. The root `ArduPilotPlatform` stays available, so `quad_ardupilot.mrsd` stays valid as written; `quad_ardupilot_host.mrsd` is the same robot with the autopilot as a joint.
 
 ## 5. Scoped node names
 
@@ -213,19 +213,22 @@ A part name found in two folders is taken from the first one on the search path.
 ### 7.2 Discovery
 
 ```cpp
-DiscoveryReport Discover(const Protocol::Record& head, const DeviceRegistry&, const Library&,
-                         const IdentityMap* robot_map, Port::IPlatform&);
+struct DiscoveryOptions { const IdentityMap* robot_map; const DeviceLibrary* library; };
 struct DiscoveryReport { Protocol::Document mrsd, mrsp, unknown; };  // unknown: I_U records
+DiscoveryReport Discover(const Protocol::Record& head, const DeviceRegistry&, Port::IPlatform&,
+                         const DiscoveryOptions& = {});
 ```
 
 The head cannot be discovered, so the caller gives its `D_H` record (children ignored). Then:
 
 1. The platform is scanned. Each scanned port's identity is resolved (§3.2). A port with an empty or unresolved identity becomes an `I_U` record; an `ignore` match is skipped.
-2. Each resolved port becomes one node of the resolved type, with the resolved parameters. If the class has several requirements of the port's type, `req` in the mapping says which one the port fills; the other requirements are left to the normal rules when the tree is built.
+2. Each resolved port becomes one node of the resolved type, with the resolved parameters (without `name` and `req`). If the class has several requirements of the port's type, `req` in the mapping says which one the port fills; the other requirements are left to the normal rules when the tree is built. A class that cannot be configured with those parameters is tried once more with `device "<address>"`. A port whose class cannot be configured, or that has no single requirement of the port's type to fill, becomes an `I_U` record. A port that resolves to a part becomes a part include (`D_X <name> part.<name>`) with no `P_A`: the part's own devices declare their ports.
 3. The node's name is the mapping's `name` parameter, else the port's address in lower case with spaces and invalid characters turned into `_` if that is a valid unused identifier, else the model followed by `_1`, `_2`, ….
-4. A node that resolves to a provider joint class becomes a `D_J` with `provider` set, is opened, and its own scan is processed the same way, its nodes becoming its children.
-5. The nodes found on each provider are placed under one `D_J` of interface `mech_bus` (named `base` for the platform), and those joints under the head.
-6. The `mrsp` holds a `P_A` per filled requirement, with the scanned port and the parameter `identity "<identity as scanned>"`.
+4. A node that resolves to a provider joint class becomes a `D_J <name> mech_bus` with `provider <type key>` and the resolved parameters. Its port is opened and the joint started, and its own scan is processed the same way, its nodes becoming its children. Joints found this way are released when discovery returns.
+5. The platform's nodes, provider joints included, are placed under one `D_J base mech_bus`, under the head. Nodes appear in scan order.
+6. The `mrsp` holds a `P_A` per filled requirement, with the scanned port, the parameter `identity "<identity as scanned>"` and, for a port of a provider joint, `via <joint>`.
+
+A port whose identity is ambiguous in one source (§3.2) is reported as unknown rather than stopping the discovery. Since the robot's own map comes first, it is also where per-unit knowledge goes that no library can have, such as which of two identical CAN hubs is bus `can0` (an `I_M` per serial with `name` and the provider's parameters).
 
 The report is a **proposal**. It is never built automatically: the user checks it, completes the unknowns (usually by adding `I_M` lines to the robot's `.mrsi`), runs discovery again if needed, and saves the result. This is the same flow as first-time port setup (spec 04 §6.4).
 
@@ -239,8 +242,10 @@ When a `P_A` entry carries an `identity` parameter, `BuildRobot` compares it wit
 | `swapped` | same vendor, model and rev; another serial | node available; the new identity is reported |
 | `updated` | another model or rev, and the new identity resolves to the node's type key | node available; the resolved parameters of the **new** identity are used (§3.3), so an updated device's information takes effect |
 | `changed` | the new identity resolves to another type key, or to nothing | node unavailable (`FAULT`) until the mapping or the definition is changed |
-| `extra` | a scanned port on a provider of the tree whose identity resolves but which no node uses | information only |
+| `extra` | a scanned port on a provider of the tree whose identity resolves (not to `ignore`) but which no node uses | information only; the finding's `node` is the provider and `expected` the port's address |
 
+* An identity in the identity format is compared by its parts; a free-form identity of version 0.1 only by exact equality, so it can be `missing`, `updated` or `changed` but never `swapped`.
+* An `updated` device whose mapping has parameters builds the robot a second time, with those parameters under the definition's own (§3.3); the findings returned are those of the second build.
 * Nothing is substituted silently: a device that is now something else leaves its node unavailable, and the task layer sees the capability as missing.
 * The runtime never rewrites the robot's files. The findings are returned with the robot (`Robot::check`, a list of `I_R`), and `WritePortMap` writes the new identities when the user decides to save.
 * Fixing a `changed` device is one line: an `I_M` in the robot's `.mrsi` that maps the new identity to the node's type key (with its parameters), or a change of the node's type key in the `.mrsd`.
@@ -260,7 +265,9 @@ Bench mode lets a user build part of a robot and command its devices directly, b
 
 ### 8.1 Building
 
-`BuildRobot` takes a flag `bench`. A bench robot is built like any other (tree, ports, start, availability, blocks, self model), but it MUST NOT be given to a `RobotController`, and a robot built without the flag does not accept bench commands. A definition MAY be as small as a head with one joint and one device.
+`BuildRobot` takes a flag `bench` (`BuildOptions::bench`). A bench robot is built like any other (tree, ports, start, availability, blocks, self model), but it MUST NOT be given to a `RobotController` (the constructor refuses it), and a robot built without the flag does not accept bench commands (`Bench` refuses it). A definition MAY be as small as a head with one joint and one device.
+
+The commands are methods of `Device::Bench`, which owns the robot. Its settings (`BenchSettings`) are `timeout`, `on_timeout` and the `allow` list, or the parameters `bench_timeout`, `bench_on_timeout` and `allow` (one id per code) through `BenchSettings::FromParams`.
 
 ### 8.2 Commands
 
@@ -276,7 +283,7 @@ Bench mode lets a user build part of a robot and command its devices directly, b
 
 ### 8.3 Safety
 
-* An action argument outside a `min` or `max` limit of the node's `K_A` is `REJECTED`.
+* An action argument outside a `min` or `max` limit of the node's `K_A` is `REJECTED`. Each value of the argument is checked against the limits named exactly `min` and `max`; other limits (such as the fcu's `max_climb`) are the class's own to enforce.
 * The **motion codes** `A_MOT A_TO A_LD A_HD A_PXY A_PZY A_VXY A_VZY A_GMB` are `REJECTED` unless the bench was built with them in its `allow` list.
 * Timeouts are user or command defined (§8.4); `Stop()` always puts every actuator in its safe state.
 
@@ -291,10 +298,12 @@ JB (2026-10-12): what happens when commands stop is chosen by the user or by the
 |---|---|
 | `default` | The actuator's own timeout behaviour, `Actuator::OnTimeout()`. Each class defines it, erring on caution: motors go to zero, the flight control unit holds or lands as it does on `setpoint_timeout`, LEDs and the payload latch keep their state. The base class calls `Safe()` |
 | `safe` | `Actuator::Safe()`: the actuator's safest state, the same as `Stop()` gives |
-| `continue` | The last action keeps being applied until a new command or `Stop()` |
+| `continue` | The last action is applied again at every `Step()` until a new command or `Stop()` |
 
 * `Actuator::Safe()` and `Actuator::OnTimeout()` are new. `Safe()` does nothing in the base class; a class whose actuator can do harm MUST override it.
-* A new command to the actuator restarts its timeout with that command's settings.
+* A new command to the actuator restarts its timeout with that command's settings. A command the actuator rejects starts nothing.
+* The timeout is in platform time and is checked at each `Step()`, after sampling and before the actuators' `Update`.
+* *Note:* before its timeout runs out, an action lasts as long as the class makes it last. A velocity setpoint to the fcu turns into a position hold after the fcu's own `setpoint_timeout` (0.5 s) unless it is repeated, which `continue` does.
 * *Note:* an E-stop, an interrupt that puts every actuator in its safe state from outside the command stream (a hardware button or a separate channel), may be added later. It is not part of version 0.2.
 * The safety supervisor and the task executor do not run in bench mode. *Note:* that is why bench mode is a build flag and not a switch on a running robot.
 
@@ -309,6 +318,14 @@ JB (2026-10-12): what happens when commands stop is chosen by the user or by the
 * `BuildError` becomes an error code and message; faults and check findings are lists of records.
 * The bench commands of §8.2 are the first slice of the C API.
 
+The bench slice is implemented in `MRSlib/libmrs/capi` (header `mrs/mrs.h`, library `mrs_c`; static by default, shared with `MRS_CAPI_SHARED=ON` for bindings):
+
+* Status codes `MRS_OK`, `MRS_ERR_ARGUMENT`, `MRS_ERR_PARSE`, `MRS_ERR_BUILD`, `MRS_ERR_NOT_FOUND`, `MRS_ERR_INTERNAL`; the message is `mrs_last_error()` (per thread). Strings the library returns are freed with `mrs_free()`.
+* `mrs_registry_create("uav")` (device sets `base`, `uav`); `mrs_platform_create` from a table of callbacks (`scan`, `open`, `read`, `write`, `send`, `receive`, `close`, `time`, `step`, `port_types`). A scan is text, one port per line: type, address, identity, descriptor, separated by tabs.
+* `mrs_bench_build(mrsd, mrsp, mrsi, settings, registry, platform)`, then `apply` (one leaf `A` record as text), `sample` (`V` records), `nodes` and `faults` (tab-separated lines), `check` (`I_R`), `self` (`K` records), `stop`, `step`, `time`, and the raw ports `open_raw`, `read`, `write`, `send`, `receive`, `close`.
+* Text given without a version line is read as version 0.2.
+* Not in this slice: user-written device classes as callbacks, discovery, and the Python package.
+
 ## 10. Protocol changes
 
 * Kind `I` with codes `I_M`, `I_U`, `I_R` (§3.1). A version 0.1 parser rejects them as unknown codes; files that use them SHOULD start with `@: MRS 0.2/`.
@@ -319,7 +336,7 @@ JB (2026-10-12): what happens when commands stop is chosen by the user or by the
 
 ## 11. Implementation order
 
-*Note (non-normative).* A suggested order, each step with its tests:
+*Note (non-normative).* A suggested order, each step with its tests. Steps 1–8 were implemented in this order on 2026-10-12.
 
 1. Identity format and pattern matching; kind `I` in the parser and writer; `.mrsi` loading; registry identities (§2, §3).
 2. Scoped names and suffix resolution (§5), with the existing examples still passing.

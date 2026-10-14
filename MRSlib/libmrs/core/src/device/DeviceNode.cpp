@@ -28,7 +28,8 @@ namespace MRS {
 		}
 
 		void DeviceNode::Configure(std::string name, std::string type_key, Params params) {
-			name_ = std::move(name);
+			name_ = name;
+			local_name_ = std::move(name);
 			type_key_ = std::move(type_key);
 			params_ = std::move(params);
 			try {
@@ -36,6 +37,11 @@ namespace MRS {
 			} catch (const BuildError& e) {
 				throw BuildError("node " + name_ + ": " + e.what());
 			}
+		}
+
+		void DeviceNode::SetFullName(std::string full) {
+			name_ = std::move(full);
+			for (auto& c : capabilities_) c.node = name_;
 		}
 
 		void DeviceNode::Declare(Capability capability) {
@@ -132,15 +138,24 @@ namespace MRS {
 			if (id_ < 1) throw BuildError("head needs an id >= 1");
 		}
 
-		void JointNode::OnConfigure() {
+		void JointNode::CheckInterface() const {
 			static const std::set<std::string> interfaces = {"mech", "bus", "elec", "mech_bus", "mech_bus_elec"};
-			if (!interfaces.count(Interface())) throw BuildError("unknown joint interface " + Interface());
+			if (!interfaces.count(interface_)) throw BuildError("joint " + Name() + ": unknown joint interface " + interface_);
+			if (dynamic_cast<const ProviderJoint*>(this) && !CarriesData())
+				throw BuildError("joint " + Name() + ": a provider joint needs an interface that carries data, not " + interface_);
+		}
+
+		bool JointNode::CarriesData() const { return interface_ == "bus" || interface_ == "mech_bus" || interface_ == "mech_bus_elec"; }
+
+		void JointNode::OnConfigure() {
+			if (interface_.empty()) interface_ = TypeKey();
 			max_children_ = GetParams().Int("max_children", 0);
 			for (const auto& code : GetParams().Texts("accepts")) {
 				if (!NodeKindFromCode(code) || code == "D_H") throw BuildError("accepts " + code + " is not a child node code");
 				accepts_.insert(code);
 			}
 			frame_ = GetParams().Text("frame");
+			OnJointConfigure();
 		}
 
 		void JointNode::CheckChildren() const {

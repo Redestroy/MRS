@@ -6,6 +6,7 @@
 #include "mrs/BuildError.h"
 #include "mrs/device/uav/UavDevices.h"
 #include "mrs/platform/ArduPilotPlatform.h"
+#include "mrs/platform/AutopilotJoint.h"
 
 namespace MRS {
 	namespace Platform {
@@ -270,6 +271,7 @@ namespace MRS {
 			r.Register<Device::Uav::Imu>("imu.mavlink",
 			                             {{"port", IdValue("MAVLINK")}, {"inertial", StrValue("ATTITUDE")}, {"gyro", StrValue("ATTITUDE_RATES")}});
 			r.Register<GuidedFcu>("fcu.mavlink", {{"guided", StrValue("GUIDED")}});
+			r.Register<AutopilotJoint>("autopilot.mavlink", {}, {"ardupilot:autopilot"});
 			r.Register<Device::Uav::Gnss>("gnss.mavlink", {{"port", IdValue("MAVLINK")}, {"device", StrValue("GLOBAL_POSITION_INT")}});
 			r.Register<Device::Uav::Velocity>("vel.mavlink", {{"port", IdValue("MAVLINK")}, {"device", StrValue("VELOCITY")}});
 			r.Register<Device::Uav::LedArray>("led.mavlink", {{"port", IdValue("MAVLINK")}});

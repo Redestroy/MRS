@@ -1,0 +1,9 @@
+@: MRS 0.2/
+
+I: I_M "ublox:neo-m9n:*" gnss.serial 1 rate_hz 10/
+
+I: I_M "acme:motor_block:2" part.motor_block 1 motor.max_speed 520/
+
+I: I_M "acme:motor_block:2@A13F07" part.motor_block 2 motor.max_speed 520 encoder.offset 0.013/
+
+I: I_M "cyberbotics:display" ignore 0/

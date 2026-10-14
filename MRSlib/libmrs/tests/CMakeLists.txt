@@ -7,6 +7,13 @@ add_executable(mrs_tests
 	task/test_conditions.cpp
 	task/test_executor.cpp
 	device/test_devices.cpp
+	device/test_identity.cpp
+	device/test_parts.cpp
+	device/test_writer.cpp
+	device/test_providers.cpp
+	device/test_check.cpp
+	device/test_discovery.cpp
+	device/test_bench.cpp
 	world/test_worldview.cpp
 	flight/test_flight.cpp
 	team/test_team.cpp
@@ -27,3 +34,15 @@ if(TARGET mrs_ardupilot)
 	target_link_libraries(mrs_tests PRIVATE mrs_ardupilot)
 endif()
 add_test(NAME mrs_tests COMMAND mrs_tests)
+
+# The C API from plain C (spec 16 §9).
+if(TARGET mrs_c)
+	enable_language(C)
+	add_executable(mrs_capi_test capi/test_capi.c)
+	target_link_libraries(mrs_capi_test PRIVATE mrs_c)
+	if(NOT MRS_CAPI_SHARED)
+		# A static C API needs the C++ runtime at link time.
+		set_target_properties(mrs_capi_test PROPERTIES LINKER_LANGUAGE CXX)
+	endif()
+	add_test(NAME mrs_capi_test COMMAND mrs_capi_test)
+endif()

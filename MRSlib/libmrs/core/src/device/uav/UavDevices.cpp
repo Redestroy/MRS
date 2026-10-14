@@ -50,6 +50,10 @@ namespace MRS {
 				return ActionStatus::DONE;
 			}
 
+			void RotorMotor::Safe(double) {
+				if (Port::Port* port = GetPort("motor"); port && port->Write({0.0})) speed_ = 0.0;
+			}
+
 			// --- Sensors ---------------------------------------------------------------------
 
 			void Imu::OnConfigure() {
@@ -364,7 +368,7 @@ namespace MRS {
 			}
 
 			void RegisterUavDevices(DeviceRegistry& r) {
-				r.Register<HeadNode>("head.default");
+				RegisterBaseDevices(r);
 				r.Register<FlightControlUnit>("fcu.default");
 				r.Register<Quadrotor>("quadrotor.webots", {{"motor_fl", StrValue("front left propeller")},
 				                                           {"motor_fr", StrValue("front right propeller")},

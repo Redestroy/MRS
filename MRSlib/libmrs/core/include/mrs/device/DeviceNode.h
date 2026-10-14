@@ -30,7 +30,12 @@ namespace MRS {
 			DeviceNode& operator=(const DeviceNode&) = delete;
 
 			NodeKind Kind() const { return kind_; }
+			// The full name (spec 16 §5): the names of the D_X ancestors and the local name, joined by '.'.
+			// Equal to the local name until the tree builder places the node.
 			const std::string& Name() const { return name_; }
+			const std::string& LocalName() const { return local_name_; }
+			// Called by the tree builder; also updates the node name of the capabilities.
+			void SetFullName(std::string full);
 			const std::string& TypeKey() const { return type_key_; }
 			const Params& GetParams() const { return params_; }
 
@@ -68,6 +73,21 @@ namespace MRS {
 			// True for nodes a complex device created (spec 04 §3).
 			bool IsVirtual() const { return virtual_; }
 			void SetVirtual(bool v) { virtual_ = v; }
+			// What the definition said about this node, for the tree writer (spec 16 §7.1): its parameters without
+			// registry defaults, and its K and P_R sub-records.
+			const Params& DefinedParams() const { return defined_params_; }
+			const std::vector<Protocol::Record>& DefinedOverrides() const { return defined_overrides_; }
+			void SetDefinition(Params params, std::vector<Protocol::Record> overrides) {
+				defined_params_ = std::move(params);
+				defined_overrides_ = std::move(overrides);
+			}
+			// The part this node was included from (spec 16 §6.2); empty for a node not included from a part.
+			// The include's parameters and sub-records are then the DefinedParams and DefinedOverrides.
+			const std::string& Part() const { return part_; }
+			void SetPart(std::string part) { part_ = std::move(part); }
+			// True for a node that a part brought in below its include; the writer leaves it to the part.
+			bool FromPart() const { return from_part_; }
+			void SetFromPart(bool v) { from_part_ = v; }
 
 		protected:
 			virtual void OnConfigure() {}
@@ -79,6 +99,7 @@ namespace MRS {
 		private:
 			NodeKind kind_;
 			std::string name_;
+			std::string local_name_;
 			std::string type_key_;
 			Params params_;
 			std::vector<Capability> capabilities_;
@@ -89,6 +110,10 @@ namespace MRS {
 			DeviceNode* parent_ = nullptr;
 			std::vector<std::unique_ptr<DeviceNode>> children_;
 			bool virtual_ = false;
+			Params defined_params_;
+			std::vector<Protocol::Record> defined_overrides_;
+			std::string part_;
+			bool from_part_ = false;
 		};
 
 		// Edge: produces views.
@@ -106,6 +131,12 @@ namespace MRS {
 			virtual ActionStatus Apply(const Action& action, double t) = 0;
 			// Runs every control tick, after dispatch.
 			virtual void Update(double t) { (void)t; }
+			// The actuator's safest state (spec 16 §8.4): what Stop() gives in bench mode. Nothing in the
+			// base class; a class whose actuator can do harm overrides it.
+			virtual void Safe(double t) { (void)t; }
+			// When commands stop arriving (spec 16 §8.4, `default`). Each class errs on caution; the base
+			// class calls Safe().
+			virtual void OnTimeout(double t) { Safe(t); }
 			// Parameter `default T`: gets `any` actions whose code several actuators accept.
 			bool IsDefault() const { return GetParams().Bool("default", false); }
 		};
@@ -146,20 +177,29 @@ namespace MRS {
 			std::int64_t id_ = 0;
 		};
 
-		// A link with an interface and connection rules (spec 04 §2.2). Not in the registry:
-		// the `type` slot of D_J is the interface kind.
+		// A link with an interface and connection rules (spec 04 §2.2). A plain joint is not in the registry:
+		// the `type` slot of D_J is the interface kind. A joint with parameter `provider <key>` is created from
+		// that registry key and provides ports for its subtree (spec 16 §4.1).
 		class JointNode : public DeviceNode {
 		public:
 			JointNode() : DeviceNode(NodeKind::Joint) {}
-			const std::string& Interface() const { return TypeKey(); }
+			const std::string& Interface() const { return interface_; }
+			// Set by the tree builder from the type slot; CheckInterface validates it.
+			void SetInterface(std::string interface_kind) { interface_ = std::move(interface_kind); }
+			void CheckInterface() const;
+			// True for the interfaces that carry data (bus, mech_bus, mech_bus_elec).
+			bool CarriesData() const;
 			const std::string& Frame() const { return frame_; }
 			// Throws BuildError if the children break the rules.
 			void CheckChildren() const;
 
 		protected:
-			void OnConfigure() override;
+			void OnConfigure() final;
+			// Further configuration of a joint subclass (a provider).
+			virtual void OnJointConfigure() {}
 
 		private:
+			std::string interface_;
 			std::int64_t max_children_ = 0;
 			std::set<std::string> accepts_;
 			std::string frame_;
@@ -176,6 +216,17 @@ namespace MRS {
 			// The platform part of the type key: "webots" for "quadrotor.webots".
 			std::string Platform() const;
 			DeviceNode& AddVirtual(const DeviceRegistry& registry, const std::string& type_key, const std::string& name, Params params);
+		};
+
+		// A joint that scans and opens ports for its subtree (spec 16 §4). Its own port requirements are resolved
+		// by the provider above it. It is started before its subtree's ports are assigned.
+		class ProviderJoint : public JointNode, public Port::IPortProvider {};
+
+		// group.default: a complex device made only of its explicit children (spec 16 §6.1). It has no
+		// capabilities and no ports of its own.
+		class GroupDevice : public ComplexDevice {
+		public:
+			void Expand(const DeviceRegistry&) override {}
 		};
 	}
 }

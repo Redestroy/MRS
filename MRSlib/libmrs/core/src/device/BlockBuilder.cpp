@@ -15,7 +15,10 @@ namespace MRS {
 			return out;
 		}
 
-		ActuatorBlock::ActuatorBlock(std::vector<Actuator*> actuators) : actuators_(std::move(actuators)) {
+		ActuatorBlock::ActuatorBlock(std::vector<Actuator*> actuators, std::vector<std::string> tree_names)
+		    : actuators_(std::move(actuators)), names_(std::move(tree_names)) {
+			if (names_.empty())
+				for (Actuator* a : actuators_) names_.push_back(a->Name());
 			for (Actuator* a : actuators_)
 				for (const auto& c : a->Capabilities())
 					if (c.kind == CapabilityKind::Action) by_code_[c.code].push_back(a);
@@ -43,10 +46,21 @@ namespace MRS {
 				auto it = default_.find(code);
 				return it == default_.end() ? nullptr : it->second;
 			}
+			// The target's full name: itself, or the one full name it is a suffix of.
+			std::string full;
+			for (const auto& name : names_) {
+				if (name == entry.target) {
+					full = name;
+					break;
+				}
+				if (!NameMatches(name, entry.target)) continue;
+				if (!full.empty()) return nullptr;  // ambiguous
+				full = name;
+			}
 			auto it = by_code_.find(code);
-			if (it == by_code_.end()) return nullptr;
+			if (full.empty() || it == by_code_.end()) return nullptr;
 			for (Actuator* a : it->second)
-				if (a->Name() == entry.target) return a;
+				if (a->Name() == full) return a;
 			return nullptr;
 		}
 
@@ -99,6 +113,8 @@ namespace MRS {
 		Blocks BuildBlocks(const DeviceTree& tree) {
 			Blocks blocks;
 			std::vector<Actuator*> actuators;
+			std::vector<std::string> names;
+			for (DeviceNode* node : tree.Nodes()) names.push_back(node->Name());
 			for (DeviceNode* node : tree.Nodes()) {
 				if (!node->Available()) continue;
 				bool has_views = false;
@@ -115,7 +131,7 @@ namespace MRS {
 				default: break;
 				}
 			}
-			blocks.actuators = ActuatorBlock(std::move(actuators));
+			blocks.actuators = ActuatorBlock(std::move(actuators), std::move(names));
 			return blocks;
 		}
 	}

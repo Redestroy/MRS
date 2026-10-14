@@ -14,6 +14,7 @@ add_library(mrs_ardupilot
 	src/UdpTransport.cpp
 	src/ArduPilotPlatform.cpp
 	src/GuidedFcu.cpp
+	src/AutopilotJoint.cpp
 	src/MockAutopilot.cpp
 )
 target_include_directories(mrs_ardupilot PUBLIC include PRIVATE src)

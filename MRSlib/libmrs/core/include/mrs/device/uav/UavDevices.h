@@ -17,6 +17,8 @@ namespace MRS {
 			class RotorMotor : public Actuator {
 			public:
 				ActionStatus Apply(const Action& action, double t) override;
+				// Speed zero.
+				void Safe(double t) override;
 				double Speed() const { return speed_; }
 
 			protected:
@@ -89,6 +91,8 @@ namespace MRS {
 			class LedArray : public Actuator {
 			public:
 				ActionStatus Apply(const Action& action, double t) override;
+				// The LEDs keep their state when commands stop.
+				void OnTimeout(double) override {}
 				std::size_t Count() const { return count_; }
 
 			protected:
@@ -126,6 +130,8 @@ namespace MRS {
 			class Gimbal : public Actuator {
 			public:
 				ActionStatus Apply(const Action& action, double t) override;
+				// The gimbal keeps its angles when commands stop.
+				void OnTimeout(double) override {}
 
 			protected:
 				void OnConfigure() override;
@@ -139,6 +145,8 @@ namespace MRS {
 			class Camera : public Actuator {
 			public:
 				ActionStatus Apply(const Action& action, double t) override;
+				// Ends the burst in progress.
+				void Safe(double) override { active_ = false; }
 				std::size_t Shots() const { return shots_; }
 
 			protected:
@@ -157,6 +165,8 @@ namespace MRS {
 			class PayloadLatch : public Actuator {
 			public:
 				ActionStatus Apply(const Action& action, double t) override;
+				// The latch keeps what it holds: its safe state is closed, which needs no command.
+				void OnTimeout(double) override {}
 				// The package held now, 0 when the bay is empty.
 				std::int64_t Carried();
 				void SetPackage(std::int64_t package) { package_ = package; }
@@ -197,7 +207,7 @@ namespace MRS {
 				void Expand(const DeviceRegistry& registry) override;
 			};
 
-			// head.default, fcu.default and the .webots keys of spec 04 §3.1.
+			// The base keys (head.default, group.default), fcu.default and the .webots keys of spec 04 §3.1.
 			void RegisterUavDevices(DeviceRegistry& registry);
 		}
 	}

@@ -55,7 +55,8 @@ namespace MRS {
 			double next_send_ = -1, send_period_ = 0.1;
 		};
 
-		// The .mavlink type keys of spec 14 §4: quadrotor, motor, imu, gnss, vel, battery and fcu.
+		// The .mavlink type keys of spec 14 §4: quadrotor, motor, imu, gnss, vel, battery and fcu, and the autopilot
+		// joint autopilot.mavlink (spec 16 §4.6).
 		void RegisterArduPilotDevices(Device::DeviceRegistry& registry);
 	}
 }
