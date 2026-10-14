@@ -6,4 +6,4 @@ add_library(mrs_sim
 	src/TreeSets.cpp
 )
 target_include_directories(mrs_sim PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
-target_link_libraries(mrs_sim PUBLIC mrs_algorithms mrs_core PRIVATE mrs_generators mrs_warnings)
+target_link_libraries(mrs_sim PUBLIC mrs_algorithms mrs_core PRIVATE mrs_generators mrs_replay mrs_warnings)
