@@ -1,7 +1,4 @@
 #VRML_SIM R2025a utf8
-# The WP5 team world (spec 09 §8): three Mavic 2 Pro running mrs_uav and a supervisor running
-# mrs_issuer with the 2021 task set 1. Battery: 180000 J = 50 Wh, as in mavic_webots.mrsd.
-# The mission header homes match the Mavic translations.
 
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackground.proto"
 EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
@@ -22,13 +19,14 @@ WorldInfo {
   gpsReference 56.9496 24.1052 10
 }
 Viewpoint {
-  orientation -0.3 0.3 0.9 1.7
+  orientation -0.30151134457776363 0.30151134457776363 0.9045340337332909 1.7
   position 0 -60 45
   follow "r2"
 }
 TexturedBackground {
 }
 TexturedBackgroundLight {
+  luminosity 2
 }
 Floor {
   size 220 220
@@ -46,11 +44,10 @@ Mavic2Pro {
   ]
   bodySlot [
     Emitter {
-      name "emitter"
+      range 200
       channel 1
     }
     Receiver {
-      name "receiver"
       channel 1
     }
   ]
@@ -67,11 +64,10 @@ Mavic2Pro {
   ]
   bodySlot [
     Emitter {
-      name "emitter"
+      range 200
       channel 1
     }
     Receiver {
-      name "receiver"
       channel 1
     }
   ]
@@ -88,17 +84,24 @@ Mavic2Pro {
   ]
   bodySlot [
     Emitter {
-      name "emitter"
+      range 200
       channel 1
     }
     Receiver {
-      name "receiver"
       channel 1
     }
   ]
 }
 Robot {
   translation 0 -12 0.5
+  children [
+    Emitter {
+      channel 1
+    }
+    Receiver {
+      channel 1
+    }
+  ]
   name "issuer"
   controller "mrs_issuer"
   controllerArgs [
@@ -107,14 +110,4 @@ Robot {
     "../../worlds/mavic_team_results.csv"
   ]
   supervisor TRUE
-  children [
-    Emitter {
-      name "emitter"
-      channel 1
-    }
-    Receiver {
-      name "receiver"
-      channel 1
-    }
-  ]
 }
