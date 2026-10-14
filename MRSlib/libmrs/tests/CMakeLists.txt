@@ -22,11 +22,12 @@ add_executable(mrs_tests
 	sta/test_sta.cpp
 	cbba/test_cbba.cpp
 	sync/test_sync.cpp
+	replay/test_replay.cpp
 )
 target_include_directories(mrs_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
 # Include the std headers instead of doctest forward-declaring std::tuple (MSVC warning C5285).
 target_compile_definitions(mrs_tests PRIVATE DOCTEST_CONFIG_USE_STD_HEADERS)
-target_link_libraries(mrs_tests PRIVATE mrs_core mrs_algorithms mrs_generators mrs_sim mrs_warnings)
+target_link_libraries(mrs_tests PRIVATE mrs_core mrs_algorithms mrs_generators mrs_sim mrs_replay mrs_warnings)
 # Test inputs are the spec examples, so the spec and the tests cannot drift apart (spec 07 §4).
 target_compile_definitions(mrs_tests PRIVATE MRS_SPEC_EXAMPLES="${MRS_SPEC_EXAMPLES}")
 if(TARGET mrs_ardupilot)

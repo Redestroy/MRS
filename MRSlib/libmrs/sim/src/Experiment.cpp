@@ -3,10 +3,12 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <fstream>
 #include <iomanip>
 #include <set>
 #include <sstream>
 
+#include "mrs/replay/Track.h"
 #include "mrs/sim/TaskSets.h"
 
 namespace MRS {
@@ -121,7 +123,33 @@ namespace MRS {
 			const auto release = ReleaseTimes(spec.timeline);
 
 			RunResult r;
-			r.completed = team.Run(spec.time_limit);
+			if (spec.track_path.empty()) {
+				r.completed = team.Run(spec.time_limit);
+			} else {
+				// The same run in slices of one track period, with a row after each (spec 17 §2).
+				std::ofstream out(spec.track_path, std::ios::binary);
+				if (!out) throw std::runtime_error("cannot write " + spec.track_path);
+				std::vector<std::string> names;
+				for (const auto& robot : team.robots) names.push_back(robot->layer->Self());
+				const auto header = c.mission.Header();
+				Replay::TrackWriter writer(out, names, &header);
+				Replay::IssuerEvents events;
+				auto sample = [&]() {
+					std::vector<Replay::Pose> poses;
+					for (const auto& robot : team.robots) {
+						const auto& q = robot->sim;
+						poses.push_back({q.pos[0], q.pos[1], q.pos[2], q.Roll(), q.Pitch(), q.Yaw()});
+					}
+					writer.Sample(team.Time(), poses);
+					events.Poll(team.issuer, writer, team.Time());
+				};
+				const double end = team.Time() + spec.time_limit;
+				sample();
+				while (!r.completed && team.Time() < end) {
+					r.completed = team.Run(std::min(spec.track_period, end - team.Time()));
+					sample();
+				}
+			}
 			r.sim_time = team.Time();
 			r.tasks = static_cast<int>(release.size());
 			double first = 1e18, last = 0.0, latency_sum = 0.0;

@@ -13,3 +13,8 @@ target_compile_definitions(mrs_experiment PRIVATE MRS_SPEC_EXAMPLES="${MRS_SPEC_
 # GeoJSON to a timeline of generated tasks (spec 11 §4.3).
 add_executable(mrs_generate mrs_generate.cpp)
 target_link_libraries(mrs_generate PRIVATE mrs_generators mrs_warnings)
+
+# The MRS dot viewer (spec 17 §4), optional because it fetches SFML.
+if(MRS_BUILD_VIEWER)
+	add_subdirectory(dot_viewer)
+endif()

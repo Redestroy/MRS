@@ -35,6 +35,8 @@ namespace {
 	    "                     [--bitrate BPS,..]  (0: no limit; every run is flown at each bitrate)\n"
 	    "                     [--repulsion LEAD,..]  (s; 0: off; every run is flown at each lead, spec 15 §4.3)\n"
 	    "                     [--ranging NOISE_M]  (every robot gets a ranging sensor, spec 15 §3.1)\n"
+	    "                     [--set FILE.mrsl]...  (one timeline file; a ported set)\n"
+	    "                     [--track FILE.csv] [--track-period S]  (one run only: write its track for mrs_dot_viewer, spec 17)\n"
 	    "  mrs_experiment gen FAMILY DISPATCH TASKS SEED\n"
 	    "  mrs_experiment oracle FILE\n"
 	    "families: grid radial cluster multicluster random; dispatch: static even clustered random\n"
@@ -106,7 +108,9 @@ namespace {
 	}
 
 	int Run(int argc, char** argv) {
-		fs::path ported, out = "results.csv", sets_out;
+		fs::path ported, out = "results.csv", sets_out, track;
+		std::vector<fs::path> set_files;
+		double track_period = 0.1;
 		fs::path examples = MRS_SPEC_EXAMPLES;
 		std::vector<GenSpec> gens;
 		std::vector<TreeSpec> tree_sets;
@@ -123,6 +127,9 @@ namespace {
 				return argv[++k];
 			};
 			if (a == "--ported") ported = next();
+			else if (a == "--set") set_files.push_back(next());
+			else if (a == "--track") track = next();
+			else if (a == "--track-period") track_period = std::stod(next());
 			else if (a == "--out") out = next();
 			else if (a == "--sets-out") sets_out = next();
 			else if (a == "--examples") examples = next();
@@ -204,6 +211,17 @@ namespace {
 							if (Sim::IsSingle(c.condition)) break;
 						}
 		};
+		for (const auto& p : set_files) {
+			Sim::RunSpec s = base;
+			s.set = "set/" + p.stem().string();
+			s.family = "ported";
+			s.dispatch = "even";
+			s.timeline = ReadFile(p);
+			for (int seed = seed_a; seed <= seed_b; ++seed) {
+				s.seed = static_cast<std::uint64_t>(seed);
+				add(s);
+			}
+		}
 		if (!ported.empty()) {
 			std::vector<fs::path> files_in;
 			for (const auto& e : fs::directory_iterator(ported))
@@ -272,7 +290,13 @@ namespace {
 				add(s);
 			}
 
-		const auto done = Done(out);
+		if (!track.empty()) {
+			// A track is one run's: flown again even when the results already have it.
+			if (runs.size() != 1) throw std::runtime_error("--track needs exactly one run, not " + std::to_string(runs.size()) + " (one set, one seed, one condition)");
+			runs[0].track_path = track.string();
+			runs[0].track_period = track_period;
+		}
+		const auto done = track.empty() ? Done(out) : std::set<std::string>{};
 		std::vector<Sim::RunSpec> todo;
 		for (const auto& r : runs)
 			if (!done.count(Key(r))) todo.push_back(r);

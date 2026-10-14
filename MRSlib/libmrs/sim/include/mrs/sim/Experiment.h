@@ -38,6 +38,8 @@ namespace MRS {
 			double ranging_noise = -1.0;   // m; negative: no ranging sensor (spec 15 §3.1)
 			Algorithms::SpatialSizeConfig size;
 			Algorithms::TravelModel travel;  // its mode follows the condition
+			std::string track_path;          // a track file for the MRS dot viewer (spec 17 §2); empty: none
+			double track_period = 0.1;       // s between track rows
 		};
 
 		struct RunResult {

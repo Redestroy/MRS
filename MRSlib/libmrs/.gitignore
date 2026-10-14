@@ -1,3 +1,6 @@
 build/
 out/
 .vs/
+# Results and tracks the Webots team world writes (spec 09 §8, spec 17 §2.5).
+platforms/webots/worlds/*_results.csv
+platforms/webots/worlds/*_track.csv

@@ -28,3 +28,32 @@ jobs:
         run: cmake --build build --config Release --parallel
       - name: Test
         run: ctest --test-dir build -C Release --output-on-failure
+
+  # The MRS dot viewer (spec 17 §4): fetches SFML, so it is a job of its own.
+  viewer:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: SFML dependencies
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libxrandr-dev libxcursor-dev libxi-dev libudev-dev libgl1-mesa-dev libfreetype-dev xvfb
+      - name: Configure
+        run: cmake -S MRSlib/libmrs -B build -DMRS_BUILD_VIEWER=ON -DMRS_BUILD_TESTS=OFF -DMRS_WARNINGS_AS_ERRORS=ON -DCMAKE_BUILD_TYPE=Release
+      - name: Build
+        run: cmake --build build --config Release --parallel --target mrs_dot_viewer mrs_experiment
+      - name: Render a QuadSim track
+        if: runner.os == 'Linux'
+        run: |
+          build/tools/mrs_experiment run --set MRSlib/libmrs/platforms/webots/worlds/taskset1.mrsl --cond G-RTA:3 --seeds 1-1 --out run.csv --track track.csv
+          xvfb-run -a -s "-screen 0 1280x800x24" build/tools/dot_viewer/mrs_dot_viewer track.csv MRSlib/libmrs/platforms/webots/worlds/taskset1.mrsl --at 60 --screenshot viewer.png
+          test -s viewer.png
+      - name: Keep the frame
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: viewer-frame
+          path: viewer.png
