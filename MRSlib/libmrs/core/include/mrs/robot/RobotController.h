@@ -132,6 +132,7 @@ namespace MRS {
 			bool Admissible(const Task::Task& task) const;
 			bool FlightCritical() const;
 			bool Airborne() const;
+			void IdleAtLayer(double t);
 			bool Landing() const;
 			bool SafetyAbove(const std::string& id) const;
 			void HandleEvents(double t);
@@ -179,6 +180,8 @@ namespace MRS {
 			std::function<void(const RaisedEvent&)> event_listener_;
 			std::vector<Environment::View> injected_;
 			bool journal_end_ = true;
+			std::optional<double> idle_yaw_;    // yaw held while idle at the layer
+			std::optional<double> idle_since_;  // when the robot last ran out of tasks in the air
 		};
 	}
 }

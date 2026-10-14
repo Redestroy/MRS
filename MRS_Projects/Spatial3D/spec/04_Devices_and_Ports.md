@@ -1,6 +1,6 @@
 # 04 Devices and ports
 
-Status: **draft for WP0, updated in WP2**, spec version `0.1`. Grammar: [01](01_Protocol_Grammar.md). Plan reference: §4 (port layer) and §5 (device tree).
+Status: **draft for WP0, updated in WP2**, spec version `0.1`. Version 0.2 additions (device identity, port providers, scoped names, parts, discovery, bench mode) are in spec [16](16_Device_Discovery_and_Bench.md). Grammar: [01](01_Protocol_Grammar.md). Plan reference: §4 (port layer) and §5 (device tree).
 
 ## 1. Device tree
 
@@ -125,8 +125,18 @@ Parameters of `quadrotor.webots`, all optional, with the Webots Mavic 2 Pro devi
 | `led.webots` | `D_A` | `device`, repeatable, one per LED bit (`"front left led"`, `"front right led"`); `rgb` (`F`: any colour turns the LED on; `T`: the colour is written to an RGB LED) | `A_L` | `led0`, `led1`, … |
 | `battery.webots` | `D_M` | `capacity_wh` (required), `voltage` (nominal, 11.55 V) | `K_Q energy_wh`, view `V_BAT` | `battery` (address `battery`, the `Robot.battery` field) |
 | `radio.webots` | `D_C` | `channel` (1), `range_m`, `emitter` (`"emitter"`), `receiver` (`"receiver"`) | `K_M broadcast` | `tx`, `rx` |
+| `gimbal.webots` | `D_A` | `pitch` (`"camera pitch"`, required), `yaw` (`"camera yaw"`, optional), `min_pitch` (−1.5708), `max_pitch` (0.5) rad | `A_GMB`, with limits `min_pitch`, `max_pitch` | `pitch`, `yaw` (motor ports with `mode position`) |
+| `camera.webots` | `D_A` | `device` (`"camera"`), `rate_hz`, `prefix` (`"shot_"`) | `A_CAM` | `camera`. On Webots each shot is saved as `<prefix><robot>_<n>.jpg` in the controller folder |
+| `payload.webots` | `D_X` | `device` (`"connector"`), `package` (the package loaded before the flight, 0 for none), `rate_hz` | expands to `latch` and `cargo`, below | |
+| `latch.webots` | `D_A` | from `payload.webots` | `A_REL` | `latch`: reads 1 while it holds a package; a write of 0 opens it, 1 closes it |
+| `cargo.default` | `D_S` | none | `V_PAY` (the package the latch holds) | none: it reads the latch |
+| `ranging.webots` | `D_S` | `device` (default `"ranging"`), `range_m`, `noise_m` | `V_REL3` per peer in range | `ranging`: reads (robot id, dx, dy, dz) per peer, ENU (WP11, spec 15 §3.1) |
+
+The stock Mavic has the gimbal motors and the camera. The payload bay needs a Webots `Connector` named `connector` in the Mavic's `bodySlot`, locked to the package before the flight. `mavic_delivery_webots.mrsd` and `.mrsp` in the examples are the Mavic with all three (WP7). The test simulator (spec 10 §4) has the same device names: it records each shot (time, position, gimbal pitch) and each release (time, position).
 
 The stock Mavic has no barometer; without `baro.webots` the worldview takes `alt.amsl` from GNSS (spec 05 §5.1).
+
+The `.mavlink` keys of the ArduPilot platform (`quadrotor.mavlink`, `fcu.mavlink`, `gnss.mavlink`, `vel.mavlink`, `led.mavlink`, `battery.mavlink`) and their MAVLink ports are in spec 14 §3–4. `quadrotor.*` uses `fcu.<platform>` when the registry has it, and `fcu.default` otherwise (WP10).
 
 Compass heading: Webots returns the north direction in the body frame, `(n_x, n_y, n_z)`. The heading is `atan2(n_y, n_x)` wrapped to `[0, 2π)`.
 
@@ -231,15 +241,18 @@ The head builds the self model after port assignment. It contains:
 
 * `robot_type`, `id` and `role` list;
 * every capability of every **available** node (`K_A`, `K_V`, `K_M`, `K_Q`), with the node name that provides it;
-* the views the robot produces: every `K_V`, plus `V_PEER` when it has any `K_M` (peer `STATE` messages decode to `V_PEER`);
-* the worldview fields the robot can provide, from the processor catalog (spec 05 §5.2).
+* the views the robot produces: every `K_V`, plus `V_PEER`, `V_FLD` and `V_DET` when it has any `K_M` (peer `STATE` messages decode to `V_PEER`, shared world fields and detections to `V_FLD` and `V_DET`, spec 15 §2.4);
+* the action codes: every `K_A`, plus `A_SY` when it has any `K_M` (it can ask peers, spec 15 §2.5);
+* the worldview fields the robot can provide, from the processor catalog (spec 05 §5.2);
+* the **measured** fields: the part of those the robot provides from its own devices, computed the same way from its `K_V` views plus `V_PEER` (a peer's own state, broadcast by that peer), without the shared `V_FLD` and `V_DET` (spec 03 §5.1).
 
 The field list is computed to a fixed point: start with `time`; a catalog processor is **active** when at least one of its subscribed views is produced (or it subscribes to none) and every field in its `Needs()` is already provided; an active processor adds its `Provides()`, its `Offers()` fields, and those of its optional outputs whose view is produced. Repeat until nothing changes. An offered field is provided when any of its sources is active; the worldview picks among them at run time (spec 05 §5.1).
 
-`ToProfile()` gives the task layer's capability profile: action codes, fields and roles.
+`ToProfile()` gives the task layer's capability profile: action codes, fields, measured fields and roles.
 
 The self model is sent to peers as a `PROFILE` message (spec 06 §4).
 
 ## 8. Notes for later versions
 
 * **Richer device metadata (JB, 2026-10-06).** Later versions may let devices report more detailed metadata, such as model, interface, rates and calibration, which would allow better self-configuration of the tree and the port map. This is beyond the current work packages. In version 0.1 the definition file, the port map and the `identity` a scan reports are the only sources.
+* **Spec 16 (2026-10-12).** The base mechanism for this is now specified in [spec 16](16_Device_Discovery_and_Bench.md): identities and identity maps (`.mrsi`) for unknown and swapped devices, joints that provide ports for their subtree, open port types, scoped node names, parts and a device library, discovery from a port scan, the boot check, and bench mode. Where spec 16 changes a rule of this spec (names in §1, port types in §6.1, the identity format in §6.3), spec 16 applies.

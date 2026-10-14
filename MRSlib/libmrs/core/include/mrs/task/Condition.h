@@ -137,6 +137,10 @@ namespace MRS {
 			std::vector<ConditionPtr> children_;
 		};
 
+		// The world fields a condition reads, which peers may know (spec 15 §2.5): its fields
+		// without the robot's own state and the mission fields. Empty: nothing to ask peers for.
+		std::vector<std::string> SharedTopics(const Condition& c);
+
 		class ViewMatchCondition : public Condition {  // C_V, V_PEER and V_DET only (spec 05 §6)
 		public:
 			static ViewMatchCondition Peer(long long robot);

@@ -19,29 +19,48 @@ MRSlib/
                            transports and the messenger (WP5)
       src/
     algorithms/            MRS::Algorithms: task pool, peer table, allocators, the MRS layer
-                           and the task issuer (WP5)
+                           and the task issuer (WP5); the route planner, PlannerAllocator,
+                           CentralPlanner and PlanFollowerAllocator (WP6); the tree
+                           decomposer and tree tasks in the pool and issuer (WP7)
+    generators/            MRS::Generators (mrs_generators): point, path, coverage, perimeter and
+                           spiral search generators, GeoJSON input (WP7, spec 11)
+    sim/                   MRS::Sim (mrs_sim): QuadSim, the team harness, task-set generators,
+                           the oracle form and evaluation runs (WP6, spec 10)
     platforms/webots/      WebotsPlatform (mrs_webots), built only when WEBOTS_HOME is set;
                            controllers/mrs_worldview_check: the WP3 ground-truth check;
-                           controllers/mrs_uav and mrs_issuer: the WP5 team controllers
-    platforms/ardupilot/   later (WP10)
+                           controllers/mrs_uav and mrs_issuer: the WP5 team controllers;
+                           worlds/mavic_team.wbt: three Mavics and the issuer
+    platforms/ardupilot/   ArduPilotPlatform, GuidedFcu, UdpTransport, MockAutopilot (mrs_ardupilot,
+                           WP10, spec 14); tools/mrs_ardupilot_uav and mrs_operator;
+                           third_party/mavlink: MAVLink's C headers, common dialect
     behaviours/            .mrsb files
     tools/                 mrs_fmt (check a file, print its canonical form);
-                           mrs_port2021 (convert a 2021 task set, WP5)
+                           mrs_port2021 (convert a 2021 task set, WP5);
+                           mrs_experiment (the WP6 batch runner, spec 10 §6);
+                           mrs_generate (GeoJSON to a timeline, WP7, spec 11 §4.3)
     tests/
       third_party/doctest.h
       protocol/            round-trip and error tests
       task/                conditions and executor (WP1)
       device/              device tree, ports, blocks, self model, with a mock platform (WP2)
       world/               worldview pipeline, source selection, processors (WP3)
-      flight/              QuadSim (a rigid-body test platform) and the single-UAV flight tests (WP4)
+      flight/              the single-UAV flight tests on QuadSim (WP4)
       team/                several UAVs over a simulated radio: messages, claims, RTA, dumps (WP5)
+      sim/                 planner, generators, oracle form, M_PLAN, one run per condition (WP6)
+      tree/                decomposer, derived states, generators, GeoJSON, payload devices,
+                           idle at layer and the 3-UAV coverage acceptance run (WP7)
+      sta/, cbba/          units and MRS-STA (WP8); CBBA, LDTA² and the channel (WP9)
+      ardupilot/           ArduPilot platform, GUIDED fcu and UDP, on the mock autopilot (WP10)
+      sync/                worldview sync, ranging, neighbours and repulsion (WP11)
 MRS_Projects/Spatial3D/
   README.md
   docs/                    plan and design notes
   spec/                    this specification
     examples/              example protocol files (also test inputs)
-  experiments/uav_spatial/ ported 2021 task sets and the 5-UAV mission (WP5); worlds,
-                           batch runner, analysis (WP6)
+  experiments/uav_spatial/ ported 2021 task sets and the 5-UAV mission (WP5); analyze.py
+                           and the WP6 results (spec 10)
+  experiments/uav_trees/   GeoJSON examples for the generators (WP7, spec 11 §4.3)
+  experiments/uav_ardupilot/ SITL runs: run_sitl.sh and the WP10 results (spec 14 §9)
 .github/workflows/spatial3d.yml
 ```
 
@@ -57,9 +76,9 @@ MRS_Projects/Spatial3D/
 | Language | C++17. No compiler extensions (`CMAKE_CXX_EXTENSIONS OFF`) |
 | Compilers | MSVC 2022 (v143), GCC ≥ 11, Clang ≥ 14 |
 | Warnings | MSVC `/W4 /permissive-`, GCC and Clang `-Wall -Wextra -Wpedantic`. Warnings are errors in CI |
-| Dependencies | `core` and `algorithms`: the C++ standard library only. No Boost. `platforms/webots`: the Webots C++ API from `WEBOTS_HOME`. `platforms/ardupilot`: MAVLink C headers, vendored |
-| Targets | `mrs_core`, `mrs_algorithms` (static libraries), `mrs_webots` (optional), `mrs_tests` |
-| Options | `MRS_BUILD_TESTS` (ON), `MRS_BUILD_TOOLS` (ON), `MRS_WARNINGS_AS_ERRORS` (OFF; ON in CI), `MRS_BUILD_WEBOTS` (AUTO: ON when `WEBOTS_HOME` is set) |
+| Dependencies | `core` and `algorithms`: the C++ standard library only. No Boost. `platforms/webots`: the Webots C++ API from `WEBOTS_HOME`. `platforms/ardupilot`: MAVLink C headers (c_library_v2, common dialect), vendored in `third_party/mavlink`; Winsock (`ws2_32`) on Windows |
+| Targets | `mrs_core`, `mrs_algorithms` (static libraries), `mrs_webots` (optional), `mrs_ardupilot`, `mrs_tests` |
+| Options | `MRS_BUILD_TESTS` (ON), `MRS_BUILD_TOOLS` (ON), `MRS_WARNINGS_AS_ERRORS` (OFF; ON in CI), `MRS_BUILD_WEBOTS` (AUTO: ON when `WEBOTS_HOME` is set), `MRS_BUILD_ARDUPILOT` (ON), `MRS_MAVLINK_DIR` (the vendored headers) |
 | Exports | No DLL macros in `core`. The C API (later) is a separate target with its own export macro |
 | Formatting | `.clang-format` at `MRSlib/libmrs/`, based on the existing code style (tabs, braces on the same line) |
 | Text I/O | Number formatting and parsing use `<charconv>` (`std::to_chars`, `std::from_chars`), so results do not depend on the locale |
@@ -183,6 +202,41 @@ In Webots, `platforms/webots/controllers/mrs_worldview_check` compares the same 
 * A UAV built without LEDs dumps the LED tasks as static and does none of them; the others do them. With two such UAVs and no LED-capable UAV left for a task, the task becomes `IMPOSSIBLE`.
 * A task whose robot went silent is taken back by another robot.
 
-### 5.8 Out of scope for WP0
+### 5.8 Evaluation tests (WP6)
+
+`tests/sim/` checks the parts of the evaluation (spec 10):
+
+* The travel model gives the layered, altitude-first and direct leg times of spec 10 §2.1.
+* Task geometry: the first `C_P3`, the latest `C_T` and the sum of the waits.
+* The planner orders a line, splits two clusters between two robots, waits for releases, skips
+  excluded robots, keeps a fixed task first, and gives equal plans for equal inputs. The two
+  objectives pick different routes on a case built for it.
+* Generated sets are the same for a seed, parse, keep their targets in the area and altitude band,
+  and follow their dispatch; the oracle form sends every task at 0 and keeps its release and target.
+* `M_PLAN` round-trips, and a count that disagrees with the ids is an error.
+* Ported task set 1 under every condition: every task done, nothing crashed or outside the fence,
+  S1* no slower than S1, every group under 0.6 × S1, no duplicates under G-C and G-RTA-X.
+
+### 5.9 Tree and generator tests (WP7)
+
+`tests/tree/` checks spec 11; the cases are listed in spec 11 §5. The camera, gimbal and payload tests fly `mavic_delivery_webots.mrsd` in QuadSim.
+
+### 5.10 Splittable trees and MRS-STA tests (WP8)
+
+`tests/sta/` checks spec 12; the cases are listed in spec 12 §5.
+
+### 5.11 CBBA, LDTA² and channel tests (WP9)
+
+`tests/cbba/` checks spec 13; the cases are listed in spec 13 §7.
+
+### 5.12 ArduPilot platform tests (WP10)
+
+`tests/ardupilot/` checks spec 14 against `MockAutopilot`; the cases are listed in spec 14 §11. SITL runs are not in CI (spec 14 §9).
+
+### 5.13 Sync, ranging and repulsion tests (WP11)
+
+`tests/sync/` checks spec 15; the cases are listed in spec 15 §6.
+
+### 5.14 Out of scope for WP0
 
 Condition evaluation, the executor, devices and the worldview get their own tests in WP1–WP3. WP0 only checks that every object can be read and written exactly.

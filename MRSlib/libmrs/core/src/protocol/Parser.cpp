@@ -10,6 +10,8 @@
 #include <vector>
 
 #include "mrs/device/Action.h"
+#include "mrs/device/Identity.h"
+#include "mrs/port/Port.h"
 
 namespace MRS {
 	namespace Protocol {
@@ -346,6 +348,35 @@ namespace MRS {
 					if (!allowed.count(v)) Fail(ErrorClass::Slot, t->offset, raw_.header, rec_.code + ": '" + v + "' is not an allowed value");
 				}
 
+				// A string in the identity format; `pattern` also allows a rev of * (spec 16 §2.1).
+				void IdentityStr(bool pattern) {
+					const Token* t = Peek();
+					if (!t || t->type != Tok::Str) SlotError("expected an identity string");
+					const bool ok = pattern ? Device::IdentityPattern::Parse(t->str).has_value() : Device::Identity::Parse(t->str).has_value();
+					if (!ok) SlotError("\"" + t->str + "\" is not an identity" + (pattern ? " pattern" : ""));
+					Push(Field::MakeText(FieldType::Str, t->str));
+				}
+
+				// A string, or nothing if the next slot is not a string.
+				bool OptStr() {
+					const Token* t = Peek();
+					if (!t || t->type != Tok::Str) return false;
+					Push(Field::MakeText(FieldType::Str, t->str));
+					return true;
+				}
+
+				void Str() {
+					if (!OptStr()) SlotError("expected a string");
+				}
+
+				// A port type name (spec 16 §4.5).
+				void PortTypeId() {
+					const Token* t = Peek();
+					std::string v = Id();
+					if (!Port::PortType::FromName(v))
+						Fail(ErrorClass::Slot, t->offset, raw_.header, rec_.code + ": '" + v + "' is not a port type name");
+				}
+
 				void IdOrStr() {
 					const Token* t = Peek();
 					if (t && t->type == Tok::Str) {
@@ -534,6 +565,8 @@ namespace MRS {
 					c.Num();
 				} else if (code == "R_K") {
 					c.Tid();
+				} else if (code == "R_I") {
+					c.Id();
 				} else if (code == "R_C") {
 					c.Label('C');
 				}
@@ -548,7 +581,7 @@ namespace MRS {
 					return;
 				}
 				if (code == "A_FN") {
-					std::string target = c.Code('A', [](const std::string& a) { return IsLeafAction(a) && a != "A_N" && a != "A_I"; });
+					std::string target = c.Code('A', [](const std::string& a) { return IsLeafAction(a) && a != "A_N" && a != "A_I" && a != "A_SY"; });
 					const auto n = static_cast<std::size_t>(Device::ValueCount(Device::FindAction(target)->layout));
 					c.Labels("F", n, n);
 					return;
@@ -593,7 +626,7 @@ namespace MRS {
 				c.Num();  // stamp
 				static const std::map<std::string, int> plain = {
 					{"V_GEO", 3}, {"V_POS3", 3}, {"V_VEL3", 3}, {"V_ATT", 3}, {"V_RATE", 3}, {"V_ACC", 3},
-					{"V_BARO", 1}, {"V_MAG", 1}, {"V_RNG", 1}, {"V_BAT", 3}, {"V_P2", 3}};
+					{"V_BARO", 1}, {"V_MAG", 1}, {"V_RNG", 1}, {"V_PAY", 1}, {"V_BAT", 3}, {"V_P2", 3}};
 				auto it = plain.find(code);
 				if (it != plain.end()) return c.Nums(it->second);
 				if (code == "V_PEER") {
@@ -606,6 +639,9 @@ namespace MRS {
 				} else if (code == "V_DET") {
 					c.Id();
 					c.Nums(4);
+				} else if (code == "V_FLD") {
+					c.Id();
+					c.Num();
 				}
 			}
 
@@ -622,15 +658,32 @@ namespace MRS {
 				if (code == "D_X") c.Labels("D");
 			}
 
-			const std::set<std::string> kPortTypes = {"GPIO", "PWM", "ADC", "UART", "I2C", "SPI",
-			                                          "CAN",  "UDP", "TCP", "MAVLINK", "SIM"};
+			// Identity map entries and device reports (spec 16 §3.1).
+			void IdentitySlots(Cursor& c, const std::string& code) {
+				if (code == "I_M") {
+					c.IdentityStr(true);
+					c.Id();
+					c.Params();
+				} else if (code == "I_U") {
+					c.Id();       // provider
+					c.IdOrStr();  // address
+					c.PortTypeId();
+					c.Str();      // identity, possibly empty
+					c.OptStr();   // descriptor
+				} else if (code == "I_R") {
+					c.IdIn({"missing", "swapped", "updated", "changed", "extra"});
+					c.Id();
+					c.Str();
+					c.Str();
+				}
+			}
 
 			void PortSlots(Cursor& c, const std::string& code) {
 				if (code == "P_A") {
 					c.Id();  // node
 					c.Id();  // requirement
 				}
-				c.IdIn(kPortTypes);
+				c.PortTypeId();
 				c.IdOrStr();
 				if (code == "P_R") c.Bool();
 				c.Params();
@@ -717,6 +770,7 @@ namespace MRS {
 					c.Bool();
 					c.Int();
 				} else if (code == "M_STATE") c.Label('V');
+				else if (code == "M_SYNC") c.Labels("V", 1);
 				else if (code == "M_PROFILE") {
 					c.Id();
 					std::int64_t n = c.Count();
@@ -752,21 +806,22 @@ namespace MRS {
 					};
 					add({"T_A", "T_P", "T_B", "T_S", "T_L", "T_O"}, TaskSlots);
 					add({"C_N", "C_F", "C_?", "C_m", "C_T", "C_W", "C_L", "C_V", "C_S", "C_P", "C_P3", "C_G", "C_H"}, ConditionSlots);
-					add({"R_S", "R_F", "R_A", "R_R", "R_E", "R_K", "R_C"}, RequirementSlots);
+					add({"R_S", "R_F", "R_A", "R_R", "R_E", "R_K", "R_I", "R_C"}, RequirementSlots);
 					add({"A_MAP", "A_FN"}, ActionSlots);
 					for (const auto& info : Device::ActionRegistry()) s.codes[info.code] = ActionSlots;
 					add({"F_K", "F_L", "F_X", "F_S", "F_P", "F_C"}, FunctionSlots);
 					add({"V_GEO", "V_POS3", "V_VEL3", "V_ATT", "V_RATE", "V_ACC", "V_BARO", "V_MAG", "V_RNG", "V_BAT",
-					     "V_PEER", "V_REL3", "V_DET", "V_P2"}, ViewSlots);
+					     "V_PEER", "V_REL3", "V_DET", "V_P2", "V_PAY", "V_FLD"}, ViewSlots);
 					add({"D_H", "D_J", "D_X", "D_S", "D_A", "D_C", "D_M"}, DeviceSlots);
 					add({"P_R", "P_A"}, PortSlots);
 					add({"K_A", "K_V", "K_M", "K_Q"}, CapabilitySlots);
+					add({"I_M", "I_U", "I_R"}, IdentitySlots);
 					add({"H_M"}, HeaderSlots);
 					add({"L_D"}, TimelineSlots);
 					add({"J_H", "J_T", "J_K", "J_C", "J_E"}, JournalSlots);
 					add({"B_E"}, BehaviourSlots);
 					add({"M_MISSION", "M_TASK", "M_CLAIM", "M_RELEASE", "M_DONE", "M_FAIL", "M_DUMP", "M_STATE",
-					     "M_PROFILE", "M_BID", "M_INFOREQ", "M_INFO", "M_CMD", "M_PLAN"}, MessageSlots);
+					     "M_PROFILE", "M_BID", "M_INFOREQ", "M_INFO", "M_CMD", "M_PLAN", "M_SYNC"}, MessageSlots);
 					s.reserved = {"T_D", "T_G", "T_U", "C_Q", "F_E",
 					              // legacy 2021 action codes (spec 02 §4.5)
 					              "A_l", "A_p", "A_t", "A_f", "A_b", "A_r", "A_y", "A_c", "A_d", "A_D", "A_M", "A_R",
@@ -781,7 +836,7 @@ namespace MRS {
 				return s.codes.count(code) != 0 && s.reserved.count(code) == 0;
 			}
 
-			const std::string kKindsWithCode = "TCRAFVDPKMHLJB";
+			const std::string kKindsWithCode = "TCRAFVDPKMHLJBI";
 
 			// Checks that need the children's codes.
 			void PostCheck(const Record& rec, const std::string& header) {
@@ -793,11 +848,14 @@ namespace MRS {
 					if (v.code != "V_DET" && v.code != "V_PEER") fail_child(v, "C_V: only V_DET and V_PEER can be matched in version 0.1");
 				} else if (rec.code == "M_STATE") {
 					if (rec.children.at(0).code != "V_PEER") fail_child(rec.children[0], "M_STATE carries a V_PEER view");
+				} else if (rec.code == "M_SYNC") {
+					for (const Record& v : rec.children)
+						if (v.code != "V_FLD" && v.code != "V_DET") fail_child(v, "M_SYNC carries V_FLD and V_DET views");
 				} else if (rec.code == "A_MAP") {
 					std::set<std::pair<std::string, std::string>> entries;
 					for (std::size_t k = 0; k + 1 < rec.fields.size(); k += 2) {
 						const Record& a = rec.children.at(rec.fields[k + 1].ref);
-						if (a.code == "A_MAP" || a.code == "A_N" || a.code == "A_W" || a.code == "A_I")
+						if (a.code == "A_MAP" || a.code == "A_N" || a.code == "A_W" || a.code == "A_I" || a.code == "A_SY")
 							fail_child(a, "A_MAP: " + a.code + " is not allowed inside a map");
 						const std::string& produced = a.code == "A_FN" ? a.fields.at(0).s : a.code;
 						if (!entries.insert({rec.fields[k].s, produced}).second)

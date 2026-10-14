@@ -1,0 +1,7 @@
+# A device report (spec 16 §7): unknowns from a discovery and findings of a boot check.
+@: MRS 0.2/
+I: I_U platform "camera2" SIM "cyberbotics:camera"/
+I: I_U can0 "node12" CAN "" "D: D_S tof tof.can 1 range_m 4/"/
+I: I_R updated gnss "ublox:neo-m8n:3.01" "ublox:neo-m9n:4.04"/
+I: I_R changed left_wheel.motor "acme:motor_block:2" "acme:motor_block:3"/
+I: I_R missing radio "digi:xbee3@0013A200" ""/

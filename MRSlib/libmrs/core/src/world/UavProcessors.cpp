@@ -2,6 +2,7 @@
 
 #include <cmath>
 #include <map>
+#include <set>
 
 namespace MRS {
 	namespace Environment {
@@ -133,6 +134,17 @@ namespace MRS {
 				}
 			};
 
+			// payload.id: the package the robot carries, 0 when its bay is empty (spec 05 §5.3).
+			class PayloadProcessor : public IViewProcessor {
+			public:
+				std::string Name() const override { return "PayloadProcessor"; }
+				std::vector<std::string> Subscriptions() const override { return {"V_PAY"}; }
+				std::vector<std::string> Provides() const override { return {"payload.id"}; }
+				void Process(const View& v, Worldview& w, double) override {
+					if (!v.values.empty()) w.SetScalar("payload.id", v.values[0], v.stamp, "payload");
+				}
+			};
+
 			class AglFromAmslProcessor : public IViewProcessor {
 			public:
 				std::string Name() const override { return "AglFromAmslProcessor"; }
@@ -198,7 +210,8 @@ namespace MRS {
 				std::string Name() const override { return "KinematicsEstimator"; }
 				std::vector<std::string> Subscriptions() const override { return {}; }
 				std::vector<std::string> Needs() const override { return {"pose.enu"}; }
-				std::vector<std::string> Provides() const override { return {"vel.enu", "acc.enu"}; }
+				std::vector<std::string> Provides() const override { return {"acc.enu"}; }
+				std::vector<Offer> Offers() const override { return {{"vel.enu", "kinematics"}}; }
 				void Tick(Worldview& w, double) override {
 					const double stamp = StampOf(w, "pose.enu.x");
 					if (stamp < 0.0 || stamp <= last_) return;
@@ -227,7 +240,7 @@ namespace MRS {
 					}
 					++samples_;
 					last_ = stamp;
-					if (samples_ >= 2) w.SetVec3("vel.enu", v_[0], v_[1], v_[2], stamp, "kinematics");
+					if (samples_ >= 2) w.OfferVec3("vel.enu", "kinematics", v_[0], v_[1], v_[2], stamp);
 					if (samples_ >= 3) w.SetVec3("acc.enu", a_[0], a_[1], a_[2], stamp, "kinematics");
 				}
 
@@ -236,6 +249,17 @@ namespace MRS {
 				double x_[3] = {0, 0, 0}, v_[3] = {0, 0, 0}, a_[3] = {0, 0, 0};
 				int samples_ = 0;
 				double last_ = -1.0;
+			};
+
+			// A velocity source that estimates it itself, such as an autopilot's EKF (spec 14 §5).
+			class VelocityProcessor : public IViewProcessor {
+			public:
+				std::string Name() const override { return "VelocityProcessor"; }
+				std::vector<std::string> Subscriptions() const override { return {"V_VEL3"}; }
+				std::vector<Offer> Offers() const override { return {{"vel.enu", "nav"}}; }
+				void Process(const View& v, Worldview& w, double) override {
+					if (v.values.size() >= 3) w.OfferVec3("vel.enu", "nav", v.values[0], v.values[1], v.values[2], v.stamp);
+				}
 			};
 
 			class BatteryProcessor : public IViewProcessor {
@@ -361,13 +385,78 @@ namespace MRS {
 						if (id.empty() && std::sqrt(dx * dx + dy * dy + dz * dz) <= radius_) id = o.first;
 					}
 					if (id.empty()) id = prefix + std::to_string(count + 1);
-					w.SetVec3(id + ".enu", v.values[0], v.values[1], v.values[2], v.stamp, "detector");
-					w.SetScalar(id + ".confidence", v.values[3], v.stamp, "detector");
-					w.PutObject({id, "detection", {v.values[0], v.values[1], v.values[2]}, {}, v.stamp, "detector", v.values[3]});
+					// A detection a peer shared keeps the peer as its source (spec 15 §2.4).
+					const std::string source = v.source.empty() ? "detector" : v.source;
+					w.SetVec3(id + ".enu", v.values[0], v.values[1], v.values[2], v.stamp, source);
+					w.SetScalar(id + ".confidence", v.values[3], v.stamp, source);
+					w.PutObject({id, "detection", {v.values[0], v.values[1], v.values[2]}, {}, v.stamp, source, v.values[3]});
 				}
 
 			private:
 				double radius_;
+			};
+
+			// V_REL3 -> rel.rN.enu, rel.rN.range (spec 15 §3.2).
+			class RelativePositionProcessor : public IViewProcessor {
+			public:
+				std::string Name() const override { return "RelativePositionProcessor"; }
+				std::vector<std::string> Subscriptions() const override { return {"V_REL3"}; }
+				std::vector<std::string> Provides() const override { return {"rel"}; }
+				void Process(const View& v, Worldview& w, double) override {
+					if (v.values.size() < 4) return;
+					const std::string base = "rel.r" + std::to_string(static_cast<long long>(v.values[0]));
+					w.SetVec3(base + ".enu", v.values[1], v.values[2], v.values[3], v.stamp, "ranging");
+					w.SetScalar(base + ".range", std::sqrt(v.values[1] * v.values[1] + v.values[2] * v.values[2] + v.values[3] * v.values[3]),
+					            v.stamp, "ranging");
+				}
+			};
+
+			// V_FLD from a peer -> sync.rN.<path>, and <path> offered with source peer:rN unless the
+			// robot's own chain writes it (spec 15 §2.4).
+			class WorldviewSyncProcessor : public IViewProcessor {
+			public:
+				std::string Name() const override { return "WorldviewSyncProcessor"; }
+				std::vector<std::string> Subscriptions() const override { return {"V_FLD"}; }
+				std::vector<std::string> Provides() const override { return {"sync"}; }
+				void SetOwnFields(std::set<std::string> fields) { own_ = std::move(fields); }
+				void Process(const View& v, Worldview& w, double) override {
+					if (v.values.empty() || v.text.empty() || !IsPeerSource(v.source)) return;
+					const std::string peer = v.source.substr(5);
+					w.SetScalar("sync." + peer + "." + v.text, v.values[0], v.stamp, v.source);
+					if (!Own(v.text)) w.OfferScalar(v.text, v.source, v.values[0], v.stamp);
+				}
+
+			private:
+				// The path, or a field it lies under, is written by one of the robot's own processors.
+				bool Own(const std::string& path) const {
+					std::string p = path;
+					while (true) {
+						if (own_.count(p)) return true;
+						const auto dot = p.rfind('.');
+						if (dot == std::string::npos) return false;
+						p.resize(dot);
+					}
+				}
+				std::set<std::string> own_;
+			};
+
+			// repulse.enu, repulse.nearest, repulse.count from the neighbours (spec 15 §4.1).
+			class RepulsionProcessor : public IViewProcessor {
+			public:
+				explicit RepulsionProcessor(const UavWorldviewConfig& c) : c_(c.repulsion) {}
+				std::string Name() const override { return "RepulsionProcessor"; }
+				std::vector<std::string> Subscriptions() const override { return {}; }
+				std::vector<std::string> Provides() const override { return {"repulse"}; }
+				void Tick(Worldview& w, double t) override {
+					const Repulsion r = RepulsionFrom(Neighbours(w, t), c_);
+					w.SetVec3("repulse.enu", r.force.x, r.force.y, r.force.z, t, "repulsion");
+					w.SetScalar("repulse.count", r.count, t, "repulsion");
+					if (r.nearest >= 0.0) w.SetScalar("repulse.nearest", r.nearest, t, "repulsion");
+					else w.Erase("repulse.nearest");
+				}
+
+			private:
+				RepulsionConfig c_;
 			};
 		}
 
@@ -389,11 +478,16 @@ namespace MRS {
 			p.push_back(std::make_unique<CompassHeadingProcessor>());
 			p.push_back(std::make_unique<AttitudeHeadingProcessor>());
 			p.push_back(std::make_unique<KinematicsEstimator>(c));
+			p.push_back(std::make_unique<VelocityProcessor>());
 			p.push_back(std::make_unique<BatteryProcessor>(c));
 			p.push_back(std::make_unique<FlightStateProcessor>(c));
 			p.push_back(std::make_unique<GeofenceProcessor>());
 			p.push_back(std::make_unique<PeerStateProcessor>());
 			p.push_back(std::make_unique<DetectionProcessor>(c));
+			p.push_back(std::make_unique<PayloadProcessor>());
+			p.push_back(std::make_unique<RelativePositionProcessor>());
+			p.push_back(std::make_unique<WorldviewSyncProcessor>());
+			p.push_back(std::make_unique<RepulsionProcessor>(c));
 			return p;
 		}
 
@@ -402,6 +496,7 @@ namespace MRS {
 			w.SetSourceOrder("alt.amsl", {"baro", "gnss", "local"});
 			w.SetSourceOrder("alt.agl", {"range", "amsl"});
 			w.SetSourceOrder("heading", {"compass", "attitude"});
+			w.SetSourceOrder("vel.enu", {"nav", "kinematics"});
 		}
 
 		void ApplyMissionHeader(const Protocol::Record& h, std::int64_t robot_id, Worldview& w, double t) {
@@ -423,6 +518,17 @@ namespace MRS {
 			m.chain.Prune(views);
 			m.chain.Build();
 			SetUavSourceOrders(m.world);
+			// The fields the robot writes itself, which a peer's V_FLD must not overwrite (spec 15 §2.4).
+			if (auto* sync = dynamic_cast<WorldviewSyncProcessor*>(m.chain.Find("WorldviewSyncProcessor"))) {
+				std::set<std::string> own;
+				for (const IViewProcessor* p : m.chain.Processors()) {
+					if (p == sync) continue;
+					for (const auto& f : p->Provides()) own.insert(f);
+					for (const auto& o : p->Offers()) own.insert(o.field);
+					for (const auto& o : p->Optional()) own.insert(o.second);
+				}
+				sync->SetOwnFields(std::move(own));
+			}
 			return m;
 		}
 

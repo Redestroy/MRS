@@ -48,11 +48,29 @@ namespace MRS {
 			const bool airborne = w_.Bool("airborne", t).value_or(false);
 			const auto x = w_.Scalar("pose.enu.x", t), y = w_.Scalar("pose.enu.y", t);
 			const double m = c_.fence_margin;
+			std::optional<Environment::Enu> push;
+			if (c_.repulsion_lead > 0.0 && airborne) {
+				const auto px = w_.Scalar("repulse.enu.x", t), py = w_.Scalar("repulse.enu.y", t), pz = w_.Scalar("repulse.enu.z", t);
+				if (px && py && pz && (*px != 0.0 || *py != 0.0 || *pz != 0.0)) push = Environment::Enu{*px, *py, *pz};
+			}
 			for (auto& e : out.entries) {
 				const std::string& code = e.action.code;
 				if (code != "A_PXY" && code != "A_PZY" && code != "A_TO" && code != "A_VXY" && code != "A_VZY") continue;
 				auto v = Device::UnpackReals(Device::ArgLayout::F32X2, e.action.arg);
 				const auto before = v;
+				if (push) {  // away from nearby robots, before the limits (spec 15 §4.3)
+					if (code == "A_PXY") {
+						v[0] += c_.repulsion_lead * push->x;
+						v[1] += c_.repulsion_lead * push->y;
+					} else if (code == "A_PZY") {
+						v[0] += c_.repulsion_lead * push->z;
+					} else if (code == "A_VXY") {
+						v[0] += push->x;
+						v[1] += push->y;
+					} else if (code == "A_VZY") {
+						v[0] += push->z;
+					}
+				}
 				if (code == "A_PXY" && fence) {
 					v[0] = std::clamp(v[0], fence->xmin + m, std::max(fence->xmin + m, fence->xmax - m));
 					v[1] = std::clamp(v[1], fence->ymin + m, std::max(fence->ymin + m, fence->ymax - m));

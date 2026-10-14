@@ -1,0 +1,15 @@
+@: MRS 0.1/
+
+D: D_H uav head.default 3 robot_type mavic2pro role delivery_uav id 1 D_1/
+D_1: D_J frame mech_bus 0 D_1..9/
+D_1: D_X quadrotor quadrotor.webots 3 max_climb 2 max_speed_xy 8 kp_att 20/
+D_2: D_S gnss gnss.webots 1 device "gps"/
+D_3: D_S compass compass.webots 1 device "compass"/
+D_4: D_A leds led.webots 2 device "front left led" device "front right led" K_1/
+K_1: K_A A_L 1 rate_hz 10/
+D_5: D_M bat battery.webots 1 capacity_wh 50/
+D_6: D_C radio radio.webots 2 channel 1 range_m 200 P_1/
+P_1: P_R SIM "emitter" T 1 req tx/
+D_7: D_A gimbal gimbal.webots 2 pitch "camera pitch" yaw "camera yaw"/
+D_8: D_A camera camera.webots 2 device "camera" rate_hz 10/
+D_9: D_X payload payload.webots 2 device "connector" package 7/

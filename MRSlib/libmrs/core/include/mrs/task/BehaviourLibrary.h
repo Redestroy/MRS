@@ -14,7 +14,7 @@ namespace MRS {
 		struct BehaviourEntry {
 			std::string name;       // "flyto.layered"
 			std::string fulfils;    // a condition code, "C_P3"
-			std::string qualifier;  // the predicate name for C_?, otherwise "any"
+			std::string qualifier;  // the predicate name for C_?, "sync" for a sync behaviour, otherwise "any"
 			double priority = 0.0;
 			std::shared_ptr<const Task> behaviour;  // normally a T_B
 		};
@@ -29,9 +29,11 @@ namespace MRS {
 			// The entry for an unmet condition: same code (and, for C_?, the predicate with the
 			// wanted value T), static requirements met when a profile is given, highest
 			// priority, and the first in file order on a tie. nullptr when there is none.
-			// Entries named in `exclude` (already tried for this condition) are skipped.
+			// Entries named in `exclude` (already tried for this condition) are skipped. A sync
+			// entry (qualifier "sync") is a candidate only when the condition reads world fields
+			// peers may know (spec 15 §2.5); `sync_only` keeps only those, for an UNKNOWN condition.
 			const BehaviourEntry* Find(const Condition& unmet, const CapabilityProfile* profile = nullptr,
-			                           const std::set<std::string>& exclude = {}) const;
+			                           const std::set<std::string>& exclude = {}, bool sync_only = false) const;
 
 			// The entry with this name, or nullptr.
 			const BehaviourEntry* ByName(const std::string& name) const;

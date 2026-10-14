@@ -1,0 +1,25 @@
+@: MRS 0.1/
+
+P: P_A m_fl motor MAVLINK "SERVO:3" 0/
+
+P: P_A m_fr motor MAVLINK "SERVO:1" 0/
+
+P: P_A m_rl motor MAVLINK "SERVO:2" 0/
+
+P: P_A m_rr motor MAVLINK "SERVO:4" 0/
+
+P: P_A fcu guided MAVLINK "GUIDED" 0/
+
+P: P_A imu inertial MAVLINK "ATTITUDE" 0/
+
+P: P_A imu gyro MAVLINK "ATTITUDE_RATES" 0/
+
+P: P_A gnss gnss MAVLINK "GLOBAL_POSITION_INT" 0/
+
+P: P_A vel velocity MAVLINK "VELOCITY" 0/
+
+P: P_A leds led0 MAVLINK "RELAY:0" 0/
+
+P: P_A leds led1 MAVLINK "RELAY:1" 0/
+
+P: P_A bat battery MAVLINK "BATTERY_STATUS" 0/

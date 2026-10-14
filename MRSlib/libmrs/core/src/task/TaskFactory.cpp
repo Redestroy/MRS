@@ -145,7 +145,7 @@ namespace MRS {
 				for (std::size_t i = 1; i < f.size(); ++i) q.items.push_back(f[i].s);
 			} else if (r.code == "R_A") {
 				for (const auto& x : f) q.items.push_back(x.s);
-			} else if (r.code == "R_R" || r.code == "R_K") {
+			} else if (r.code == "R_R" || r.code == "R_K" || r.code == "R_I") {
 				q.name = f[0].s;
 			} else if (r.code == "R_E") {
 				q.name = f[0].s;

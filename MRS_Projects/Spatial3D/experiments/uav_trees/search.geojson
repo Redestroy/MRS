@@ -1,0 +1,8 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {"type": "Feature",
+     "properties": {"task": "search", "group": "wreck", "altitude": 15, "radius": 25, "footprint": 10, "overlap": 0.1, "step": 6},
+     "geometry": {"type": "MultiPoint", "coordinates": [[24.1046, 56.9497], [24.1058, 56.9497], [24.1052, 56.9502]]}}
+  ]
+}

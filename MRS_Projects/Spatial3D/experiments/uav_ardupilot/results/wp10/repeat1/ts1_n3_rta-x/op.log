@@ -1,0 +1,22 @@
+operator: mission m1, timeline from t = 45.92, listening on 14600
+      0.92 operator: 0 of 0 tasks ended, 0 messages in
+     10.95 operator: 0 of 0 tasks ended, 0 messages in
+     20.97 operator: 0 of 0 tasks ended, 63 messages in
+     30.98 operator: 0 of 0 tasks ended, 126 messages in
+     40.99 operator: 0 of 0 tasks ended, 189 messages in
+     50.99 operator: 0 of 1 tasks ended, 253 messages in
+     61.00 operator: 0 of 3 tasks ended, 321 messages in
+     71.02 operator: 0 of 5 tasks ended, 390 messages in
+     81.03 operator: 0 of 7 tasks ended, 459 messages in
+     91.04 operator: 2 of 9 tasks ended, 532 messages in
+    101.06 operator: 3 of 11 tasks ended, 603 messages in
+    111.07 operator: 5 of 13 tasks ended, 674 messages in
+    121.07 operator: 5 of 15 tasks ended, 740 messages in
+    131.11 operator: 7 of 15 tasks ended, 812 messages in
+    141.12 operator: 8 of 15 tasks ended, 882 messages in
+    151.13 operator: 9 of 15 tasks ended, 954 messages in
+    161.14 operator: 10 of 15 tasks ended, 1024 messages in
+    171.15 operator: 12 of 15 tasks ended, 1099 messages in
+    181.17 operator: 12 of 15 tasks ended, 1168 messages in
+    191.18 operator: 14 of 15 tasks ended, 1237 messages in
+operator: all tasks ended; makespan 153.91 s; results in results.csv

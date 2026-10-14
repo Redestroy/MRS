@@ -6,8 +6,10 @@
 //   mrs_experiment oracle FILE         print the oracle form of a timeline
 #include <algorithm>
 #include <atomic>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <mutex>
 #include <set>
@@ -29,10 +31,16 @@ namespace {
 	    "  mrs_experiment run [--ported DIR] [--gen FAMILY:DISPATCH:TASKS]... [--seeds A-B]\n"
 	    "                     [--cond S1|S1*|G-RTA:N,..|G-RTA-X:N,..|G-C:N,..]... [--jobs J]\n"
 	    "                     [--out results.csv] [--limit SECONDS] [--sets-out DIR] [--examples DIR]\n"
-	    "                     [--commit HASH]\n"
+	    "                     [--commit HASH] [--trees FAMILY:TREES:PARTS[:INTERVAL]]... [--cond G-STA:N,..|G-CBBA:N,..]\n"
+	    "                     [--bitrate BPS,..]  (0: no limit; every run is flown at each bitrate)\n"
+	    "                     [--repulsion LEAD,..]  (s; 0: off; every run is flown at each lead, spec 15 §4.3)\n"
+	    "                     [--ranging NOISE_M]  (every robot gets a ranging sensor, spec 15 §3.1)\n"
+	    "                     [--set FILE.mrsl]...  (one timeline file; a ported set)\n"
+	    "                     [--track FILE.csv] [--track-period S]  (one run only: write its track for mrs_dot_viewer, spec 17)\n"
 	    "  mrs_experiment gen FAMILY DISPATCH TASKS SEED\n"
 	    "  mrs_experiment oracle FILE\n"
-	    "families: grid radial cluster multicluster random; dispatch: static even clustered random\n";
+	    "families: grid radial cluster multicluster random; dispatch: static even clustered random\n"
+	    "tree families (spec 12 §4): coverage perimeter search mixed\n";
 
 	std::string ReadFile(const fs::path& p) {
 		std::ifstream in(p, std::ios::binary);
@@ -48,6 +56,12 @@ namespace {
 		int tasks;
 	};
 
+	struct TreeSpec {
+		Sim::TreeFamily family;
+		int trees, parts;
+		double interval;  // s between releases; 0: the default
+	};
+
 	struct CondSpec {
 		Sim::Condition condition;
 		std::vector<int> n;
@@ -61,8 +75,15 @@ namespace {
 		return out;
 	}
 
+	std::string Fmt(double v) {
+		std::ostringstream o;
+		o << std::fixed << std::setprecision(3) << v;
+		return o.str();
+	}
+
 	std::string Key(const Sim::RunSpec& s) {
-		return s.set + "|" + std::to_string(s.seed) + "|" + Sim::ConditionName(s.condition) + "|" + std::to_string(Sim::IsSingle(s.condition) ? 1 : s.n);
+		return s.set + "|" + std::to_string(s.seed) + "|" + Sim::ConditionName(s.condition) + "|" + std::to_string(Sim::IsSingle(s.condition) ? 1 : s.n) +
+		       "|" + std::to_string(std::lround(s.bitrate_bps)) + "|" + Fmt(s.repulsion_lead) + "|" + Fmt(s.ranging_noise);
 	}
 
 	// Runs already in the CSV (set, seed, condition, n), so an interrupted grid resumes.
@@ -76,16 +97,26 @@ namespace {
 			std::stringstream s(line);
 			std::string x;
 			while (std::getline(s, x, ',')) f.push_back(x);
-			if (f.size() > 6) keys.insert(f[0] + "|" + f[4] + "|" + f[5] + "|" + f[6]);
+			// The bitrate column (spec 13 §4) is absent in files from before WP9: no limit.
+			const std::string bitrate = f.size() > 31 ? std::to_string(std::lround(std::stod(f[31]))) : "0";
+			// The repulsion and ranging columns (spec 15 §5) are absent before WP11: off.
+			const std::string lead = f.size() > 35 ? Fmt(std::stod(f[35])) : Fmt(0.0);
+			const std::string ranging = f.size() > 36 ? Fmt(std::stod(f[36])) : Fmt(-1.0);
+			if (f.size() > 6) keys.insert(f[0] + "|" + f[4] + "|" + f[5] + "|" + f[6] + "|" + bitrate + "|" + lead + "|" + ranging);
 		}
 		return keys;
 	}
 
 	int Run(int argc, char** argv) {
-		fs::path ported, out = "results.csv", sets_out;
+		fs::path ported, out = "results.csv", sets_out, track;
+		std::vector<fs::path> set_files;
+		double track_period = 0.1;
 		fs::path examples = MRS_SPEC_EXAMPLES;
 		std::vector<GenSpec> gens;
+		std::vector<TreeSpec> tree_sets;
 		std::vector<CondSpec> conds;
+		std::vector<double> bitrates{0.0}, leads{0.0};
+		double ranging = -1.0;
 		int seed_a = 1, seed_b = 10, jobs = static_cast<int>(std::max(1u, std::thread::hardware_concurrency()));
 		double limit = 4000.0;
 		std::string commit = "unknown";
@@ -96,12 +127,27 @@ namespace {
 				return argv[++k];
 			};
 			if (a == "--ported") ported = next();
+			else if (a == "--set") set_files.push_back(next());
+			else if (a == "--track") track = next();
+			else if (a == "--track-period") track_period = std::stod(next());
 			else if (a == "--out") out = next();
 			else if (a == "--sets-out") sets_out = next();
 			else if (a == "--examples") examples = next();
 			else if (a == "--commit") commit = next();
 			else if (a == "--jobs") jobs = std::stoi(next());
 			else if (a == "--limit") limit = std::stod(next());
+			else if (a == "--bitrate") {
+				bitrates.clear();
+				std::stringstream in(next());
+				std::string part;
+				while (std::getline(in, part, ',')) bitrates.push_back(std::stod(part));
+			}
+			else if (a == "--repulsion") {
+				leads.clear();
+				std::stringstream in(next());
+				std::string part;
+				while (std::getline(in, part, ',')) leads.push_back(std::stod(part));
+			} else if (a == "--ranging") ranging = std::stod(next());
 			else if (a == "--seeds") {
 				const std::string v = next();
 				const auto dash = v.find('-');
@@ -117,6 +163,19 @@ namespace {
 				if (!Sim::ParseFamily(f, g.family) || !Sim::ParseDispatch(d, g.dispatch)) throw std::runtime_error("bad --gen " + s.str());
 				g.tasks = std::stoi(n);
 				gens.push_back(g);
+			} else if (a == "--trees") {
+				std::stringstream s(next());
+				std::string f, n, p, iv;
+				std::getline(s, f, ':');
+				std::getline(s, n, ':');
+				std::getline(s, p, ':');
+				std::getline(s, iv, ':');
+				TreeSpec g{};
+				if (!Sim::ParseTreeFamily(f, g.family) || n.empty() || p.empty()) throw std::runtime_error("bad --trees " + s.str());
+				g.trees = std::stoi(n);
+				g.parts = std::stoi(p);
+				g.interval = iv.empty() ? 0.0 : std::stod(iv);
+				tree_sets.push_back(g);
 			} else if (a == "--cond") {
 				const std::string v = next();
 				const auto colon = v.find(':');
@@ -139,14 +198,30 @@ namespace {
 		// The run list: every set and seed under every condition.
 		std::vector<Sim::RunSpec> runs;
 		auto add = [&](Sim::RunSpec s) {
-			for (const auto& c : conds)
-				for (int n : c.n) {
-					s.condition = c.condition;
-					s.n = Sim::IsSingle(c.condition) ? 1 : n;
-					runs.push_back(s);
-					if (Sim::IsSingle(c.condition)) break;
-				}
+			s.ranging_noise = ranging;
+			for (double lead : leads)
+				for (double b : bitrates)
+					for (const auto& c : conds)
+						for (int n : c.n) {
+							s.condition = c.condition;
+							s.n = Sim::IsSingle(c.condition) ? 1 : n;
+							s.bitrate_bps = b;
+							s.repulsion_lead = lead;
+							runs.push_back(s);
+							if (Sim::IsSingle(c.condition)) break;
+						}
 		};
+		for (const auto& p : set_files) {
+			Sim::RunSpec s = base;
+			s.set = "set/" + p.stem().string();
+			s.family = "ported";
+			s.dispatch = "even";
+			s.timeline = ReadFile(p);
+			for (int seed = seed_a; seed <= seed_b; ++seed) {
+				s.seed = static_cast<std::uint64_t>(seed);
+				add(s);
+			}
+		}
 		if (!ported.empty()) {
 			std::vector<fs::path> files_in;
 			for (const auto& e : fs::directory_iterator(ported))
@@ -192,7 +267,36 @@ namespace {
 				add(s);
 			}
 
-		const auto done = Done(out);
+		for (const auto& g : tree_sets)
+			for (int seed = seed_a; seed <= seed_b; ++seed) {
+				Sim::TreeGenConfig tc;
+				tc.family = g.family;
+				tc.trees = g.trees;
+				tc.parts = g.parts;
+				if (g.interval > 0) tc.interval = g.interval;
+				tc.seed = static_cast<std::uint64_t>(seed);
+				Sim::RunSpec s = base;
+				const std::string name = std::string(Sim::TreeFamilyName(g.family)) + "-" + std::to_string(g.trees) + "x" + std::to_string(g.parts) +
+				                         (g.interval > 0 ? "-i" + std::to_string(static_cast<int>(g.interval)) : std::string());
+				s.set = "tree/" + name + "/s" + std::to_string(seed);
+				s.family = Sim::TreeFamilyName(g.family);
+				s.dispatch = "even";
+				s.timeline = Sim::GenerateTreeSet(tc);
+				s.seed = tc.seed;
+				if (!sets_out.empty()) {
+					fs::create_directories(sets_out / name);
+					std::ofstream(sets_out / name / ("s" + std::to_string(seed) + ".mrsl"), std::ios::binary) << s.timeline;
+				}
+				add(s);
+			}
+
+		if (!track.empty()) {
+			// A track is one run's: flown again even when the results already have it.
+			if (runs.size() != 1) throw std::runtime_error("--track needs exactly one run, not " + std::to_string(runs.size()) + " (one set, one seed, one condition)");
+			runs[0].track_path = track.string();
+			runs[0].track_period = track_period;
+		}
+		const auto done = track.empty() ? Done(out) : std::set<std::string>{};
 		std::vector<Sim::RunSpec> todo;
 		for (const auto& r : runs)
 			if (!done.count(Key(r))) todo.push_back(r);
@@ -207,7 +311,7 @@ namespace {
 			meta << "# mrs_experiment run\ncommit " << commit << "\nworld QuadSim (spec 08 §9)\nexamples " << examples.string()
 			     << "\nmission " << s.mission.Text() << " (homes per run: a row " << s.home_spacing
 			     << " m apart in seed order)\ngps_noise " << s.gps_noise << " m\nbattery " << s.battery_wh << " Wh\ntime_limit "
-			     << s.time_limit << " s\nrta switch_margin " << s.rta.switch_margin << " claim_ttl " << s.rta.claim_ttl << "\nsize a1 "
+			     << s.time_limit << " s\nrta switch_margin " << s.rta.switch_margin << " claim_ttl " << s.rta.claim_ttl << "\nsta stack_bonus " << s.sta.stack_bonus << " relative_bonus " << s.sta.relative_bonus << "\nsize a1 "
 			     << s.size.a1 << " a2 " << s.size.a2 << " a3 " << s.size.a3 << " a4 " << s.size.a4 << " pursuit " << s.size.pursuit
 			     << "\ntravel v_xy " << s.travel.v_xy << " v_z " << s.travel.v_z << " settle " << s.travel.settle << " takeoff "
 			     << s.travel.takeoff << " cruise_alt " << s.travel.cruise_alt

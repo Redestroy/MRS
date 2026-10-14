@@ -1,0 +1,4 @@
+# expect: slot_error 97
+# an identity pattern without a model (spec 16 §2.1)
+@: MRS 0.2/
+I: I_M "ublox" gnss.serial 0/

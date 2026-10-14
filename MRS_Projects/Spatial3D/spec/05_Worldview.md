@@ -104,8 +104,11 @@ The thresholds are configuration, not spec.
 | `peer.<id>.pose.enu`, `peer.<id>.vel.enu` | vec3 | `PeerStateProcessor` | `<id>` is the robot id written as `r<N>`, for example `peer.r3.pose.enu` |
 | `peer.<id>.battery.remaining` | scalar | `PeerStateProcessor` | |
 | `peer.<id>.task` | id | `PeerStateProcessor` | |
-| `rel.<id>.enu` | vec3 | `RelativePositionProcessor` | Relative position of a peer from a ranging sensor |
+| `rel.<id>.enu`, `rel.<id>.range` | vec3, scalar | `RelativePositionProcessor` | Relative position of a peer from a ranging sensor; `max_age` 1 s (spec 15 §3.2) |
+| `sync.<id>.<path>` | scalar | `WorldviewSyncProcessor` | A world field peer `<id>` shared (spec 15 §2.4) |
+| `repulse.enu`, `repulse.nearest`, `repulse.count` | vec3, scalar, scalar | `RepulsionProcessor` | Repulsion away from nearby robots, m/s (spec 15 §4) |
 | `det.<class>.<n>.enu` | vec3 | `DetectionProcessor` | Object detections |
+| `payload.id` | scalar | `PayloadProcessor` | The package the robot carries, 0 when its bay is empty (WP7, spec 11 §3.1) |
 
 ## 5. Processors
 
@@ -140,6 +143,7 @@ For every offered field the worldview keeps the latest value of each source and 
 
 * A source is fresh when its latest value is at most the field's `max_age` old.
 * Sources are ranked by the field's **source order**, a per-robot setting. Sources missing from the order rank after it, by name.
+* Sources named `peer:<id>` (values a peer shared, spec 15 §2.4) rank after every other source, whatever the order, and among themselves newest first (WP11).
 * The field is re-selected whenever a source offers a new value, and at the end of every tick. When no source is fresh, the newest value is kept, so the field reads as stale.
 * The field records which source it came from (`WorldField::source`), and the change of source is visible to logs.
 
@@ -151,6 +155,7 @@ Default source orders (version 0.1, UAV):
 | `alt.amsl` | `baro`, `gnss`, `local` | `BaroAltitudeProcessor` (`V_BARO`), `GnssAltitudeProcessor` (`geo.position.alt`), `LocalAltitudeProcessor` (`V_POS3` z + `alt0`) |
 | `alt.agl` | `range`, `amsl` | `RangeAltitudeProcessor` (`V_RNG`), `AglFromAmslProcessor` (`alt.amsl` − ground) |
 | `heading` | `compass`, `attitude` | `CompassHeadingProcessor` (`V_MAG`), `AttitudeHeadingProcessor` (`V_ATT` yaw, converted, spec 00 §3) |
+| `vel.enu` | `nav`, `kinematics` | `VelocityProcessor` (`V_VEL3`, an autopilot's estimate, spec 14 §5), `KinematicsEstimator` (from `pose.enu`) |
 
 * Ground altitude in version 0.1 is flat ground at the robot's home: `alt0 + home.enu.z`, or `alt0` before the mission header arrives.
 * A robot without a barometer (the stock Webots Mavic) gets `alt.amsl` from GNSS; one with a rangefinder gets `alt.agl` from it. Nothing else changes.
@@ -174,12 +179,17 @@ The self model (spec 04 §7) works out which fields a robot can provide from des
 | `RateProcessor` | `V_RATE` | — | `rate.body` | |
 | `CompassHeadingProcessor` | `V_MAG` | — | | `heading`/`compass` |
 | `AttitudeHeadingProcessor` | `V_ATT` | — | | `heading`/`attitude` |
-| `KinematicsEstimator` | — | `pose.enu` | `vel.enu`, `acc.enu` | |
+| `KinematicsEstimator` | — | `pose.enu` | `acc.enu` | `vel.enu`/`kinematics` |
+| `VelocityProcessor` | `V_VEL3` | — | | `vel.enu`/`nav` (WP10, spec 14 §5) |
 | `BatteryProcessor` | `V_BAT` | — | `battery`, `battery.low`, `battery.critical` | |
 | `FlightStateProcessor` | — | `alt.agl`, `vel.enu` | `airborne`, `landed`, `home` | |
 | `GeofenceProcessor` | — | `pose.enu` | `geofence.inside` | |
 | `PeerStateProcessor` | `V_PEER` | — | `peer` (the `peer.<id>.*` subtree) | |
 | `DetectionProcessor` | `V_DET` | — | `det` (the `det.<class>.<n>.*` subtree) | |
+| `PayloadProcessor` | `V_PAY` | — | `payload.id` | |
+| `RelativePositionProcessor` | `V_REL3` | — | `rel` (the `rel.<id>.*` subtree) | (WP11, spec 15 §3.2) |
+| `WorldviewSyncProcessor` | `V_FLD` | — | `sync` (the `sync.<id>.*` subtree); offers peers' fields under source `peer:<id>` | (WP11, spec 15 §2.4) |
+| `RepulsionProcessor` | — | — | `repulse` (`repulse.enu`, `.nearest`, `.count`) | (WP11, spec 15 §4) |
 
 A processor is in the robot's chain when at least one of its subscriptions is produced (or it has none) and its needs are met; this is the same fixed point as spec 04 §7. Processors whose inputs never appear are left out, so they cost nothing.
 
@@ -218,6 +228,8 @@ Every view code starts with the slot `num stamp` (mission time of the informatio
 | `V_PEER` | `int robot`, `num x`, `num y`, `num z`, `num vx`, `num vy`, `num vz`, `num battery`, `tid task` | a peer's `STATE` message (spec 06) |
 | `V_REL3` | `int robot`, `num dx`, `num dy`, `num dz` | relative-position sensor |
 | `V_DET` | `id class`, `num x`, `num y`, `num z`, `num confidence` | detector |
+| `V_PAY` | `num package` | payload bay: the package held, 0 for none (WP7) |
+| `V_FLD` | `id path`, `num value` | a world field a peer shared (WP11, spec 15 §2.2) |
 | `V_P2` | `num x`, `num y`, `num yaw` | legacy 2D pose (E-puck) |
 
 **View matching (`C_V`)** in version 0.1 is defined only for:

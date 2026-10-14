@@ -1,0 +1,7 @@
+set,family,dispatch,tasks,seed,condition,n,completed,done,failed,makespan_s,latency_mean_s,latency_max_s,distance_m,energy_wh,duplicates,busy_robots,messages,bytes,decision_mean_us,decision_worst_us,plan_calls,plan_worst_ms,separation_breaches,min_separation_m,fence_exits,crashed,sim_time_s,wall_s,leaves,leaf_duplicates,bitrate_bps,dropped,delay_mean_s,delay_max_s
+ported/taskset1,ported,even,15,1,S1,1,1,15,0,276.576,118.861,231.096,783.492,3.958,0,1,665,128569,0.127,198.323,15,0.198,0,-1.000,0,0,277.584,0.543,0,0,0.000,0,0.000,0.000
+ported/taskset1,ported,even,15,1,G-RTA,3,1,15,0,133.968,36.642,73.968,1209.432,5.746,0,3,903,180288,15.901,1436.898,0,0.000,3,0.271,0,0,134.976,1.698,0,0,0.000,0,0.000,0.000
+ported/taskset1,ported,even,15,1,G-RTA-X,3,1,15,0,136.112,36.742,76.112,1103.812,5.833,0,3,1207,201287,18.318,2831.115,0,0.000,2,0.404,0,0,137.120,2.039,0,0,0.000,0,0.000,0.000
+ported/taskset1,ported,even,15,1,G-CBBA,3,1,15,0,117.920,35.225,68.168,929.934,5.062,0,3,1038,188479,10.637,483.838,0,0.000,0,3.052,0,0,118.928,1.361,0,0,0.000,0,0.000,0.000
+ported/taskset1,ported,even,15,1,G-LDTA2,3,1,15,0,136.112,36.742,76.112,1103.812,5.833,0,3,1207,201287,16.295,292.511,0,0.000,2,0.404,0,0,137.120,1.689,0,0,0.000,0,0.000,0.000
+ported/taskset1,ported,even,15,1,G-RTA,1,1,15,0,275.168,111.132,225.168,771.373,3.937,0,1,662,127953,22.668,900.904,0,0.000,0,-1.000,0,0,276.176,1.388,0,0,0.000,0,0.000,0.000

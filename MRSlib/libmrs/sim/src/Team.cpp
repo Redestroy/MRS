@@ -1,5 +1,7 @@
 #include "mrs/sim/Team.h"
 
+#include <algorithm>
+
 #include <cmath>
 #include <regex>
 #include <sstream>
@@ -24,20 +26,49 @@ namespace MRS {
 			return out;
 		}
 
-		void Air::Deliver() {
-			std::vector<std::pair<const void*, std::string>> all;
-			for (auto& text : outbox_) all.push_back({&op_, text});
+		void Air::Send(const Queued& q, double t) {
+			if (q.from != &op_) op_.inbox.push_back(q.text);
+			for (auto* s : sims_)
+				if (s != q.from) s->inbox.push_back(q.text);
+			++messages;
+			bytes += static_cast<long>(q.text.size());
+			delay_sum += t - q.t;
+			delay_max = std::max(delay_max, t - q.t);
+		}
+
+		void Air::Deliver(double t) {
+			for (auto& text : outbox_) queue_.push_back({&op_, std::move(text), t});
 			outbox_.clear();
 			for (auto* s : sims_) {
-				for (auto& text : s->sent) all.push_back({s, text});
+				for (auto& text : s->sent) queue_.push_back({s, std::move(text), t});
 				s->sent.clear();
 			}
-			for (const auto& [from, text] : all) {
-				if (from != &op_) op_.inbox.push_back(text);
-				for (auto* s : sims_)
-					if (s != from) s->inbox.push_back(text);
-				++messages;
-				bytes += static_cast<long>(text.size());
+			if (bitrate_bps <= 0.0) {
+				for (const auto& q : queue_) Send(q, t);
+				queue_.clear();
+				return;
+			}
+			// One shared channel, first come first served. Unused time is saved for 0.1 s, or for as
+			// long as the message at the head needs.
+			const double head = queue_.empty() ? 0.0 : static_cast<double>(queue_.front().text.size());
+			credit_ = std::min(credit_ + bitrate_bps / 8.0 * std::max(0.0, t - last_t_), std::max(bitrate_bps / 8.0 * 0.1, head));
+			last_t_ = t;
+			while (!queue_.empty()) {
+				Queued& q = queue_.front();
+				// A message on the air is not dropped, however long it takes; one still waiting
+				// behind others is, once it has waited max_delay.
+				if (!q.sending && t - q.t > max_delay) {
+					++dropped;
+					queue_.pop_front();
+					continue;
+				}
+				if (static_cast<double>(q.text.size()) > credit_) {
+					q.sending = true;
+					break;
+				}
+				credit_ -= static_cast<double>(q.text.size());
+				Send(q, t);
+				queue_.pop_front();
 			}
 		}
 
@@ -80,6 +111,26 @@ namespace MRS {
 			return leds ? base : std::regex_replace(base, std::regex("P: P_A leds[^\n]*\n"), "");
 		}
 
+		std::string WithRanging(const std::string& definition, double noise_m, double range_m) {
+			// The frame joint lists its children as D_1..N; the sensor becomes child N + 1.
+			std::smatch m;
+			if (!std::regex_search(definition, m, std::regex("D_J frame mech_bus 0 D_1\\.\\.([0-9]+)/"))) return definition;
+			const int n = std::stoi(m[1]) + 1;
+			std::string d = std::regex_replace(definition, std::regex("(D_J frame mech_bus 0 D_1\\.\\.)[0-9]+/"), "$01" + std::to_string(n) + "/");
+			std::ostringstream line;
+			line << "D_" << n << ": D_S rel ranging.webots 3 device \"ranging\" range_m " << range_m << " noise_m " << noise_m << "/\n";
+			if (!d.empty() && d.back() != '\n') d += "\n";
+			return d + line.str();
+		}
+
+		std::string WithRangingPort(const std::string& port_map, double rate_hz) {
+			std::ostringstream line;
+			line << "P: P_A rel ranging SIM \"ranging\" 1 rate_hz " << rate_hz << "/\n";
+			std::string p = port_map;
+			if (!p.empty() && p.back() != '\n') p += "\n";
+			return p + line.str();
+		}
+
 		// --- timing ------------------------------------------------------------------------------
 
 		void TimedAllocator::Bind(const Algorithms::AllocatorContext& ctx) {
@@ -113,9 +164,15 @@ namespace MRS {
 			Task::BehaviourLibrary library;
 			library.PopulateFromFile(files.behaviours_path, factory);
 			for (const auto& [name, priority] : c.behaviour_priority) library.SetPriority(name, priority);
-			const auto map = Port::PortMap::Parse(PortMapFor(files.port_map, leds));
-			robot = Device::BuildRobot(DefinitionFor(files.definition, id, leds), devices, sim, &map);
+			std::string port_map = PortMapFor(files.port_map, leds), definition = DefinitionFor(files.definition, id, leds);
+			if (c.ranging_noise >= 0.0) {
+				definition = WithRanging(definition, c.ranging_noise);
+				port_map = WithRangingPort(port_map);
+			}
+			const auto map = Port::PortMap::Parse(port_map);
+			robot = Device::BuildRobot(definition, devices, sim, &map);
 			Robot::ControllerConfig cc;
+			cc.safety.repulsion_lead = c.repulsion_lead;
 			cc.robot = "r" + std::to_string(id);
 			cc.robot_id = id;
 			ctl = std::make_unique<Robot::RobotController>(robot, library, functions, cc);
@@ -123,15 +180,23 @@ namespace MRS {
 			auto inner = c.allocator ? c.allocator(id) : std::make_unique<Algorithms::RtaAllocator>();
 			auto timed = std::make_unique<TimedAllocator>(std::move(inner));
 			timing = timed.get();
-			layer = std::make_unique<Algorithms::MrsLayer>(*ctl, *transport, functions, std::move(timed), c.mrs);
+			layer = std::make_unique<Algorithms::MrsLayer>(*ctl, *transport, functions, std::move(timed), [&c] {
+				Algorithms::MrsConfig m = c.mrs;
+				if (c.bitrate_bps > 0.0) m.bitrate_bps = c.bitrate_bps;
+				return m;
+			}());
 		}
 
 		Team::Team(const RobotFiles& files, const TeamConfig& c) : issuer(air.Operator(), c.mission.Header(), c.issuer), c_(c) {
+			air.bitrate_bps = c.bitrate_bps;
 			for (std::size_t k = 0; k < c.mission.homes.size(); ++k) {
 				const int id = static_cast<int>(k + 1);
 				robots.push_back(std::make_unique<TeamRobot>(id, c.mission.homes[k], !c.without_leds.count(id), files, c));
 				air.Add(&robots.back()->sim);
 			}
+			for (auto& r : robots)  // every robot is a peer of every other, for the ranging sensor
+				for (auto& q : robots)
+					if (q != r) r->sim.peers.push_back({static_cast<int>(q->robot.self.id), &q->sim});
 		}
 
 		bool Team::Run(double seconds, bool stop_when_done) {
@@ -140,7 +205,7 @@ namespace MRS {
 				const double t = Time();
 				issuer.Tick(t);
 				for (auto& r : robots) r->layer->Tick(t);
-				air.Deliver();
+				air.Deliver(t);
 				if (stop_when_done && issuer.Done()) return true;
 				for (auto& r : robots) r->sim.Step();
 				Watch();

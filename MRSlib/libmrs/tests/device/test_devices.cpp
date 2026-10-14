@@ -68,8 +68,11 @@ TEST_CASE("the Webots Mavic is built from its definition file and port map") {
 
 	CHECK(robot.faults.empty());
 	CHECK(robot.ports.unresolved.empty());
-	CHECK(Names(robot.tree) == std::set<std::string>{"uav", "frame", "quadrotor", "m_fl", "m_fr", "m_rl", "m_rr", "fcu", "imu",
-	                                                 "gnss", "compass", "leds", "bat", "radio"});
+	// Nodes inside the quadrotor have full names under it (spec 16 §5); short names still find them.
+	CHECK(Names(robot.tree) == std::set<std::string>{"uav", "frame", "quadrotor", "quadrotor.m_fl", "quadrotor.m_fr", "quadrotor.m_rl",
+	                                                 "quadrotor.m_rr", "quadrotor.fcu", "quadrotor.imu", "gnss", "compass", "leds",
+	                                                 "bat", "radio"});
+	CHECK(robot.tree.Find("m_fl") == robot.tree.Find("quadrotor.m_fl"));
 	CHECK(robot.tree.Find("m_fl")->IsVirtual());
 	CHECK_FALSE(robot.tree.Find("gnss")->IsVirtual());
 
@@ -83,8 +86,8 @@ TEST_CASE("the Webots Mavic is built from its definition file and port map") {
 	CHECK(self.robot_type == "mavic2pro");
 	CHECK(self.id == 1);
 	CHECK(self.roles == std::vector<std::string>{"camera_uav"});
-	CHECK(self.actions == std::set<std::string>{"A_MOT", "A_TO", "A_LD", "A_HD", "A_PXY", "A_PZY", "A_VXY", "A_VZY", "A_L"});
-	CHECK(self.views == std::set<std::string>{"V_ATT", "V_RATE", "V_GEO", "V_MAG", "V_BAT", "V_PEER"});
+	CHECK(self.actions == std::set<std::string>{"A_MOT", "A_TO", "A_LD", "A_HD", "A_PXY", "A_PZY", "A_VXY", "A_VZY", "A_L", "A_SY"});
+	CHECK(self.views == std::set<std::string>{"V_ATT", "V_RATE", "V_GEO", "V_MAG", "V_BAT", "V_PEER", "V_FLD", "V_DET"});
 	CHECK(self.Capacity("energy_wh") == doctest::Approx(50));
 	bool broadcast = false;
 	for (const auto& c : self.capabilities)
@@ -142,7 +145,8 @@ TEST_CASE("without a port map, addresses come from the device parameters") {
 	const auto example = MavicMap();
 	REQUIRE(written.entries.size() == example.entries.size());
 	for (const auto& e : example.entries) {
-		const auto* w = written.Find(e.node, e.requirement);
+		// The written map uses full names; the example uses short ones (spec 16 §5).
+		const auto* w = written.Find(robot.tree.Find(e.node)->Name(), e.requirement);
 		REQUIRE_MESSAGE(w, (e.node + "." + e.requirement));
 		CHECK(w->address == e.address);
 		CHECK(w->type == e.type);
@@ -168,7 +172,7 @@ TEST_CASE("a missing device makes its node unavailable, and dependants with it")
 		auto robot = Device::BuildRobot(MavicText(), Registry(), platform);
 		std::set<std::string> faulted;
 		for (const auto& f : robot.faults) faulted.insert(f.node);
-		CHECK(faulted == std::set<std::string>{"m_fl", "fcu"});
+		CHECK(faulted == std::set<std::string>{"quadrotor.m_fl", "quadrotor.fcu"});
 		CHECK_FALSE(robot.self.Accepts("A_TO"));
 		CHECK(robot.self.Accepts("A_MOT"));  // the other three motors
 		CHECK(robot.blocks.actuators.Dispatch(One("any", "A_TO", {10, 1}), 0) == ActionStatus::REJECTED);
@@ -361,4 +365,47 @@ TEST_CASE("definition errors are build errors") {
 	auto robot = build("D_1: D_A leds led.webots 2 device \"l1\" device \"l2\" P_1/\nP_1: P_R SIM \"x\" T 1 req led1/\n");
 	CHECK(robot.faults.empty());
 	CHECK(robot.tree.Find("leds")->GetPort("led1")->Assignment().address == "x");
+}
+
+TEST_CASE("scoped names let two complex devices of one type share a tree (spec 16 §5)") {
+	const std::string text = "@: MRS 0.2/\n"
+	                         "D: D_H uav head.default 2 robot_type mavic2pro id 1 D_1/\n"
+	                         "D_1: D_J frame mech_bus 0 D_1..2/\n"
+	                         "D_1: D_X front payload.webots 2 device \"connector\" package 7/\n"
+	                         "D_2: D_X rear payload.webots 2 device \"connector2\" package 8/\n";
+	Test::MockPlatform platform;
+	platform.Add(PortType::SIM, "connector").Push({1.0});
+	platform.Add(PortType::SIM, "connector2").Push({1.0});
+	auto robot = Device::BuildRobot(text, Registry(), platform);
+	REQUIRE(robot.faults.empty());
+	CHECK(Names(robot.tree) == std::set<std::string>{"uav", "frame", "front", "front.latch", "front.cargo", "rear", "rear.latch",
+	                                                 "rear.cargo"});
+	CHECK(robot.tree.Find("front.latch")->LocalName() == "latch");
+	CHECK(robot.tree.Find("latch") == nullptr);  // ambiguous
+	CHECK(robot.tree.Matches("latch").size() == 2);
+	CHECK(robot.tree.Find("rear.cargo") != nullptr);
+	CHECK(robot.tree.Find("ar.cargo") == nullptr);  // a suffix is whole segments
+
+	// Capabilities carry full names.
+	bool rel = false;
+	for (const auto& c : robot.self.capabilities)
+		if (c.code == "A_REL" && c.node == "rear.latch") rel = true;
+	CHECK(rel);
+
+	// Action targets: the full name routes, an ambiguous short name is rejected.
+	auto& actuators = robot.blocks.actuators;
+	CHECK(actuators.Dispatch(OneInt("latch", "A_REL", {7}), 0) == ActionStatus::REJECTED);
+	CHECK(actuators.Dispatch(OneInt("front.latch", "A_REL", {7}), 0) == ActionStatus::DONE);
+	CHECK(actuators.Dispatch(OneInt("rear.latch", "A_REL", {7}), 0) == ActionStatus::FAILED);  // holds package 8
+
+	// A port map may use full or unique short names, never ambiguous ones.
+	const auto ok = Port::PortMap::Parse("@: MRS 0.2/\nP: P_A front.latch latch SIM \"connector\" 0/\n");
+	CHECK(Device::BuildRobot(text, Registry(), platform, &ok).faults.empty());
+	const auto ambiguous = Port::PortMap::Parse("@: MRS 0.2/\nP: P_A latch latch SIM \"connector\" 0/\n");
+	CHECK_THROWS_AS(Device::BuildRobot(text, Registry(), platform, &ambiguous), BuildError);
+
+	// Local names cannot contain '.'.
+	std::string dotted = text;
+	dotted.replace(dotted.find("D_X front"), 9, "D_X fr.ont");
+	CHECK_THROWS_AS(Device::BuildRobot(dotted, Registry(), platform), BuildError);
 }

@@ -22,6 +22,18 @@ Status: **WP1** (core repair). It contains the protocol layer, the task core and
 | `tests/task/` | WP1: task strings run tick by tick against a scripted worldview and a toy UAV |
 | `tests/protocol/` | The WP0 suite of spec 07 §5: round trip against `spec/examples/canonical/`, one file per error class in `spec/examples/invalid/`, action packing vectors, and parser rule tests |
 
+## MRS dot viewer
+
+`mrs_dot_viewer` (spec 17) replays a track file in 3D with the tasks of the given task files: robots as balls with fading trails, tasks as flagged balls with their condition volume, a slider with play and pause. The Webots issuer writes the track (`worlds/mavic_team_track.csv`), and so does `mrs_experiment run ... --track FILE` for one QuadSim run. The viewer is off by default because it fetches SFML:
+
+```
+cmake -S MRSlib/libmrs -B build-viewer -DMRS_BUILD_VIEWER=ON
+cmake --build build-viewer --target mrs_dot_viewer --config Release
+build-viewer/tools/dot_viewer/Release/mrs_dot_viewer.exe MRSlib/libmrs/platforms/webots/worlds/mavic_team_track.csv MRSlib/libmrs/platforms/webots/worlds/taskset1.mrsl
+```
+
+(On Linux and with single-config generators the program is `build-viewer/tools/dot_viewer/mrs_dot_viewer`.) Press H in the window for the keys.
+
 Build and test:
 
 ```

@@ -1,0 +1,28 @@
+# Acceptance step 3 of WP10 (spec 14 §10): one copter takes off to 6 m, flies 8 m east of robot 1's home
+# in mission_5uav (-8, -5), flashes its LEDs, and lands there. Flown first in SITL with run_sitl.sh 1.
+# Before a real flight, set the mission header's G_O origin and fence to the flying field.
+@: MRS 0.1/
+
+L: L_D 1 T_1/
+T_1: T_A sf.1 1 0 C_1 C_2 A_1..2/
+C_1: C_N/
+C_2: C_? ?_1/
+?_1: airborne T/
+A_1: A_TO 6 1.5/
+A_2: A_N/
+
+L: L_D 20 T_1/
+T_1: T_A sf.2 1 0 C_1 C_2 A_1..4/
+C_1: C_P3 0 -5 6 1 0.5 0 -1/
+C_2: C_N/
+A_1: A_L 3 65280/
+A_2: A_W 1/
+A_3: A_L 3 0/
+A_4: A_N/
+
+L: L_D 45 T_1/
+T_1: T_A sf.3 1 0 C_1 C_2 A_1/
+C_1: C_? ?_1/
+?_1: landed T/
+C_2: C_N/
+A_1: A_N/

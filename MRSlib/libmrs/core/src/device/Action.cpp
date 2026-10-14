@@ -47,6 +47,7 @@ namespace MRS {
 				{"A_N", "NULL", ArgLayout::NONE},
 				{"A_W", "WAIT", ArgLayout::F64},
 				{"A_I", "IMPOSSIBLE", ArgLayout::NONE},
+				{"A_SY", "SYNC", ArgLayout::F64},
 				{"A_L", "LED", ArgLayout::U32X2},
 				{"A_TO", "TAKEOFF", ArgLayout::F32X2},
 				{"A_LD", "LAND", ArgLayout::F32X2},
@@ -56,6 +57,9 @@ namespace MRS {
 				{"A_VXY", "VEL_XY", ArgLayout::F32X2},
 				{"A_VZY", "VEL_Z_YAWRATE", ArgLayout::F32X2},
 				{"A_MOT", "MOTOR_SPEED", ArgLayout::F64},
+				{"A_CAM", "CAPTURE", ArgLayout::U32X2},
+				{"A_GMB", "GIMBAL", ArgLayout::F32X2},
+				{"A_REL", "RELEASE", ArgLayout::I64},
 			};
 			return registry;
 		}

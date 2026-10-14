@@ -3,9 +3,12 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <fstream>
 #include <iomanip>
+#include <set>
 #include <sstream>
 
+#include "mrs/replay/Track.h"
 #include "mrs/sim/TaskSets.h"
 
 namespace MRS {
@@ -17,12 +20,15 @@ namespace MRS {
 			case Condition::G_RTA: return "G-RTA";
 			case Condition::G_RTA_X: return "G-RTA-X";
 			case Condition::G_C: return "G-C";
+			case Condition::G_STA: return "G-STA";
+			case Condition::G_CBBA: return "G-CBBA";
+			case Condition::G_LDTA2: return "G-LDTA2";
 			}
 			return "?";
 		}
 
 		bool ParseCondition(const std::string& s, Condition& c) {
-			for (Condition x : {Condition::S1, Condition::S1_ORACLE, Condition::G_RTA, Condition::G_RTA_X, Condition::G_C})
+			for (Condition x : {Condition::S1, Condition::S1_ORACLE, Condition::G_RTA, Condition::G_RTA_X, Condition::G_C, Condition::G_STA, Condition::G_CBBA, Condition::G_LDTA2})
 				if (s == ConditionName(x)) {
 					c = x;
 					return true;
@@ -62,12 +68,20 @@ namespace MRS {
 			c.quad.gps_noise = spec.gps_noise;
 			c.quad.capacity_wh = spec.battery_wh;
 			c.quad.seed = Mix(spec.seed) & 0xFFFFFFFFULL;
+			c.bitrate_bps = spec.bitrate_bps;
+			c.repulsion_lead = spec.repulsion_lead;
+			c.ranging_noise = spec.ranging_noise;
+			// A limited channel loses messages, so the issuer repeats open tasks (spec 13 §3).
+			if (spec.bitrate_bps > 0.0) c.issuer.task_period = 15.0;
 			Algorithms::TravelModel travel = spec.travel;
 			travel.mode = IsSingle(spec.condition) ? Algorithms::FlightMode::ALTITUDE_FIRST : Algorithms::FlightMode::LAYERED;
 			Algorithms::PlannerConfig pc;
 			pc.travel = travel;
 			// The single UAV flies altitude-first; the groups keep the layered default (plan §10.2).
-			if (IsSingle(spec.condition)) c.behaviour_priority["flyto.altitude_first"] = 11;
+			if (IsSingle(spec.condition)) {
+				c.behaviour_priority["flyto.altitude_first"] = 11;
+				c.mrs.split_trees = false;  // the oracle form is one robot's own sequence (spec 10 §3.3)
+			}
 			switch (spec.condition) {
 			case Condition::S1:
 			case Condition::S1_ORACLE: c.allocator = [pc](int) { return std::make_unique<Algorithms::PlannerAllocator>(pc); }; break;
@@ -79,6 +93,24 @@ namespace MRS {
 				break;
 			}
 			case Condition::G_C: c.allocator = [](int) { return std::make_unique<Algorithms::PlanFollowerAllocator>(); }; break;
+			case Condition::G_STA: {
+				Algorithms::StaConfig sta = spec.sta;
+				sta.rta = spec.rta;
+				c.allocator = [sta](int) { return std::make_unique<Algorithms::StaAllocator>(sta); };
+				break;
+			}
+			case Condition::G_CBBA: {
+				Algorithms::CbbaConfig cb = spec.cbba;
+				cb.travel = travel;
+				c.allocator = [cb](int) { return std::make_unique<Algorithms::CbbaAllocator>(cb); };
+				break;
+			}
+			case Condition::G_LDTA2: {
+				Algorithms::Ldta2Config lc;
+				lc.rta = spec.rta;
+				c.allocator = [lc](int) { return std::make_unique<Algorithms::Ldta2Allocator>(lc); };
+				break;
+			}
 			}
 			// Tasks keep arriving, so the central planner minimises the sum of completions and lets
 			// the makespan break ties (spec 10 §2.3).
@@ -91,7 +123,33 @@ namespace MRS {
 			const auto release = ReleaseTimes(spec.timeline);
 
 			RunResult r;
-			r.completed = team.Run(spec.time_limit);
+			if (spec.track_path.empty()) {
+				r.completed = team.Run(spec.time_limit);
+			} else {
+				// The same run in slices of one track period, with a row after each (spec 17 §2).
+				std::ofstream out(spec.track_path, std::ios::binary);
+				if (!out) throw std::runtime_error("cannot write " + spec.track_path);
+				std::vector<std::string> names;
+				for (const auto& robot : team.robots) names.push_back(robot->layer->Self());
+				const auto header = c.mission.Header();
+				Replay::TrackWriter writer(out, names, &header);
+				Replay::IssuerEvents events;
+				auto sample = [&]() {
+					std::vector<Replay::Pose> poses;
+					for (const auto& robot : team.robots) {
+						const auto& q = robot->sim;
+						poses.push_back({q.pos[0], q.pos[1], q.pos[2], q.Roll(), q.Pitch(), q.Yaw()});
+					}
+					writer.Sample(team.Time(), poses);
+					events.Poll(team.issuer, writer, team.Time());
+				};
+				const double end = team.Time() + spec.time_limit;
+				sample();
+				while (!r.completed && team.Time() < end) {
+					r.completed = team.Run(std::min(spec.track_period, end - team.Time()));
+					sample();
+				}
+			}
 			r.sim_time = team.Time();
 			r.tasks = static_cast<int>(release.size());
 			double first = 1e18, last = 0.0, latency_sum = 0.0;
@@ -112,6 +170,12 @@ namespace MRS {
 				r.latency_mean = latency_sum / r.done;
 			}
 			if (!r.completed) r.makespan = r.sim_time - first;  // a stalled run counts up to the limit
+			std::set<std::string> leaf_robots;
+			for (const auto& [id, it] : team.issuer.Leaves()) {
+				++r.leaves;
+				r.leaf_duplicates += std::max(0, it.done_count - 1);
+				if (it.done) leaf_robots.insert(it.done_by);
+			}
 			long calls = 0;
 			double total = 0.0;
 			for (const auto& robot : team.robots) {
@@ -121,7 +185,7 @@ namespace MRS {
 				calls += robot->timing->calls;
 				total += robot->timing->total_s;
 				r.decision_worst_us = std::max(r.decision_worst_us, robot->timing->worst_s * 1e6);
-				r.busy_robots += team.DoneBy(robot->layer->Self()) > 0;
+				r.busy_robots += team.DoneBy(robot->layer->Self()) > 0 || leaf_robots.count(robot->layer->Self());
 				if (auto* p = dynamic_cast<Algorithms::PlannerAllocator*>(&robot->timing->Inner())) {
 					r.plan_calls += p->Replans();
 					r.plan_worst_ms = std::max(r.plan_worst_ms, robot->timing->worst_s * 1e3);
@@ -132,6 +196,9 @@ namespace MRS {
 				r.plan_calls = planner->calls;
 				r.plan_worst_ms = planner->worst_s * 1e3;
 			}
+			r.dropped = team.air.dropped;
+			if (team.air.messages > 0) r.delay_mean = team.air.delay_sum / static_cast<double>(team.air.messages);
+			r.delay_max = team.air.delay_max;
 			r.messages = team.air.messages;
 			r.bytes = team.air.bytes;
 			r.separation_breaches = team.metrics.separation_breaches;
@@ -144,7 +211,8 @@ namespace MRS {
 		std::string CsvHeader() {
 			return "set,family,dispatch,tasks,seed,condition,n,completed,done,failed,makespan_s,latency_mean_s,latency_max_s,"
 			       "distance_m,energy_wh,duplicates,busy_robots,messages,bytes,decision_mean_us,decision_worst_us,plan_calls,"
-			       "plan_worst_ms,separation_breaches,min_separation_m,fence_exits,crashed,sim_time_s,wall_s";
+			       "plan_worst_ms,separation_breaches,min_separation_m,fence_exits,crashed,sim_time_s,wall_s,leaves,leaf_duplicates,bitrate_bps,dropped,delay_mean_s,delay_max_s,"
+			       "repulsion_lead_s,ranging_noise_m";
 		}
 
 		std::string CsvRow(const RunSpec& s, const RunResult& r) {
@@ -155,7 +223,8 @@ namespace MRS {
 			  << "," << r.latency_mean << "," << r.latency_max << "," << r.distance_m << "," << r.energy_wh << "," << r.duplicates << ","
 			  << r.busy_robots << "," << r.messages << "," << r.bytes << "," << r.decision_mean_us << "," << r.decision_worst_us << ","
 			  << r.plan_calls << "," << r.plan_worst_ms << "," << r.separation_breaches << "," << r.min_separation_m << "," << r.fence_exits
-			  << "," << (r.crashed ? 1 : 0) << "," << r.sim_time << "," << r.wall_s;
+			  << "," << (r.crashed ? 1 : 0) << "," << r.sim_time << "," << r.wall_s << "," << r.leaves << "," << r.leaf_duplicates << "," << s.bitrate_bps << "," << r.dropped
+			  << "," << r.delay_mean << "," << r.delay_max << "," << s.repulsion_lead << "," << s.ranging_noise;
 			return o.str();
 		}
 	}

@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include "mrs/BuildError.h"
+
 namespace MRS {
 	namespace Robot {
 		const char* ControllerEventName(ControllerEvent e) {
@@ -17,6 +19,12 @@ namespace MRS {
 		namespace {
 			const char* kSafetyPrefix = "safety.";
 			const char* kFlightCritical[] = {"m_fl", "m_fr", "m_rl", "m_rr", "fcu"};
+
+			// A bench robot is commanded directly, without safety supervisor or executor (spec 16 §8.1).
+			Device::Robot& NotBench(Device::Robot& robot) {
+				if (robot.bench) throw BuildError("a bench robot cannot be given to a RobotController (spec 16 §8.1)");
+				return robot;
+			}
 
 			Device::Uav::FlightControlUnit* FindFcu(Device::Robot& robot) {
 				auto* node = dynamic_cast<Device::Uav::FlightControlUnit*>(robot.tree.Find("fcu"));
@@ -44,7 +52,7 @@ namespace MRS {
 
 		RobotController::RobotController(Device::Robot& robot, Task::BehaviourLibrary library, const Task::FunctionRegistry& registry,
 		                                 ControllerConfig config)
-		    : robot_(robot),
+		    : robot_(NotBench(robot)),
 		      library_(std::move(library)),
 		      factory_(registry),
 		      c_(std::move(config)),
@@ -215,6 +223,7 @@ namespace MRS {
 
 			// 1. The fcu's armed state, then the views (spec 08 §3.1 steps 1-2).
 			if (fcu_) model_.world.SetBool("armed", fcu_->Armed(), t, "fcu");
+			Device::UpdateProviders(robot_, t);
 			auto views = robot_.blocks.sensors.Sample(t);
 			for (auto& v : injected_) views.push_back(std::move(v));
 			injected_.clear();
@@ -237,6 +246,15 @@ namespace MRS {
 							journal_.Event(t, "swap_land");
 							Stop(t);
 						}
+					}
+					// An idle robot in the air waits at its own layer (spec 08 §3.3).
+					// The second it waits first lets the next task of a chain start where the last one ended.
+					if (fcu_ && !blocked_ && !returning_ && pending_.empty() && executor_.Empty() && Airborne()) {
+						if (!idle_since_) idle_since_ = t;
+						if (t - *idle_since_ >= 1.0) IdleAtLayer(t);
+					} else {
+						idle_since_.reset();
+						idle_yaw_.reset();
 					}
 					if (!list_done_ && any_task_ && !blocked_ && pending_.empty() && executor_.Empty()) {
 						list_done_ = true;
@@ -290,8 +308,23 @@ namespace MRS {
 		bool RobotController::FlightCritical() const {
 			for (const auto& f : robot_.faults)
 				for (const char* n : kFlightCritical)
-					if (f.node == n) return true;
+					if (Device::NameMatches(f.node, n)) return true;
 			return fcu_ && !robot_.self.Provides("pose.enu");
+		}
+
+		void RobotController::IdleAtLayer(double t) {
+			const auto& w = model_.world;
+			const auto layer = w.Raw("layer.alt");
+			const auto z = w.Scalar("pose.enu.z", t);
+			if (!layer || !std::holds_alternative<double>(layer->value) || !z) return;
+			if (!idle_yaw_) idle_yaw_ = w.Scalar("att.yaw", t).value_or(0.0);
+			// The horizontal setpoint stays where the last task left it (spec 02 §4.2).
+			Device::ActionMap a;
+			Device::Action pzy;
+			pzy.code = "A_PZY";
+			pzy.arg = *Device::PackArgument(Device::ArgLayout::F32X2, std::vector<double>{std::get<double>(layer->value), *idle_yaw_});
+			a.entries.push_back({"any", pzy});
+			safety_.Dispatch(a, t);
 		}
 
 		bool RobotController::Airborne() const { return model_.world.Bool("airborne", now_).value_or(false); }
@@ -394,7 +427,12 @@ namespace MRS {
 					}
 					continue;
 				}
-				if (e.behaviour || !records_.count(e.task_id)) continue;  // a child of a complex task
+				if (e.behaviour) continue;
+				if (!records_.count(e.task_id)) {
+					// A child of a complex task: the listener hears it, the journal does not (spec 12 §2.2).
+					if (listener_) listener_(e, t);
+					continue;
+				}
 				states_[e.task_id] = {e.state, e.reason};
 				const char* pool = e.state == Task::TaskState::SUCCEEDED ? "DONE" : e.state == Task::TaskState::FAILED ? "FAILED" : "ACTIVE";
 				Journal(e.task_id, pool, e.state, t);

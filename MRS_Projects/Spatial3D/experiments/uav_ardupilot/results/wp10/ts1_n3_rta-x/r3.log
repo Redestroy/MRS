@@ -1,0 +1,53 @@
+r3: waiting for the autopilot on tcp:127.0.0.1:5780
+r3: autopilot 3 found at 56.9495550 24.1052000 10.1 m
+     10.61 r3 mission '' tasks 0 armed 0 mode 0 rel_alt 0.0 battery 100%
+     15.62 r3 mission 'm1' tasks 0 armed 0 mode 0 rel_alt 0.0 battery 100%
+     20.63 r3 mission 'm1' tasks 0 armed 0 mode 0 rel_alt -0.0 battery 100%
+     25.65 r3 mission 'm1' tasks 0 armed 0 mode 0 rel_alt 0.0 battery 100%
+     30.65 r3 mission 'm1' tasks 0 armed 0 mode 0 rel_alt 0.0 battery 100%
+     35.65 r3 mission 'm1' tasks 0 armed 0 mode 0 rel_alt 0.0 battery 100%
+     40.67 r3 mission 'm1' tasks 0 armed 0 mode 0 rel_alt -0.0 battery 100%
+     45.68 r3 mission 'm1' tasks 0 armed 0 mode 0 rel_alt -0.0 battery 100%
+     46.67 r3 task op.1
+     50.69 r3 mission 'm1' tasks 1 armed 1 mode 4 rel_alt 0.0 battery 99%
+     55.71 r3 mission 'm1' tasks 2 armed 1 mode 4 rel_alt 8.9 battery 99%
+     60.72 r3 mission 'm1' tasks 3 armed 1 mode 4 rel_alt 21.6 battery 99%
+     65.73 r3 mission 'm1' tasks 4 armed 1 mode 4 rel_alt 29.6 battery 99%
+     70.74 r3 mission 'm1' tasks 5 armed 1 mode 4 rel_alt 29.9 battery 99%
+     75.75 r3 mission 'm1' tasks 6 armed 1 mode 4 rel_alt 23.8 battery 98%
+     80.75 r3 mission 'm1' tasks 7 armed 1 mode 4 rel_alt 16.3 battery 98%
+     85.76 r3 mission 'm1' tasks 8 armed 1 mode 4 rel_alt 14.9 battery 98%
+     87.73 r3 task -
+     87.75 r3 task op.6
+     90.76 r3 mission 'm1' tasks 9 armed 1 mode 4 rel_alt 18.8 battery 98%
+     95.78 r3 mission 'm1' tasks 10 armed 1 mode 4 rel_alt 29.1 battery 98%
+    100.78 r3 mission 'm1' tasks 11 armed 1 mode 4 rel_alt 29.9 battery 97%
+    105.79 r3 mission 'm1' tasks 12 armed 1 mode 4 rel_alt 23.3 battery 97%
+    110.80 r3 mission 'm1' tasks 13 armed 1 mode 4 rel_alt 16.0 battery 97%
+    115.80 r3 mission 'm1' tasks 14 armed 1 mode 4 rel_alt 14.9 battery 97%
+    117.45 r3 task -
+    117.47 r3 task op.11
+    120.81 r3 mission 'm1' tasks 15 armed 1 mode 4 rel_alt 19.6 battery 97%
+    125.82 r3 mission 'm1' tasks 15 armed 1 mode 4 rel_alt 29.4 battery 97%
+    130.82 r3 mission 'm1' tasks 15 armed 1 mode 4 rel_alt 29.8 battery 96%
+    135.83 r3 mission 'm1' tasks 15 armed 1 mode 4 rel_alt 22.7 battery 96%
+    140.84 r3 mission 'm1' tasks 15 armed 1 mode 4 rel_alt 15.5 battery 96%
+    145.85 r3 mission 'm1' tasks 15 armed 1 mode 4 rel_alt 14.9 battery 96%
+    147.17 r3 task -
+    147.19 r3 task op.5
+    150.86 r3 mission 'm1' tasks 15 armed 1 mode 4 rel_alt 20.5 battery 96%
+    155.87 r3 mission 'm1' tasks 15 armed 1 mode 4 rel_alt 29.6 battery 95%
+    160.87 r3 mission 'm1' tasks 15 armed 1 mode 4 rel_alt 29.8 battery 95%
+    165.88 r3 mission 'm1' tasks 15 armed 1 mode 4 rel_alt 29.9 battery 95%
+    170.89 r3 mission 'm1' tasks 15 armed 1 mode 4 rel_alt 23.6 battery 95%
+    175.89 r3 mission 'm1' tasks 15 armed 1 mode 4 rel_alt 16.2 battery 95%
+    180.90 r3 mission 'm1' tasks 15 armed 1 mode 4 rel_alt 14.9 battery 94%
+    182.77 r3 task -
+    182.79 r3 task op.15
+    185.91 r3 mission 'm1' tasks 15 armed 1 mode 4 rel_alt 18.9 battery 94%
+    189.41 r3 task -
+    190.92 r3 mission 'm1' tasks 15 armed 1 mode 4 rel_alt 29.2 battery 94%
+    195.92 r3 mission 'm1' tasks 15 armed 1 mode 4 rel_alt 29.9 battery 94%
+    200.93 r3 mission 'm1' tasks 15 armed 1 mode 4 rel_alt 29.9 battery 94%
+    205.93 r3 mission 'm1' tasks 15 armed 1 mode 4 rel_alt 29.9 battery 93%
+    210.94 r3 mission 'm1' tasks 15 armed 1 mode 4 rel_alt 29.9 battery 93%

@@ -2,7 +2,7 @@
 
 This project builds a group of flight-capable UAVs on the MRS framework. The UAVs allocate and execute 3D spatial tasks. The project also answers one question: **does a group of N UAVs finish a set of spatial tasks faster than one UAV flying a planned mission?**
 
-Branch: `spatial-3d`. Status: **WP0**. The specification is written; the library skeleton goes in [`MRSlib/libmrs`](../../MRSlib/libmrs).
+Branch: `spatial-3d`. Status: **WP8 done** (WP0–WP8). Library code is in [`MRSlib/libmrs`](../../MRSlib/libmrs); the WP6 findings are in [`experiments/uav_spatial/results/wp6`](experiments/uav_spatial/results/wp6/README.md); the WP7 generator examples are in [`experiments/uav_trees`](experiments/uav_trees/README.md); the WP8 tree-set results are in [`experiments/uav_spatial/results/wp8`](experiments/uav_spatial/results/wp8/README.md).
 
 ## Contents
 
@@ -26,6 +26,14 @@ Branch: `spatial-3d`. Status: **WP0**. The specification is written; the library
 | 07 | [Build and test](spec/07_Build_and_Test.md) | Repository layout, CMake and compiler rules, test framework, the WP0 round-trip test suite |
 | 08 | [Robot layer and flight](spec/08_Robot_and_Flight.md) | The flight control unit, the robot controller and its events, the safety supervisor, energy, journal and resume (WP4) |
 | 09 | [MRS layer](spec/09_MRS_Layer.md) | Messages and transports, the task pool, allocation (MRS-RTA), the dump rule and the task issuer (WP5) |
+| 10 | [Evaluation harness](spec/10_Evaluation.md) | The route planner (S1, S1*, G-C), task-set generators and the oracle form, the team harness, the batch runner and the analysis (WP6) |
+| 11 | [Tree tasks and generators](spec/11_Trees_and_Generators.md) | Tree tasks split across robots, the point, path, coverage, perimeter and spiral search generators, GeoJSON input and `mrs_generate` (WP7) |
+| 12 | [Splittable trees and MRS-STA](spec/12_STA.md) | Units (trees split only where they can be split), MRS-STA with the active-task stack, tree-task sets and evaluation v2 (WP8) |
+| 13 | [CBBA, LDTA² and the communication budget](spec/13_CBBA_LDTA2.md) | CBBA, LDTA², the bitrate-limited channel and message pacing, evaluation v3 (WP9) |
+| 14 | [The ArduPilot platform](spec/14_ArduPilot.md) | MAVLink ports, the GUIDED-mode flight control unit, pass-through processing, UDP between agents, the mock autopilot, SITL runs (WP10) |
+| 15 | [Worldview sync, relative positions and repulsion](spec/15_Sync_and_Neighbours.md) | Sharing world fields and detections (M_SYNC, ask a peer), the ranging sensor, neighbours, the repulsion processor and its opt-in use, the sync behaviour and the capability guard (WP11) |
+| 16 | [Device identity, discovery and bench mode](spec/16_Device_Discovery_and_Bench.md) | Draft, version 0.2: identities and identity maps for unknown and swapped devices, joints as port providers, open port types, scoped names, parts and the device library, discovery, the boot check, bench mode, C API touchpoints |
+| 17 | [Track files and the MRS dot viewer](spec/17_Replay_Viewer.md) | Robot poses over time as CSV with mission and task events, written by the Webots supervisor and QuadSim; task markers from the protocol files; `mrs_dot_viewer`, the SFML replay window |
 
 ## WP0 acceptance (from the plan)
 
@@ -48,3 +56,16 @@ Branch: `spatial-3d`. Status: **WP0**. The specification is written; the library
 ## WP2 decisions (JB, 2026-10-06)
 
 1. **Ports are never picked because they are free.** Which device sits on which port is fixed by the wiring or the connection order. A port comes from the robot's port map (first-time setup, `.mrsp`), from an explicit address, or from a port scan that identifies the device (spec 04 §6).
+
+## WP7 decisions (JB, 2026-10-08)
+
+1. **Idle robots wait at their own layer** (spec 08 §3.1a). A later mode may land idle robots and bring them up to their layer only to hear from task dispatch, depending on the radio and on the signal at ground level.
+2. **Point presets:** land, release a package (only when the robot carries it, it is the recipient's package, and the robot has landed), take a picture, orient the gimbal, flash the LEDs (spec 11 §3.1).
+3. **Points of interest** are searched in a spiral with minimum overlap (spec 11 §3.5).
+
+## WP8 decisions (JB, 2026-10-08)
+
+1. **Split only what can be split.** A tree is decomposed down to units, the parts one robot takes; a sequence whose steps are bound to each other by affinity (a waypoint chain, land then release) is one unit (spec 12 §2.1).
+2. **The binding is physical.** "Take a package, go to x, place the package" must not be decomposed: the package placed must be the one taken. Such tasks are written with each step bound to the previous one by `R_K`, so they stay whole (spec 12 §2.1).
+3. **Exclusive mode** depends on the task definitions and the environment; the started-task claim rule is accepted (spec 12 §3.2).
+4. **STA level with RTA-X** is expected for simple trees; it should later be compared on complex tasks and on safety, energy and distance too.

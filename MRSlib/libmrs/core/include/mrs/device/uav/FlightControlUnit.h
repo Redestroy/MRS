@@ -42,6 +42,11 @@ namespace MRS {
 				ActionStatus Apply(const Action& action, double t) override;
 				// The cascade of spec 08 §2.3, one control tick.
 				void Update(double t) override;
+				// Airborne: land where it is (A_LD). On the ground: nothing.
+				void Safe(double t) override;
+				// Flying or taking off: hold where it is (A_HD 0), as when velocity setpoints stop. Landing
+				// goes on.
+				void OnTimeout(double t) override;
 				std::vector<const DeviceNode*> DependsOn() const override;
 
 				void SetMotors(std::array<RotorMotor*, 4> motors) { motors_ = motors; }
@@ -61,16 +66,21 @@ namespace MRS {
 			protected:
 				void OnConfigure() override;
 
+				// For flight controllers that run elsewhere (spec 14 §4): the same actions, gains and
+				// state, with their own Apply and Update.
+				FcuGains g_;
+				FlightStateSource state_;
+				FcuMode mode_ = FcuMode::DISARMED;
+				bool failsafe_ = false;
+				std::map<std::string, std::vector<double>> setpoints_;
+				std::string last_code_;
+
 			private:
 				enum class Axis { POSITION, VELOCITY };
 				void HoldHere(const FlightState& s);
 				void WriteMotors(double t);
 
-				FcuGains g_;
 				std::array<RotorMotor*, 4> motors_{};
-				FlightStateSource state_;
-				FcuMode mode_ = FcuMode::DISARMED;
-				bool failsafe_ = false;
 				double missing_since_ = -1;  // no flight state since
 
 				// Commanded values.
@@ -89,8 +99,6 @@ namespace MRS {
 				double last_t_ = -1;
 				std::array<double, 4> commands_{};
 
-				std::map<std::string, std::vector<double>> setpoints_;
-				std::string last_code_;
 				double hold_until_ = -1.0;
 				std::uint64_t hold_arg_ = 0;
 			};

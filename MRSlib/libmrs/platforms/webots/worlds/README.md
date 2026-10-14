@@ -28,5 +28,16 @@ What the world sets, and what any other team world needs:
 * The issuer's `controllerArgs`: mission header, timeline and results paths, relative to
   `../controllers/mrs_issuer/` (the controller's working folder).
 
+The issuer also writes `mavic_team_track.csv` here: every robot's position and attitude every
+0.1 s, with the mission header and the task events (spec 17 §2). Replay it outside Webots with the
+MRS dot viewer (build with `-DMRS_BUILD_VIEWER=ON`):
+
+```
+mrs_dot_viewer mavic_team_track.csv taskset1.mrsl
+```
+
+Add `"--track-period" "0.05"` to the issuer's `controllerArgs` for denser rows, or `"--track" "none"`
+to turn it off.
+
 To fly another task set, copy it here from `MRS_Projects/Spatial3D/experiments/uav_spatial/` and
 change the issuer's second argument.

@@ -13,3 +13,6 @@ Mavic runs `mrs_uav <id>` (spec 09 §8).
 
 A ready three-UAV world with task set 1 is `MRSlib/libmrs/platforms/webots/worlds/mavic_team.wbt`; its
 README lists what a team world needs (WGS84 GPS, battery, radio, homes).
+
+WP6 adds `analyze.py` (spec 10 §7) and `results/wp6/`: the evaluation grid's CSV, its metadata, the tables and
+the findings (`results/wp6/README.md`). Re-run with `mrs_experiment run` (spec 10 §6).

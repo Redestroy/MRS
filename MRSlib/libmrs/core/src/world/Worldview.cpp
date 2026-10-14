@@ -7,7 +7,8 @@ namespace MRS {
 		Worldview::Worldview() {
 			// Spec 05 §4.1, minimum UAV field set.
 			max_age_ = {{"geo.position", 1.0}, {"pose.enu", 0.5}, {"alt.agl", 0.5}, {"alt.amsl", 0.5}, {"att", 0.2},
-			            {"heading", 0.2}, {"vel.enu", 0.5}, {"acc.enu", 0.5}, {"rate.body", 0.2}, {"battery", 2.0}};
+			            {"heading", 0.2}, {"vel.enu", 0.5}, {"acc.enu", 0.5}, {"rate.body", 0.2}, {"battery", 2.0},
+			            {"rel", 1.0}};  // spec 15 §3.2
 		}
 
 		void Worldview::SetScalar(const std::string& path, double value, double stamp, const std::string& source) {
@@ -68,13 +69,19 @@ namespace MRS {
 			auto it = offers_.find(path);
 			if (it == offers_.end() || it->second.empty()) return;
 			const auto& candidates = it->second;
-			// Rank: the source order first, then the other sources by name (std::map order).
-			std::vector<const std::string*> ranked;
+			// Rank: the source order first, then the other sources by name (std::map order), then the
+			// peers' values (sources "peer:...", spec 15 §2.4), newest first.
+			std::vector<const std::string*> ranked, peers;
 			for (const auto& name : SourceOrder(path))
-				if (candidates.count(name)) ranked.push_back(&candidates.find(name)->first);
-			for (const auto& c : candidates)
-				if (std::find_if(ranked.begin(), ranked.end(), [&](const std::string* r) { return *r == c.first; }) == ranked.end())
+				if (candidates.count(name) && !IsPeerSource(name)) ranked.push_back(&candidates.find(name)->first);
+			for (const auto& c : candidates) {
+				if (IsPeerSource(c.first)) peers.push_back(&c.first);
+				else if (std::find_if(ranked.begin(), ranked.end(), [&](const std::string* r) { return *r == c.first; }) == ranked.end())
 					ranked.push_back(&c.first);
+			}
+			std::stable_sort(peers.begin(), peers.end(),
+			                 [&](const std::string* a, const std::string* b) { return candidates.at(*a).stamp > candidates.at(*b).stamp; });
+			ranked.insert(ranked.end(), peers.begin(), peers.end());
 
 			const double max_age = MaxAge(path);
 			const std::string* chosen = nullptr;

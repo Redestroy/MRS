@@ -20,6 +20,7 @@ namespace MRS {
 			std::set<std::string> actions;         // K_A codes
 			std::set<std::string> views;           // K_V codes, plus V_PEER with any K_M
 			std::set<std::string> fields;          // worldview fields the robot can provide
+			std::set<std::string> measured;        // the part of fields its own devices provide (spec 03 §5.1)
 			std::vector<std::string> processors;   // catalog processors that are active
 
 			static SelfModel Build(const DeviceTree& tree,

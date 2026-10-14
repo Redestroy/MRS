@@ -17,7 +17,7 @@ namespace MRS {
 			} else if (view.code == "V_REL3") {
 				rec.fields.push_back(Field::MakeInt(static_cast<std::int64_t>(view.values.at(0))));
 				for (std::size_t k = 1; k < view.values.size(); ++k) rec.fields.push_back(Field::MakeNum(view.values[k]));
-			} else if (view.code == "V_DET") {
+			} else if (view.code == "V_DET" || view.code == "V_FLD") {
 				rec.fields.push_back(Field::MakeText(FieldType::Id, view.text));
 				for (double v : view.values) rec.fields.push_back(Field::MakeNum(v));
 			} else {

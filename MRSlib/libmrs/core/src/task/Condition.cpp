@@ -1,5 +1,6 @@
 #include "mrs/task/Condition.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace MRS {
@@ -185,6 +186,7 @@ namespace MRS {
 
 		void ViewMatchCondition::Fields(std::vector<std::string>& out) const {
 			if (view_code_ == "V_PEER") out.push_back("peer.r" + std::to_string(robot_) + ".pose.enu");
+			if (view_code_ == "V_DET") out.push_back("det." + class_);
 		}
 
 		// ---- C_S
@@ -295,6 +297,14 @@ namespace MRS {
 			SetTarget(w, t, written, "z", h_ + ((z && agl) ? *z - *agl : 0.0));
 			SetTarget(w, t, written, "tol_z", tol_);
 			return written;
+		}
+
+		std::vector<std::string> SharedTopics(const Condition& c) {
+			std::vector<std::string> fields, out;
+			c.Fields(fields);
+			for (const auto& f : fields)
+				if (!Environment::IsSelfStateField(f) && std::find(out.begin(), out.end(), f) == out.end()) out.push_back(f);
+			return out;
 		}
 	}
 }

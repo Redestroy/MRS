@@ -17,6 +17,8 @@ namespace MRS {
 			class RotorMotor : public Actuator {
 			public:
 				ActionStatus Apply(const Action& action, double t) override;
+				// Speed zero.
+				void Safe(double t) override;
 				double Speed() const { return speed_; }
 
 			protected:
@@ -47,6 +49,25 @@ namespace MRS {
 				bool local_ = false;
 			};
 
+			// V_VEL3: ENU velocity from a source that estimates it, such as an autopilot (spec 14 §5).
+			class Velocity : public Sensor {
+			public:
+				void Sample(double t, std::vector<View>& out) override;
+
+			protected:
+				void OnConfigure() override;
+			};
+
+			// V_REL3 per peer in range: a relative position sensor (spec 15 §3.1). Its port reads
+			// (robot id, dx, dy, dz) for each peer, ENU, one after another.
+			class Ranging : public Sensor {
+			public:
+				void Sample(double t, std::vector<View>& out) override;
+
+			protected:
+				void OnConfigure() override;
+			};
+
 			// V_MAG: heading = atan2(n_y, n_x) of the body-frame north vector, wrapped to [0, 2π).
 			class Compass : public Sensor {
 			public:
@@ -70,6 +91,8 @@ namespace MRS {
 			class LedArray : public Actuator {
 			public:
 				ActionStatus Apply(const Action& action, double t) override;
+				// The LEDs keep their state when commands stop.
+				void OnTimeout(double) override {}
 				std::size_t Count() const { return count_; }
 
 			protected:
@@ -79,7 +102,8 @@ namespace MRS {
 				std::size_t count_ = 0;
 			};
 
-			// Energy store, K_Q energy_wh, and V_BAT from its port (energy Wh, optional voltage V).
+			// Energy store, K_Q energy_wh, and V_BAT from its port (energy Wh, optional voltage V). A port
+			// that knows only the remaining fraction reads -1, voltage, remaining (an autopilot, spec 14 §3).
 			class Battery : public StorageDevice {
 			public:
 				void Sample(double t, std::vector<View>& out) override;
@@ -102,13 +126,88 @@ namespace MRS {
 				void OnConfigure() override;
 			};
 
-			// quadrotor.*: expands to m_fl, m_fr, m_rl, m_rr, fcu and imu (spec 04 §3).
+			// A_GMB: gimbal pitch and yaw (rad), each written to a position-mode motor port.
+			class Gimbal : public Actuator {
+			public:
+				ActionStatus Apply(const Action& action, double t) override;
+				// The gimbal keeps its angles when commands stop.
+				void OnTimeout(double) override {}
+
+			protected:
+				void OnConfigure() override;
+
+			private:
+				double min_pitch_ = -1.5708, max_pitch_ = 0.5;
+			};
+
+			// A_CAM shots interval_ms: a burst of pictures. Each shot is one write of its index to the
+			// camera port; the action is RUNNING until the last shot.
+			class Camera : public Actuator {
+			public:
+				ActionStatus Apply(const Action& action, double t) override;
+				// Ends the burst in progress.
+				void Safe(double) override { active_ = false; }
+				std::size_t Shots() const { return shots_; }
+
+			protected:
+				void OnConfigure() override;
+
+			private:
+				std::uint64_t burst_ = 0;  // argument of the burst in progress
+				bool active_ = false;
+				std::uint32_t taken_ = 0;
+				double next_ = 0.0;
+				std::size_t shots_ = 0;    // every shot since start
+			};
+
+			// The release half of a payload bay: its port reads 1 while a package is held and takes a
+			// write of 0 to open. A_REL package releases the held package, if it is that package.
+			class PayloadLatch : public Actuator {
+			public:
+				ActionStatus Apply(const Action& action, double t) override;
+				// The latch keeps what it holds: its safe state is closed, which needs no command.
+				void OnTimeout(double) override {}
+				// The package held now, 0 when the bay is empty.
+				std::int64_t Carried();
+				void SetPackage(std::int64_t package) { package_ = package; }
+
+			protected:
+				void OnConfigure() override;
+
+			private:
+				std::int64_t package_ = 0;
+				bool held_ = false;
+				bool released_ = false;
+			};
+
+			// The sense half of a payload bay: V_PAY with the package the latch holds.
+			class PayloadSense : public Sensor {
+			public:
+				void Sample(double t, std::vector<View>& out) override;
+				void SetLatch(PayloadLatch* latch) { latch_ = latch; }
+
+			protected:
+				void OnConfigure() override;
+
+			private:
+				PayloadLatch* latch_ = nullptr;
+			};
+
+			// payload.*: expands to latch (A_REL) and cargo (V_PAY). Parameters: device (the latch's
+			// port address) and package (the package loaded before the flight, 0 for none).
+			class Payload : public ComplexDevice {
+			public:
+				void Expand(const DeviceRegistry& registry) override;
+			};
+
+			// quadrotor.*: expands to m_fl, m_fr, m_rl, m_rr, fcu and imu (spec 04 §3). The fcu is
+			// fcu.<platform> when the registry has it (spec 14 §4), otherwise fcu.default.
 			class Quadrotor : public ComplexDevice {
 			public:
 				void Expand(const DeviceRegistry& registry) override;
 			};
 
-			// head.default, fcu.default and the .webots keys of spec 04 §3.1.
+			// The base keys (head.default, group.default), fcu.default and the .webots keys of spec 04 §3.1.
 			void RegisterUavDevices(DeviceRegistry& registry);
 		}
 	}

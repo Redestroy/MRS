@@ -22,6 +22,7 @@ namespace MRS {
 
 			std::size_t iterator = 0;             // leaf tasks and behaviour bases
 			std::optional<double> wait_start;     // A_W
+			std::optional<double> sync_start;     // A_SY: when the peers were asked
 
 			// Behaviours.
 			std::shared_ptr<const Condition> until;
@@ -159,6 +160,12 @@ namespace MRS {
 						return Fulfil(f);
 					case Truth::Unknown:
 						if (!f.unknown_since) f.unknown_since = t;
+						// A world field peers may know: ask them first (spec 15 §2.5). The answer, not
+						// the asking, decides; the wait below still bounds it.
+						if (f.depth + 1 <= ex.config_.max_behaviour_depth) {
+							if (const BehaviourEntry* entry = ex.library_.Find(f.task->StartCondition(), ex.profile_, f.tried, true))
+								return PushBehaviour(f, *entry);
+						}
 						if (t - *f.unknown_since >= ex.config_.start_unknown_timeout) Finish(TaskState::FAILED, FailReason::MISSING_FIELD);
 						return;
 					}
@@ -177,13 +184,19 @@ namespace MRS {
 					if (!f.tried.empty()) return Finish(TaskState::FAILED, f.behaviour_failure);
 					return Finish(TaskState::FAILED, FailReason::NO_BEHAVIOUR);
 				}
+				PushBehaviour(f, *entry);
+			}
+
+			// Binds a library behaviour for the frame's start condition and pushes it (spec 03 §7).
+			void PushBehaviour(Frame& f, const BehaviourEntry& entry) {
+				const Condition& unmet = f.task->StartCondition();
 				if (f.task->State() != TaskState::STARTED) Enter(f, TaskState::STARTED);
 
 				auto b = std::make_unique<Frame>();
-				b->owned = entry->behaviour->Clone();
+				b->owned = entry.behaviour->Clone();
 				b->task = b->owned.get();
 				b->role = Frame::Role::Fulfil;
-				b->label = entry->name;
+				b->label = entry.name;
 				b->depth = f.depth + 1;
 				b->until = f.task->StartConditionPtr();  // the unmet condition replaces the placeholder
 				b->until_context = *f.context_start;
@@ -246,6 +259,29 @@ namespace MRS {
 				Work();
 			}
 
+			// `A_SY timeout` (spec 15 §2.5): ask the live peers for the world fields of the condition the
+			// frame works towards, then wait for the answer. The condition is never assumed: it must
+			// become TRUE from what arrives (the behaviour's until ends it), else NOT_KNOWN.
+			bool Sync(Frame& f, const TaskAction& a) {
+				if (!f.sync_start) {
+					const Condition& goal = f.until                                  ? *f.until
+					                        : f.task->Type() == TaskType::BEHAVIOUR ? static_cast<const Behaviour&>(*f.task).Until()
+					                                                                 : f.task->EndCondition();
+					const auto topics = SharedTopics(goal);
+					const int asked = topics.empty() || !ex.sync_ ? 0 : ex.sync_(topics, t);
+					if (asked <= 0) {
+						Finish(TaskState::FAILED, FailReason::NOT_KNOWN);
+						return false;
+					}
+					f.sync_start = t;
+				}
+				if (t - *f.sync_start >= a.WaitSeconds()) {
+					Finish(TaskState::FAILED, FailReason::NOT_KNOWN);
+					return false;
+				}
+				return false;
+			}
+
 			// Runs the action at the iterator (spec 03 §8.2). Returns true when the iterator is
 			// at A_N or past the last action; the caller decides what that means.
 			bool RunActions(Frame& f, const std::vector<TaskAction>& actions) {
@@ -256,6 +292,7 @@ namespace MRS {
 					Finish(TaskState::FAILED, FailReason::IMPOSSIBLE);
 					return false;
 				}
+				if (a.Code() == "A_SY") return Sync(f, a);
 				if (a.Code() == "A_W") {
 					if (!f.wait_start) f.wait_start = t;
 					if (t - *f.wait_start >= a.WaitSeconds()) {  // >=, not > (fixes the 2021 inversion)

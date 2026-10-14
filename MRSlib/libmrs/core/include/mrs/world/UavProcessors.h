@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "mrs/protocol/Record.h"
+#include "mrs/world/Neighbours.h"
 #include "mrs/world/Processor.h"
 
 namespace MRS {
@@ -22,6 +23,7 @@ namespace MRS {
 			double landed_time = 1.0;
 			double home_radius = 1.0;
 			double detection_radius = 2.0;
+			RepulsionConfig repulsion;  // spec 15 §4
 		};
 
 		// Every UAV processor, in catalog order.

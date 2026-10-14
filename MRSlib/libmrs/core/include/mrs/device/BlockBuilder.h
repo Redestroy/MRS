@@ -25,7 +25,9 @@ namespace MRS {
 		class ActuatorBlock : public Task::IActionSink {
 		public:
 			// Throws BuildError when two actuators are `default T` for the same code.
-			explicit ActuatorBlock(std::vector<Actuator*> actuators = {});
+			// `tree_names` are the full names of every node of the tree, available or not, so that a short
+			// target is resolved as in the tree (spec 16 §5). Without them, the actuators' names are used.
+			explicit ActuatorBlock(std::vector<Actuator*> actuators = {}, std::vector<std::string> tree_names = {});
 
 			Device::ActionStatus Dispatch(const ActionMap& action, double t) override;
 			// Control step of every actuator, after dispatch.
@@ -37,6 +39,7 @@ namespace MRS {
 
 		private:
 			std::vector<Actuator*> actuators_;
+			std::vector<std::string> names_;
 			std::map<std::string, std::vector<Actuator*>> by_code_;
 			std::map<std::string, Actuator*> default_;  // code -> its `any` route
 		};

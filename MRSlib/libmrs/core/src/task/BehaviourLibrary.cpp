@@ -51,14 +51,17 @@ namespace MRS {
 		}
 
 		const BehaviourEntry* BehaviourLibrary::Find(const Condition& unmet, const CapabilityProfile* profile,
-		                                             const std::set<std::string>& exclude) const {
+		                                             const std::set<std::string>& exclude, bool sync_only) const {
 			const bool predicate = unmet.Code() == "C_?";
 			// A C_? that wants F has no behaviour in version 0.1 (spec 03 §7).
 			if (predicate && !unmet.WantedValue()) return nullptr;
+			const bool shared = !SharedTopics(unmet).empty();
 			const BehaviourEntry* best = nullptr;
 			for (const auto& e : entries_) {
 				if (e.fulfils != unmet.Code() || exclude.count(e.name)) continue;
-				if (predicate && e.qualifier != unmet.Qualifier()) continue;
+				const bool sync = e.qualifier == "sync";
+				if (sync ? !shared : sync_only) continue;
+				if (predicate && !sync && e.qualifier != unmet.Qualifier()) continue;
 				if (profile && !e.behaviour->MeetsStaticRequirements(*profile)) continue;
 				if (!best || e.priority > best->priority) best = &e;
 			}

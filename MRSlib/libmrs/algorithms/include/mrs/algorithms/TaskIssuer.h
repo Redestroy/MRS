@@ -4,10 +4,12 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
 #include "mrs/algorithms/Planner.h"
+#include "mrs/algorithms/TaskTree.h"
 #include "mrs/comm/Messenger.h"
 #include "mrs/protocol/Record.h"
 
@@ -24,7 +26,8 @@ namespace MRS {
 			double dispatch = 0.0;              // when it was sent
 			std::optional<double> done;         // first M_DONE
 			std::string done_by;
-			int done_count = 0;                 // M_DONE messages: more than one means duplicate arrivals
+			int done_count = 0;                 // robots that sent M_DONE: more than one means the task was done twice
+			std::set<std::string> done_robots;  // a robot re-sends M_DONE on a lossy link (spec 13 §3.3); that is no duplicate
 			std::optional<std::string> failed;  // M_FAIL reason
 			std::vector<std::string> dumped_by; // robots that sent M_DUMP static
 		};
@@ -53,7 +56,13 @@ namespace MRS {
 			long PlansSent() const { return plans_sent_; }
 			const CentralPlanner* Planner() const { return planner_.get(); }
 
+			// Top-level tasks, tree roots included: a root is done when its tree is (spec 11 §2.5).
 			const std::map<std::string, IssuedTask>& Tasks() const { return issued_; }
+			// The leaves of the tree tasks, by leaf id.
+			const std::map<std::string, IssuedTask>& Leaves() const { return leaves_; }
+			// The complex units of the tree tasks (spec 12 §2), by node id.
+			const std::map<std::string, IssuedTask>& Units() const { return units_; }
+			const TaskTree* Tree(const std::string& root) const;
 			const Comm::Messenger& Messages() const { return messenger_; }
 
 		private:
@@ -73,8 +82,21 @@ namespace MRS {
 			std::vector<std::string> order_;  // ids in dispatch order
 			std::unique_ptr<CentralPlanner> planner_;
 			long plans_sent_ = 0;
+			double last_plans_ = -1e9;
+			std::vector<Protocol::Record> plans_;  // the M_PLAN of the last replan
+			struct IssuedTree {
+				TaskTree tree;
+				TreeState state;
+				explicit IssuedTree(TaskTree t) : tree(std::move(t)), state(tree) {}
+				IssuedTree(const IssuedTree&) = delete;
+			};
+			std::map<std::string, std::unique_ptr<IssuedTree>> trees_;  // by root
+			std::map<std::string, std::string> root_of_;                 // node id -> root
+			std::map<std::string, IssuedTask> leaves_;
+			std::map<std::string, IssuedTask> units_;  // complex units below the root (spec 12 §2)
 
 			void SendPlans(double t);
+			void OnTreeMessage(const Comm::Message& m, const std::string& root);
 		};
 
 		// How a 2021 E-puck task set maps to a flying area (spec 09 §7).

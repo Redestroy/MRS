@@ -1,0 +1,15 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {"type": "Feature", "properties": {"task": "picture", "pitch": -1.0},
+     "geometry": {"type": "Point", "coordinates": [24.1046, 56.9499, 18]}},
+    {"type": "Feature", "properties": {"task": "gimbal", "pitch": -0.5, "yaw": 0.3},
+     "geometry": {"type": "Point", "coordinates": [24.1050, 56.9499, 18]}},
+    {"type": "Feature", "properties": {"task": "leds", "colour": 65280, "duration": 2},
+     "geometry": {"type": "Point", "coordinates": [24.1054, 56.9499, 15]}},
+    {"type": "Feature", "properties": {"task": "release", "package": 7},
+     "geometry": {"type": "Point", "coordinates": [24.1058, 56.9498, 15]}},
+    {"type": "Feature", "properties": {"task": "land"},
+     "geometry": {"type": "Point", "coordinates": [24.1046, 56.9494, 15]}}
+  ]
+}

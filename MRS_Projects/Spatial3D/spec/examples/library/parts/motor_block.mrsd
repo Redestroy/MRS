@@ -1,0 +1,7 @@
+# A part (spec 16 §6.2): a motor block made of a motor and its encoder, as one group.
+# The .mock keys are the test registry's devices (tests/device/test_parts.cpp).
+@: MRS 0.2/
+
+D: D_X block group.default 0 D_1..2/
+D_1: D_A motor motor.mock 2 device "motor" max_speed 300/
+D_2: D_S encoder encoder.mock 1 device "encoder"/

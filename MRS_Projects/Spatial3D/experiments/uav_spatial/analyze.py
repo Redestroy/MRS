@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""WP6 analysis (plan §10.5, spec 10 §7): reads the CSV that mrs_experiment writes and prints
+"""WP6 and WP8 analysis (plan §10.5, spec 10 §7, spec 12 §4): reads the CSV that mrs_experiment writes and prints
 Markdown tables.
 
   python3 analyze.py results.csv [--out results.md] [--boot 2000]
@@ -16,7 +16,7 @@ import statistics
 import sys
 from collections import defaultdict
 
-GROUPS = ["G-RTA", "G-RTA-X", "G-C"]
+GROUPS = ["G-RTA", "G-RTA-X", "G-STA", "G-CBBA", "G-LDTA2", "G-C"]
 
 
 def load(path):
@@ -29,7 +29,12 @@ def load(path):
             for k in ("makespan_s", "latency_mean_s", "latency_max_s", "distance_m", "energy_wh", "decision_mean_us",
                       "decision_worst_us", "plan_worst_ms", "min_separation_m", "sim_time_s", "wall_s"):
                 r[k] = float(r[k])
+            for k in ("leaves", "leaf_duplicates", "dropped"):  # WP8 and WP9 columns; absent in older files
+                r[k] = int(r.get(k) or 0)
+            for k in ("delay_mean_s", "delay_max_s"):
+                r[k] = float(r.get(k) or 0)
             r["source"] = r["set"].split("/")[0]
+            r["tree_set"] = r["set"].split("/")[1] if r["source"] == "tree" else ""
             rows.append(r)
     return rows
 
@@ -65,14 +70,19 @@ def main():
     ap.add_argument("csv")
     ap.add_argument("--out")
     ap.add_argument("--boot", type=int, default=2000)
+    ap.add_argument("--bitrate", type=float, help="only runs at this channel bitrate (WP9; 0: no limit)")
     a = ap.parse_args()
     rows = load(a.csv)
+    if a.bitrate is not None:
+        rows = [r for r in rows if float(r.get("bitrate_bps") or 0) == a.bitrate]
     rng = random.Random(20261007)
     by_run = {}
     for r in rows:
         by_run[(r["set"], r["seed"], r["condition"], r["n"])] = r
     conds = sorted({cond_key(r) for r in rows}, key=lambda k: (["S1", "S1*"] + GROUPS).index(k[0]) * 100 + k[1])
     ns = sorted({k[1] for k in conds if k[0] in GROUPS})
+    present = {k[0] for k in conds}
+    GROUPS[:] = [g for g in GROUPS if g in present]  # only the conditions this file has
     sources = sorted({r["source"] for r in rows})
     out = []
     w = out.append
@@ -131,12 +141,47 @@ def main():
     speed_table("Speed-up by source", [(s, (lambda s: lambda r: r["source"] == s)(s)) for s in sources])
     gen = [r for r in rows if r["source"] == "gen"]
     if gen:
+        # Family and dispatch at the most common task count, so other sizes do not mix in.
+        main_size = statistics.mode(r["tasks"] for r in gen)
         fams = sorted({r["family"] for r in gen})
         disps = sorted({r["dispatch"] for r in gen})
-        speed_table("Speed-up by family (generated sets)",
-                    [(f, (lambda f: lambda r: r["source"] == "gen" and r["family"] == f)(f)) for f in fams])
-        speed_table("Speed-up by dispatch (generated sets)",
-                    [(d, (lambda d: lambda r: r["source"] == "gen" and r["dispatch"] == d)(d)) for d in disps])
+        speed_table(f"Speed-up by family (generated sets, {main_size} tasks)",
+                    [(f, (lambda f: lambda r: r["source"] == "gen" and r["tasks"] == main_size and r["family"] == f)(f)) for f in fams])
+        speed_table(f"Speed-up by dispatch (generated sets, {main_size} tasks)",
+                    [(d, (lambda d: lambda r: r["source"] == "gen" and r["tasks"] == main_size and r["dispatch"] == d)(d)) for d in disps])
+        sizes = sorted({r["tasks"] for r in gen})
+        if len(sizes) > 1:
+            # Only the family and dispatch pairs run at every size, so the rows compare like with like.
+            pairs = set.intersection(*({(r["family"], r["dispatch"]) for r in gen if r["tasks"] == t} for t in sizes))
+            names = ", ".join(f"{f}/{d}" for f, d in sorted(pairs))
+            speed_table(f"Speed-up by task count (generated sets: {names})",
+                        [(f"{t} tasks", (lambda t: lambda r: r["source"] == "gen" and r["tasks"] == t and
+                                         (r["family"], r["dispatch"]) in pairs)(t)) for t in sizes])
+
+    trees = [r for r in rows if r["source"] == "tree"]
+    if trees:
+        tsets = sorted({r["tree_set"] for r in trees})
+        speed_table("Speed-up by tree set", [(t, (lambda t: lambda r: r["tree_set"] == t)(t)) for t in tsets])
+        # G-STA against MRS-RTA-X on the same set and seed.
+        w("## G-STA against G-RTA-X\n")
+        w("Paired ratio makespan(G-STA) / makespan(G-RTA-X); below 1 means the stack and kinship help.\n")
+        body = []
+        for t in tsets:
+            line = [t]
+            for n in ns:
+                v = []
+                for r in trees:
+                    if r["tree_set"] == t and r["condition"] == "G-STA" and r["n"] == n:
+                        x = by_run.get((r["set"], r["seed"], "G-RTA-X", n))
+                        if x and x["makespan_s"] > 0:
+                            v.append(r["makespan_s"] / x["makespan_s"])
+                if v:
+                    lo, hi = boot_ci(v, a.boot, rng)
+                    line.append(f"{statistics.mean(v):.3f} [{lo:.3f}, {hi:.3f}]")
+                else:
+                    line.append("–")
+            body.append(line)
+        w(table(["Tree set"] + [f"N={n}" for n in ns], body) + "\n")
 
     # 3. The oracle against the online single UAV.
     w("## S1* against S1\n")
@@ -152,7 +197,10 @@ def main():
         if v:
             lo, hi = boot_ci(v, a.boot, rng)
             body.append([s, f"{statistics.mean(v):.3f} [{lo:.3f}, {hi:.3f}]", len(v)])
-    w(table(["Source", "S1*/S1", "Pairs"], body) + "\n")
+    if body:
+        w(table(["Source", "S1*/S1", "Pairs"], body) + "\n")
+    else:
+        w("No S1* runs.\n")
 
     # 4. Secondary metrics.
     w("## Secondary metrics\n")
@@ -161,7 +209,7 @@ def main():
       "own replans (S1, S1*).\n")
     hdr = ["Condition", "Latency mean (s)", "Latency max (s)", "Distance (m)", "Energy (Wh)", "Duplicates",
            "Busy robots", "Messages", "kB", "Decision mean (µs)", "Decision worst (µs)", "Plan worst (ms)",
-           "Sep. breaches", "Min sep. (m)", "Fence exits", "Stalled", "Crashed"]
+           "Sep. breaches", "Min sep. (m)", "Fence exits", "Stalled", "Crashed", "Leaf duplicates", "Dropped", "Delay mean (s)"]
     body = []
     for k in conds:
         v = [r for r in rows if cond_key(r) == k]
@@ -172,7 +220,8 @@ def main():
                      fmt(m("bytes") / 1000, 1), fmt(m("decision_mean_us"), 1), fmt(max(r["decision_worst_us"] for r in v), 0),
                      fmt(max(r["plan_worst_ms"] for r in v), 1), sum(r["separation_breaches"] for r in v),
                      fmt(min(seps), 2) if seps else "–", sum(r["fence_exits"] for r in v),
-                     sum(1 for r in v if not r["completed"]), sum(r["crashed"] for r in v)])
+                     sum(1 for r in v if not r["completed"]), sum(r["crashed"] for r in v),
+                     fmt(m("leaf_duplicates"), 2), fmt(m("dropped"), 1), fmt(m("delay_mean_s"), 2)])
     w(table(hdr, body) + "\n")
 
     # 5. The best group condition per N.

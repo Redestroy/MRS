@@ -34,6 +34,7 @@ namespace MRS {
 			    : p_(p), geo_(geo) {
 				energy_wh_ = p_.capacity_wh;
 				seed_ = p_.seed;
+				range_seed_ = p_.seed * 31ULL + 7ULL;
 				R_ = {1, 0, 0, 0, 1, 0, 0, 0, 1};
 			}
 
@@ -41,6 +42,19 @@ namespace MRS {
 			std::array<double, 3> pos{0, 0, 0}, vel{0, 0, 0}, omega{0, 0, 0};
 			std::array<double, 4> motor{0, 0, 0, 0};  // commanded speeds, signed
 			std::map<std::string, double> leds;
+			double gimbal_pitch = 0.0, gimbal_yaw = 0.0;  // rad, last commanded
+			struct Shot {
+				double t;
+				std::array<double, 3> pos;
+				double pitch;
+			};
+			std::vector<Shot> shots;                      // every picture taken
+			bool package_held = true;                      // the connector holds a package
+			struct Drop {
+				double t;
+				std::array<double, 3> pos;
+			};
+			std::vector<Drop> drops;                       // every release, where it happened
 			std::vector<std::string> sent;
 			std::deque<std::string> inbox;
 			bool crashed = false;
@@ -48,6 +62,8 @@ namespace MRS {
 			double energy_used_wh = 0.0;
 			double distance_flown = 0.0;  // m, path length while airborne
 			std::array<double, 3> wind{0, 0, 0};  // N, a constant disturbance force
+			// The other robots, for the ranging sensor (spec 15 §3.1): robot id and its simulator.
+			std::vector<std::pair<int, const QuadSim*>> peers;
 
 			double Energy() const { return energy_wh_; }
 			void SetEnergy(double wh) { energy_wh_ = wh; }
@@ -82,7 +98,8 @@ namespace MRS {
 		private:
 			static constexpr const char* kDevices[] = {"front left propeller", "front right propeller", "rear left propeller",
 			                                            "rear right propeller", "inertial unit", "gyro", "gps", "compass",
-			                                            "front left led", "front right led", "battery", "emitter", "receiver"};
+			                                            "front left led", "front right led", "battery", "emitter", "receiver",
+			                                            "camera pitch", "camera yaw", "camera", "connector", "ranging"};
 			// Motor positions from Mavic2Pro.proto: fl, fr, rl, rr; thrust constant signs.
 			static constexpr double kMotorX[4] = {0.0548537, 0.0548537, -0.177179, -0.177179};
 			static constexpr double kMotorY[4] = {0.151294, -0.151294, 0.127453, -0.127453};
@@ -166,6 +183,11 @@ namespace MRS {
 				seed_ = seed_ * 6364136223846793005ULL + 1442695040888963407ULL;
 				return (static_cast<double>(seed_ >> 11) / 9007199254740992.0 * 2.0 - 1.0) * p_.gps_noise;
 			}
+			// Uniform in [-1, 1], from its own stream, so ranging leaves the GPS noise unchanged.
+			double RangeNoise() {
+				range_seed_ = range_seed_ * 6364136223846793005ULL + 1442695040888963407ULL;
+				return static_cast<double>(range_seed_ >> 11) / 9007199254740992.0 * 2.0 - 1.0;
+			}
 
 			friend class QuadPort;
 			QuadParams p_;
@@ -175,6 +197,7 @@ namespace MRS {
 			double t_ = 0;
 			long step_ = 0;
 			unsigned long long seed_ = 42;
+			unsigned long long range_seed_ = 7;
 		};
 
 		class QuadPort : public ::MRS::Port::Port {
@@ -200,6 +223,19 @@ namespace MRS {
 					v = {R[1], R[4], R[7]};  // world north (0, 1, 0) in the body frame: column 1 of R
 				} else if (a == "battery") {
 					v = {sim_.energy_wh_};
+				} else if (a == "connector") {
+					v = {sim_.package_held ? 1.0 : 0.0};
+				} else if (a == "ranging") {
+					// Peers within range_m (default 30 m), ENU, with uniform noise of noise_m per axis.
+					const double range = Assignment().params.Num("range_m", 30.0), noise = Assignment().params.Num("noise_m", 0.0);
+					v.clear();
+					for (const auto& [id, peer] : sim_.peers) {
+						double d[3];
+						for (int k = 0; k < 3; ++k) d[k] = peer->pos[k] - sim_.pos[k];
+						if (std::sqrt(d[0] * d[0] + d[1] * d[1] + d[2] * d[2]) > range) continue;
+						v.push_back(static_cast<double>(id));
+						for (int k = 0; k < 3; ++k) v.push_back(d[k] + noise * sim_.RangeNoise());
+					}
 				} else {
 					return false;
 				}
@@ -214,7 +250,13 @@ namespace MRS {
 						sim_.motor[k] = v.at(0);
 						return true;
 					}
-				sim_.leds[a] = v.at(0);
+				if (a == "camera pitch") sim_.gimbal_pitch = v.at(0);
+				else if (a == "camera yaw") sim_.gimbal_yaw = v.at(0);
+				else if (a == "camera") sim_.shots.push_back({sim_.t_, sim_.pos, sim_.gimbal_pitch});
+				else if (a == "connector") {
+					if (v.at(0) < 0.5 && sim_.package_held) sim_.drops.push_back({sim_.t_, sim_.pos});
+					sim_.package_held = v.at(0) >= 0.5;
+				} else sim_.leds[a] = v.at(0);
 				return true;
 			}
 			bool Send(const std::string& data) override {

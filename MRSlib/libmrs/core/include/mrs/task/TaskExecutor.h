@@ -51,6 +51,9 @@ namespace MRS {
 			void SetGeoReference(const Environment::GeoReference* geo) { geo_ = geo; }
 			void SetPoolState(std::function<std::optional<std::string>(const std::string&)> f) { pool_state_ = std::move(f); }
 			void SetProfile(const CapabilityProfile* profile) { profile_ = profile; }
+			// A_SY (spec 15 §2.5): asks the live peers for these world-field topics and returns how
+			// many were asked. Unset, or 0 asked: A_SY fails at once with NOT_KNOWN.
+			void SetSync(std::function<int(const std::vector<std::string>& topics, double t)> f) { sync_ = std::move(f); }
 
 			// Starts a task when the stack is empty, or preempts the top task (spec 03 §8.6).
 			void Push(std::unique_ptr<Task> task);
@@ -83,6 +86,7 @@ namespace MRS {
 			const Environment::GeoReference* geo_ = nullptr;
 			std::function<std::optional<std::string>(const std::string&)> pool_state_;
 			const CapabilityProfile* profile_ = nullptr;
+			std::function<int(const std::vector<std::string>&, double)> sync_;
 			std::vector<std::unique_ptr<Frame>> stack_;
 		};
 	}

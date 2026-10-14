@@ -1,0 +1,6 @@
+# A part made of parts: two motor blocks on one axle.
+@: MRS 0.2/
+
+D: D_X drive group.default 0 D_1..2/
+D_1: D_X left part.motor_block 2 motor.device "left motor" encoder.device "left encoder"/
+D_2: D_X right part.motor_block 2 motor.device "right motor" encoder.device "right encoder"/
