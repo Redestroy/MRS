@@ -53,10 +53,6 @@ if(MRS_BUILD_ARDUPILOT)
 	add_subdirectory(platforms/ardupilot)
 endif()
 
-if(MRS_BUILD_VIEWER)
-	add_subdirectory(viewer)
-endif()
-
 if(MRS_BUILD_TOOLS)
 	add_subdirectory(tools)
 endif()

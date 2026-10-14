@@ -29,10 +29,10 @@ Status: **WP1** (core repair). It contains the protocol layer, the task core and
 ```
 cmake -S MRSlib/libmrs -B build-viewer -DMRS_BUILD_VIEWER=ON
 cmake --build build-viewer --target mrs_dot_viewer --config Release
-build-viewer/viewer/Release/mrs_dot_viewer.exe MRSlib/libmrs/platforms/webots/worlds/mavic_team_track.csv MRSlib/libmrs/platforms/webots/worlds/taskset1.mrsl
+build-viewer/tools/dot_viewer/Release/mrs_dot_viewer.exe MRSlib/libmrs/platforms/webots/worlds/mavic_team_track.csv MRSlib/libmrs/platforms/webots/worlds/taskset1.mrsl
 ```
 
-(On Linux and with single-config generators the program is `build-viewer/viewer/mrs_dot_viewer`.) Press H in the window for the keys.
+(On Linux and with single-config generators the program is `build-viewer/tools/dot_viewer/mrs_dot_viewer`.) Press H in the window for the keys.
 
 Build and test:
 

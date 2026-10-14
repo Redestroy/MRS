@@ -1,5 +1,5 @@
 # MRS::Replay (spec 17): track files and task markers for the MRS dot viewer. No SFML here, so the
-# formats build and are tested everywhere; the viewer itself is the optional viewer/ target.
+# formats build and are tested everywhere; the viewer itself is the optional tools/dot_viewer target.
 add_library(mrs_replay
 	src/Track.cpp
 	src/TaskMarkers.cpp

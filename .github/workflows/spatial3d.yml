@@ -49,7 +49,7 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           build/tools/mrs_experiment run --set MRSlib/libmrs/platforms/webots/worlds/taskset1.mrsl --cond G-RTA:3 --seeds 1-1 --out run.csv --track track.csv
-          xvfb-run -a -s "-screen 0 1280x800x24" build/viewer/mrs_dot_viewer track.csv MRSlib/libmrs/platforms/webots/worlds/taskset1.mrsl --at 60 --screenshot viewer.png
+          xvfb-run -a -s "-screen 0 1280x800x24" build/tools/dot_viewer/mrs_dot_viewer track.csv MRSlib/libmrs/platforms/webots/worlds/taskset1.mrsl --at 60 --screenshot viewer.png
           test -s viewer.png
       - name: Keep the frame
         if: runner.os == 'Linux'

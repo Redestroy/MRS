@@ -8,7 +8,7 @@ Status: spec version `0.1`, 2026-10-14. Requested by JB (2026-10-14): a tool out
 * **Task markers** (§3): the spatial conditions of the tasks, read from the protocol files the issuer already uses (`.mrsl` timelines, `.mrst` task files, `.mrs` mission headers). No new task format.
 * **The MRS dot viewer** (§4): `mrs_dot_viewer`, an SFML window that replays one track file with its task files. It needs no other file: no font, image or configuration.
 
-Code: `MRS::Replay` in `replay/` (`mrs_replay`, no SFML, always built and tested); the viewer in `viewer/` (optional target, §4.4).
+Code: `MRS::Replay` in `replay/` (`mrs_replay`, no SFML, always built and tested); the viewer in `tools/dot_viewer/` (optional target, §4.4).
 
 ## 2. Track files
 
@@ -126,7 +126,7 @@ The legend (top left) lists the robots by number with their altitude, and counts
 
 ### 4.3 Rendering
 
-SFML 3 (graphics module) draws the projected scene in 2D: an orbit camera with perspective projection (50° vertical field of view), lines clipped at the near plane, balls as shaded sprites sorted far to near. Text uses a built-in bitmap of DejaVu Sans Mono (`viewer/src/FontData.h`, made by `viewer/tools/make_font.py`), so no font file is needed.
+SFML 3 (graphics module) draws the projected scene in 2D: an orbit camera with perspective projection (50° vertical field of view), lines clipped at the near plane, balls as shaded sprites sorted far to near. Text uses a built-in bitmap of DejaVu Sans Mono (`tools/dot_viewer/src/FontData.h`, made by `tools/dot_viewer/tools/make_font.py`), so no font file is needed.
 
 ### 4.4 Build
 
