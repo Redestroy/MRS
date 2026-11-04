@@ -187,6 +187,7 @@ The self model (spec 04 §7) works out which fields a robot can provide from des
 | `PeerStateProcessor` | `V_PEER` | — | `peer` (the `peer.<id>.*` subtree) | |
 | `DetectionProcessor` | `V_DET` | — | `det` (the `det.<class>.<n>.*` subtree) | |
 | `PayloadProcessor` | `V_PAY` | — | `payload.id` | |
+| `SlingProcessor` | `V_TAG`, `V_SLG` | `pose.enu`, `payload.id` | `payload.dest`, `.area`, `.mass`, `.goal`, `.held`, `.grounded`, `.at_dest`; `sling.load`, `.length`, `.open` | spec 18 §3.1 |
 | `RelativePositionProcessor` | `V_REL3` | — | `rel` (the `rel.<id>.*` subtree) | (WP11, spec 15 §3.2) |
 | `WorldviewSyncProcessor` | `V_FLD` | — | `sync` (the `sync.<id>.*` subtree); offers peers' fields under source `peer:<id>` | (WP11, spec 15 §2.4) |
 | `RepulsionProcessor` | — | — | `repulse` (`repulse.enu`, `.nearest`, `.count`) | (WP11, spec 15 §4) |
@@ -229,6 +230,8 @@ Every view code starts with the slot `num stamp` (mission time of the informatio
 | `V_REL3` | `int robot`, `num dx`, `num dy`, `num dz` | relative-position sensor |
 | `V_DET` | `id class`, `num x`, `num y`, `num z`, `num confidence` | detector |
 | `V_PAY` | `num package` | payload bay: the package held, 0 for none (WP7) |
+| `V_TAG` | `num package`, `num x`, `num y`, `num z`, `num area`, `num mass` | the label of the package on a sling's hook (spec 18 §2.3) |
+| `V_SLG` | `num load`, `num length`, `num open` | a sling's load cell (spec 18 §2.3) |
 | `V_FLD` | `id path`, `num value` | a world field a peer shared (WP11, spec 15 §2.2) |
 | `V_P2` | `num x`, `num y`, `num yaw` | legacy 2D pose (E-puck) |
 
