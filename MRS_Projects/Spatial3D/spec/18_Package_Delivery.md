@@ -17,7 +17,16 @@ A team of UAVs delivers small packages from a pile at a source point to destinat
 
 ## 3. Behaviours (*pending*)
 
-## 4. Zones and queues (*pending*)
+## 4. Zones and queues (draft design)
+
+A **zone** is a named place only a limited number of robots may use at once: a pickup spot at the pile, a drop spot at a destination, a charging pad. Zones come from the mission (a zone list next to the mission header): name, centre (ENU), radius, capacity (default 1) and a holding point.
+
+* **Claims.** A robot that needs a zone broadcasts `M_ZONE <name> want <stamp>`; it holds the zone once it is among the first `capacity` wanting robots, ordered by stamp, then robot id (the same tie rule as task claims, spec 06 §4.1). It sends `M_ZONE <name> free` when it leaves the zone's radius, and a claim lapses after `zone_timeout` without renewal, so a robot that went silent does not block the line.
+* **Worldview.** A zone processor writes the predicate `zone.<name>.mine` (TRUE while this robot holds the zone) and `zone.<name>.queue` (its place in line, 0 when it holds it).
+* **Waiting in line.** Pickup, drop-off and recharge leaves start with `C_? zone.<name>.mine T`. The behaviour library entry for that predicate is `wait_in_line`: claim the zone, fly to the holding point and hold at `hold_base + queue · hold_step` above it (a vertical stack), until the predicate is TRUE. The robot then flies into the zone.
+* **Allocation.** The queue length goes into the size estimate (expected wait), so robots prefer free sources and pads when there are several.
+
+The message and record codes are fixed when this section is implemented.
 
 ## 5. Generator and manifest (*pending*)
 
