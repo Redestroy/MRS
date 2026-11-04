@@ -50,6 +50,28 @@ namespace MRS {
 			return found;
 		}
 
+		// A qualifier segment "_" matches any one dot-separated segment: "zone._.mine" matches
+		// "zone.3.mine" and "zone.dest.mine" (spec 18 §4.3).
+		bool QualifierMatches(const std::string& pattern, const std::string& name) {
+			if (pattern == name) return true;
+			if (pattern.find("._") == std::string::npos && pattern.rfind("_.", 0) != 0) return false;
+			auto split = [](const std::string& s) {
+				std::vector<std::string> out;
+				std::size_t start = 0;
+				while (true) {
+					const std::size_t end = s.find('.', start);
+					out.push_back(s.substr(start, end == std::string::npos ? std::string::npos : end - start));
+					if (end == std::string::npos) return out;
+					start = end + 1;
+				}
+			};
+			const auto ps = split(pattern), ns = split(name);
+			if (ps.size() != ns.size()) return false;
+			for (std::size_t k = 0; k < ps.size(); ++k)
+				if (ps[k] != "_" && ps[k] != ns[k]) return false;
+			return true;
+		}
+
 		const BehaviourEntry* BehaviourLibrary::Find(const Condition& unmet, const CapabilityProfile* profile,
 		                                             const std::set<std::string>& exclude, bool sync_only) const {
 			const bool predicate = unmet.Code() == "C_?";
@@ -61,7 +83,7 @@ namespace MRS {
 				if (e.fulfils != unmet.Code() || exclude.count(e.name)) continue;
 				const bool sync = e.qualifier == "sync";
 				if (sync ? !shared : sync_only) continue;
-				if (predicate && !sync && e.qualifier != unmet.Qualifier()) continue;
+				if (predicate && !sync && !QualifierMatches(e.qualifier, unmet.Qualifier())) continue;
 				if (profile && !e.behaviour->MeetsStaticRequirements(*profile)) continue;
 				if (!best || e.priority > best->priority) best = &e;
 			}

@@ -62,6 +62,7 @@ namespace MRS {
 			long sent = 0, received = 0, bytes_sent = 0;
 			long dropped_parse = 0, dropped_version = 0, dropped_mission = 0, dropped_duplicate = 0, dropped_size = 0;
 			long not_for_us = 0, own = 0;
+			long relayed = 0;  // messages forwarded for others (spec 18 §6)
 		};
 
 		class Messenger {
@@ -84,11 +85,20 @@ namespace MRS {
 
 			const MessengerStats& Stats() const { return stats_; }
 
+			// Relay (spec 18 §6): when on, every message heard for the first time that is not this
+			// agent's own and not a unicast to it is sent on once, unchanged, so a chain of agents
+			// carries it beyond one radio range. The (sender, seq) pair keeps each copy to one hop
+			// per agent, so a flood ends.
+			void SetRelay(bool on) { relay_ = on; }
+			bool Relay() const { return relay_; }
+
 		private:
 			ITransport& transport_;
 			std::string self_, mission_;
 			std::int64_t seq_ = 0;
 			std::map<std::string, std::set<std::int64_t>> seen_;
+			std::map<std::string, std::set<std::int64_t>> relayed_;
+			bool relay_ = false;
 			MessengerStats stats_;
 		};
 	}

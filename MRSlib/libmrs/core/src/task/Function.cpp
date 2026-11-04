@@ -56,6 +56,38 @@ namespace MRS {
 				};
 			}
 
+			// pkg_x / pkg_y (spec 18 §3.3): towards payload.goal like layered_*, but the setpoint is
+			// at most `lead` m ahead of the robot, so the loaded speed stays near kp_pos · lead.
+			RegistryFunction PackageAxis(int axis) {
+				return [axis](const Environment::Worldview& w, double t, const std::vector<double>& k) {
+					const double alt_tol = k.at(0), switch_radius = k.at(1), lead = k.at(2);
+					const double px = Get(w, "pose.enu.x", t), py = Get(w, "pose.enu.y", t);
+					const double gx = Get(w, "payload.goal.x", t), gy = Get(w, "payload.goal.y", t);
+					const double d = std::hypot(gx - px, gy - py);
+					const bool at_layer = std::fabs(Get(w, "pose.enu.z", t) - Get(w, "layer.alt", t)) <= alt_tol;
+					if (!at_layer && d > switch_radius) return axis == 0 ? px : py;
+					const double s = d > lead ? lead / d : 1.0;
+					return axis == 0 ? px + (gx - px) * s : py + (gy - py) * s;
+				};
+			}
+
+			// zone_hold_x / _y / _z (spec 18 §4.3): the robot's place in the holding stack of zone
+			// target.arg (zone.<id>.hold), reached like layered_*: climb to the layer, cross, then
+			// descend to the stack altitude.
+			RegistryFunction ZoneHold(int axis) {
+				return [axis](const Environment::Worldview& w, double t, const std::vector<double>& k) {
+					const std::string p = "zone." + std::to_string(std::llround(Get(w, "target.arg", t))) + ".hold.";
+					const double px = Get(w, "pose.enu.x", t), py = Get(w, "pose.enu.y", t), pz = Get(w, "pose.enu.z", t);
+					const double hx = w.Scalar(p + "x", t).value_or(px), hy = w.Scalar(p + "y", t).value_or(py);
+					const double hz = w.Scalar(p + "z", t).value_or(pz);
+					const double d = std::hypot(hx - px, hy - py);
+					if (axis == 2) return d > k.at(1) ? std::max(Get(w, "layer.alt", t), hz) : hz;
+					const bool at_layer = pz >= Get(w, "layer.alt", t) - k.at(0) || pz >= hz - k.at(0);
+					if (!at_layer && d > k.at(1)) return axis == 0 ? px : py;
+					return axis == 0 ? hx : hy;
+				};
+			}
+
 			RegistryFunction VelocityTo(const char* axis_target, const char* axis_pose) {
 				return [axis_target, axis_pose](const Environment::Worldview& w, double t, const std::vector<double>& k) {
 					const double gain = k.at(0), limit = k.at(1);
@@ -95,6 +127,28 @@ namespace MRS {
 				    return HorizontalDistance(w, t) > k.at(0) ? Get(w, "layer.alt", t) : Get(w, "target.z", t);
 			    },
 			    1, {"pose.enu", "target.x", "target.y", "target.z", "layer.alt"});
+			const std::vector<std::string> pkg = {"pose.enu", "payload.goal", "layer.alt"};
+			r.Register("pkg_x", PackageAxis(0), 3, pkg);
+			r.Register("pkg_y", PackageAxis(1), 3, pkg);
+			r.Register(
+			    "pkg_z",
+			    [](const Environment::Worldview& w, double t, const std::vector<double>& k) {
+				    const double d = std::hypot(Get(w, "payload.goal.x", t) - Get(w, "pose.enu.x", t),
+				                                Get(w, "payload.goal.y", t) - Get(w, "pose.enu.y", t));
+				    return d > k.at(0) ? Get(w, "layer.alt", t) : Get(w, "payload.goal.z", t);
+			    },
+			    1, pkg);
+			r.Register(
+			    "yaw_to_goal",
+			    [](const Environment::Worldview& w, double t, const std::vector<double>&) {
+				    const double dx = Get(w, "payload.goal.x", t) - Get(w, "pose.enu.x", t), dy = Get(w, "payload.goal.y", t) - Get(w, "pose.enu.y", t);
+				    return std::hypot(dx, dy) < 1.0 ? Get(w, "att.yaw", t) : std::atan2(dy, dx);
+			    },
+			    0, {"pose.enu", "payload.goal", "att.yaw"});
+			const std::vector<std::string> zone = {"pose.enu", "target.arg", "layer.alt"};
+			r.Register("zone_hold_x", ZoneHold(0), 2, zone);
+			r.Register("zone_hold_y", ZoneHold(1), 2, zone);
+			r.Register("zone_hold_z", ZoneHold(2), 2, zone);
 			r.Register("cruise_x", Cruise("target.x", "pose.enu.x"), 3, pose_target);
 			r.Register("cruise_y", Cruise("target.y", "pose.enu.y"), 3, pose_target);
 			r.Register(

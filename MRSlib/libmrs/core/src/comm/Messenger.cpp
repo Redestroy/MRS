@@ -81,6 +81,9 @@ namespace MRS {
 					++stats_.own;
 					continue;
 				}
+				if (relay_ && m->recipient != self_ && relayed_[m->sender].insert(m->seq).second) {
+					if (transport_.Send(text, m->recipient)) ++stats_.relayed;
+				}
 				if (!m->Broadcast() && m->recipient != self_) {
 					++stats_.not_for_us;
 					continue;

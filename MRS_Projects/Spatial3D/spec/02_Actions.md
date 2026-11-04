@@ -92,7 +92,8 @@ Used by the point presets of spec 11 §3.1. The actuators are in spec 04 §3.
 |---|---|---|---|---|
 | `A_CAM` | CAPTURE | `U32X2` | shots, interval ms | Take `shots` pictures, `interval` ms apart. The action is `RUNNING` until the last one; 0 shots is done at once |
 | `A_GMB` | GIMBAL | `F32X2` | pitch rad, yaw rad | Point the camera gimbal. Pitch 0 is level and negative is down (−π/2 straight down); yaw is relative to the body. The gimbal clamps pitch to its limits |
-| `A_REL` | RELEASE | `I64` | package id | Open the payload bay if it holds package `id`. `FAILED` when it holds another package or none; id 0 is never released |
+| `A_REL` | RELEASE | `I64` | package id | Open the payload bay if it holds package `id`. `FAILED` when it holds another package or none; id 0 is never released. The sling's hook takes it too (spec 18 §2.2) |
+| `A_ZQ` | ZONE_QUEUE | `I64` | zone id | Handled by the executor through the MRS layer: this robot wants the zone (spec 18 §4.2). `DONE` at once |
 
 ### 4.3 Device-level actions (inside the device layer only)
 

@@ -11,6 +11,15 @@
 
 namespace MRS {
 	namespace Environment {
+		// The package flight of the sling (spec 18 §3.3).
+		struct DeliveryConfig {
+			double dest_tol = 1.0;         // m: payload.at_dest within this horizontal distance
+			double via_offset = 8.0;       // m: the largest sideways offset of the path's via point
+			double via_radius = 4.0;       // m: the via point counts as passed this close
+			double approach = 2.5;         // m: the package's bottom above the destination on arrival
+			double grounded_ratio = 0.3;   // payload.grounded when the load is below this share of the mass
+		};
+
 		struct UavWorldviewConfig {
 			double alpha = 0.85;  // KinematicsEstimator position gain
 			double beta = 0.3;    // velocity gain
@@ -24,6 +33,7 @@ namespace MRS {
 			double home_radius = 1.0;
 			double detection_radius = 2.0;
 			RepulsionConfig repulsion;  // spec 15 §4
+			DeliveryConfig delivery;    // spec 18 §3.3
 		};
 
 		// Every UAV processor, in catalog order.

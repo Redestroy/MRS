@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "mrs/port/Port.h"
+#include "mrs/sim/Packages.h"
 #include "mrs/world/GeoReference.h"
 
 namespace MRS {
@@ -55,6 +56,18 @@ namespace MRS {
 				std::array<double, 3> pos;
 			};
 			std::vector<Drop> drops;                       // every release, where it happened
+			// The sling (spec 18 §2.4): fixed length, a passive hook that catches package loops of
+			// `world`, and opens on command for hook_open_s.
+			PackageWorld* world = nullptr;
+			int robot_id = 0;
+			double sling_length = 2.0, sling_length_open = 2.1;  // m, body to hook, closed and open
+			double hook_open_s = 1.0;
+			std::int64_t carried = 0;      // package id on the hook, 0 for none
+			bool carried_resting = false;  // the carried package stands on something (the line is slack)
+			// Charging pads (spec 18 §3.5): a robot on the ground within pad_radius of one charges at charge_w.
+			std::vector<std::array<double, 3>> pads;
+			double pad_radius = 0.6, charge_w = 200.0;
+			double energy_charged_wh = 0.0;
 			std::vector<std::string> sent;
 			std::deque<std::string> inbox;
 			bool crashed = false;
@@ -76,6 +89,53 @@ namespace MRS {
 			double Pitch() const { return std::asin(std::clamp(-R_[6], -1.0, 1.0)); }
 			bool OnGround() const { return pos[2] <= 1e-6; }
 
+			// The carried package's weight hangs on the robot unless it stands on something.
+			double HangingMass() const {
+				if (!world || carried == 0 || carried_resting) return 0.0;
+				for (const auto& q : world->packages)
+					if (q.id == carried) return q.mass;
+				return 0.0;
+			}
+			bool HookOpen() const { return t_ < hook_open_until_; }
+			std::array<double, 3> HookPoint() const {
+				return {pos[0], pos[1], pos[2] - (HookOpen() ? sling_length_open : sling_length)};
+			}
+			void UpdateSling() {
+				if (!world) return;
+				const auto hook = HookPoint();
+				if (carried != 0) {
+					Package* p = world->Find(carried);
+					if (!p) return;
+					const double bottom = hook[2] - world->loop_height - p->height;
+					const double support = world->SupportAt(hook[0], hook[1], p);
+					carried_resting = bottom <= support;
+					p->pos = {hook[0], hook[1], std::max(bottom, support)};
+				} else if (!HookOpen()) {
+					if (Package* p = world->Catch(hook)) {
+						p->state = Package::State::CARRIED;
+						p->carrier = robot_id;
+						p->t_picked = t_;
+						carried = p->id;
+					}
+				}
+			}
+			// Opens the hook: a carried package stays where it is (on the ground, or it falls).
+			void OpenHook() {
+				hook_open_until_ = t_ + hook_open_s;
+				if (!world || carried == 0) return;
+				if (Package* p = world->Find(carried)) {
+					const double support = world->SupportAt(p->pos[0], p->pos[1], p);
+					p->drop_height = p->pos[2] - support;
+					p->pos[2] = support;
+					p->state = Package::State::PLACED;
+					p->t_placed = t_;
+					drops.push_back({t_, pos});
+				}
+				carried = 0;
+				carried_resting = false;
+			}
+
+
 			// --- platform ----------------------------------------------------------------------
 			std::vector<Port::PortInfo> Scan() override {
 				std::vector<Port::PortInfo> out;
@@ -89,6 +149,7 @@ namespace MRS {
 			bool Step() override {
 				for (int k = 0; k < 8; ++k) Integrate(0.001);
 				t_ += 0.008;
+				UpdateSling();
 				++step_;
 				return true;
 			}
@@ -99,13 +160,15 @@ namespace MRS {
 			static constexpr const char* kDevices[] = {"front left propeller", "front right propeller", "rear left propeller",
 			                                            "rear right propeller", "inertial unit", "gyro", "gps", "compass",
 			                                            "front left led", "front right led", "battery", "emitter", "receiver",
-			                                            "camera pitch", "camera yaw", "camera", "connector", "ranging"};
+			                                            "camera pitch", "camera yaw", "camera", "connector", "ranging",
+			                                            "hook", "load cell", "tag reader"};
 			// Motor positions from Mavic2Pro.proto: fl, fr, rl, rr; thrust constant signs.
 			static constexpr double kMotorX[4] = {0.0548537, 0.0548537, -0.177179, -0.177179};
 			static constexpr double kMotorY[4] = {0.151294, -0.151294, 0.127453, -0.127453};
 			static constexpr double kSign[4] = {1, -1, -1, 1};
 
 			void Integrate(double dt) {
+				const double mass = p_.mass + HangingMass();
 				double thrust = 0, tx = 0, ty = 0, tz = 0, power = p_.p0;
 				for (int i = 0; i < 4; ++i) {
 					const double w = motor[i];
@@ -122,9 +185,16 @@ namespace MRS {
 
 				// Forces in world frame: thrust along body z.
 				double f[3] = {R_[2] * thrust - p_.drag * vel[0] + wind[0], R_[5] * thrust - p_.drag * vel[1] + wind[1],
-				               R_[8] * thrust - p_.drag * vel[2] - p_.mass * 9.81 + wind[2]};
+				               R_[8] * thrust - p_.drag * vel[2] - mass * 9.81 + wind[2]};
 				const bool grounded = pos[2] <= 1e-6 && f[2] <= 0.0;
 				if (grounded) {
+					for (const auto& pad : pads)
+						if (std::hypot(pos[0] - pad[0], pos[1] - pad[1]) <= pad_radius) {
+							const double add = std::min(charge_w * dt / 3600.0, p_.capacity_wh - energy_wh_);
+							energy_wh_ += add;
+							energy_charged_wh += add;
+							break;
+						}
 					vel = {0, 0, 0};
 					omega = {0, 0, 0};
 					const double yaw = Yaw();
@@ -133,7 +203,7 @@ namespace MRS {
 					return;
 				}
 				for (int k = 0; k < 3; ++k) {
-					vel[k] += f[k] / p_.mass * dt;
+					vel[k] += f[k] / mass * dt;
 					pos[k] += vel[k] * dt;
 				}
 				distance_flown += std::sqrt(vel[0] * vel[0] + vel[1] * vel[1] + vel[2] * vel[2]) * dt;
@@ -198,6 +268,7 @@ namespace MRS {
 			long step_ = 0;
 			unsigned long long seed_ = 42;
 			unsigned long long range_seed_ = 7;
+			double hook_open_until_ = -1.0;
 		};
 
 		class QuadPort : public ::MRS::Port::Port {
@@ -225,6 +296,14 @@ namespace MRS {
 					v = {sim_.energy_wh_};
 				} else if (a == "connector") {
 					v = {sim_.package_held ? 1.0 : 0.0};
+				} else if (a == "hook") {
+					v = {sim_.carried != 0 ? 1.0 : 0.0, sim_.HookOpen() ? 1.0 : 0.0};
+				} else if (a == "load cell") {
+					v = {sim_.HangingMass(), sim_.HookOpen() ? sim_.sling_length_open : sim_.sling_length, sim_.HookOpen() ? 1.0 : 0.0};
+				} else if (a == "tag reader") {
+					const Package* p = sim_.world && sim_.carried ? sim_.world->Find(sim_.carried) : nullptr;
+					if (p) v = {static_cast<double>(p->id), p->dest[0], p->dest[1], p->dest[2], static_cast<double>(p->area), p->mass};
+					else v = {0.0};
 				} else if (a == "ranging") {
 					// Peers within range_m (default 30 m), ENU, with uniform noise of noise_m per axis.
 					const double range = Assignment().params.Num("range_m", 30.0), noise = Assignment().params.Num("noise_m", 0.0);
@@ -253,7 +332,9 @@ namespace MRS {
 				if (a == "camera pitch") sim_.gimbal_pitch = v.at(0);
 				else if (a == "camera yaw") sim_.gimbal_yaw = v.at(0);
 				else if (a == "camera") sim_.shots.push_back({sim_.t_, sim_.pos, sim_.gimbal_pitch});
-				else if (a == "connector") {
+				else if (a == "hook") {
+					if (v.at(0) < 0.5) sim_.OpenHook();
+				} else if (a == "connector") {
 					if (v.at(0) < 0.5 && sim_.package_held) sim_.drops.push_back({sim_.t_, sim_.pos});
 					sim_.package_held = v.at(0) >= 0.5;
 				} else sim_.leds[a] = v.at(0);

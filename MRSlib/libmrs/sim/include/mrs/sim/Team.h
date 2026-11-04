@@ -42,6 +42,12 @@ namespace MRS {
 			double bitrate_bps = 0.0;      // 0: no limit
 			double max_delay = 5.0;        // s: a message queued longer, before it goes on the air, is lost
 			long dropped = 0;
+			// Radio range (spec 18 §6): 0 means everyone hears everyone. Above 0, a message reaches
+			// only the agents within range_m of the sender when it goes on the air; the operator
+			// stands at operator_pos (ENU).
+			double range_m = 0.0;
+			std::array<double, 3> operator_pos{0, 0, 0};
+			long out_of_range = 0;  // receptions lost to range
 			double delay_sum = 0.0, delay_max = 0.0;  // s, over delivered messages
 
 		private:
@@ -99,6 +105,13 @@ namespace MRS {
 			double bitrate_bps = 0.0;                      // the channel's bitrate; 0: no limit (spec 13 §3)
 			double repulsion_lead = 0.0;                   // the supervisor's repulsion hook; 0: off (spec 15 §4.3)
 			double ranging_noise = -1.0;                   // m; at least 0: every robot has a ranging sensor (spec 15 §3.1)
+			double radio_range = 0.0;                      // m; 0: no limit. Above 0, see Air::range_m (spec 18 §6)
+			std::array<double, 3> operator_pos{0, 0, 0};   // ENU, where the issuer's radio is
+			PackageWorld* packages = nullptr;              // the delivery packages every sling sees (spec 18 §2.4)
+			double sling_length = 2.0;                     // m
+			std::vector<std::array<double, 3>> pads;       // charging pads (spec 18 §3.5)
+			double charge_w = 200.0;
+			bool recharge = false;                         // robots recharge at pads instead of a swap
 		};
 
 		// Times Select of the allocator it wraps (the decision time of spec 10 §5).

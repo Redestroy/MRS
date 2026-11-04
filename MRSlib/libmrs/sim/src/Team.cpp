@@ -27,9 +27,20 @@ namespace MRS {
 		}
 
 		void Air::Send(const Queued& q, double t) {
-			if (q.from != &op_) op_.inbox.push_back(q.text);
+			// Where the sender is now, for the range check.
+			std::array<double, 3> from = operator_pos;
 			for (auto* s : sims_)
-				if (s != q.from) s->inbox.push_back(q.text);
+				if (s == q.from) from = s->pos;
+			const auto reaches = [&](const std::array<double, 3>& to) {
+				if (range_m <= 0.0) return true;
+				const double dx = to[0] - from[0], dy = to[1] - from[1], dz = to[2] - from[2];
+				if (dx * dx + dy * dy + dz * dz <= range_m * range_m) return true;
+				++out_of_range;
+				return false;
+			};
+			if (q.from != &op_ && reaches(operator_pos)) op_.inbox.push_back(q.text);
+			for (auto* s : sims_)
+				if (s != q.from && reaches(s->pos)) s->inbox.push_back(q.text);
 			++messages;
 			bytes += static_cast<long>(q.text.size());
 			delay_sum += t - q.t;
@@ -173,6 +184,7 @@ namespace MRS {
 			robot = Device::BuildRobot(definition, devices, sim, &map);
 			Robot::ControllerConfig cc;
 			cc.safety.repulsion_lead = c.repulsion_lead;
+			cc.recharge = c.recharge;
 			cc.robot = "r" + std::to_string(id);
 			cc.robot_id = id;
 			ctl = std::make_unique<Robot::RobotController>(robot, library, functions, cc);
@@ -189,10 +201,18 @@ namespace MRS {
 
 		Team::Team(const RobotFiles& files, const TeamConfig& c) : issuer(air.Operator(), c.mission.Header(), c.issuer), c_(c) {
 			air.bitrate_bps = c.bitrate_bps;
+			air.range_m = c.radio_range;
+			air.operator_pos = c.operator_pos;
 			for (std::size_t k = 0; k < c.mission.homes.size(); ++k) {
 				const int id = static_cast<int>(k + 1);
 				robots.push_back(std::make_unique<TeamRobot>(id, c.mission.homes[k], !c.without_leds.count(id), files, c));
 				air.Add(&robots.back()->sim);
+				robots.back()->sim.world = c.packages;
+				robots.back()->sim.robot_id = static_cast<int>(robots.size());
+				robots.back()->sim.sling_length = c.sling_length;
+				robots.back()->sim.sling_length_open = c.sling_length + 0.1;
+				robots.back()->sim.pads = c.pads;
+				robots.back()->sim.charge_w = c.charge_w;
 			}
 			for (auto& r : robots)  // every robot is a peer of every other, for the ranging sensor
 				for (auto& q : robots)

@@ -74,6 +74,25 @@ namespace MRS {
 		std::vector<std::string> PredicateCondition::Bind(Environment::Worldview& w, double t, const Environment::GeoReference*) const {
 			w.SetId("target.predicate", predicate_, t);
 			w.SetBool("target.value", value_, t);
+			// target.arg (spec 18 §4.3): the number in the predicate's name ("zone.3.mine" gives 3), or
+			// the field <name without its last segment>.id ("zone.dest.mine" reads zone.dest.id).
+			std::size_t start = 0;
+			while (start <= predicate_.size()) {
+				const std::size_t end = std::min(predicate_.find('.', start), predicate_.size());
+				const std::string seg = predicate_.substr(start, end - start);
+				if (!seg.empty() && seg.find_first_not_of("0123456789") == std::string::npos) {
+					w.SetScalar("target.arg", std::stod(seg), t);
+					return {"target.predicate", "target.value", "target.arg"};
+				}
+				start = end + 1;
+			}
+			const std::size_t last = predicate_.rfind('.');
+			if (last != std::string::npos) {
+				if (auto id = w.Scalar(predicate_.substr(0, last) + ".id", t)) {
+					w.SetScalar("target.arg", *id, t);
+					return {"target.predicate", "target.value", "target.arg"};
+				}
+			}
 			return {"target.predicate", "target.value"};
 		}
 

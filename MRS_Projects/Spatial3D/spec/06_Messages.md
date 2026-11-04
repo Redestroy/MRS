@@ -63,6 +63,7 @@ taskid = issuer "." seq { "." child }
 | `M_SYNC` | `V+` (`V_FLD` and `V_DET` views) | broadcast | World fields and detections the sender measured itself (WP11, spec 15 §2) |
 | `M_CMD` | `id command`, `tid task` | broadcast or P2P, from the issuer | `abort`, `recall`, `pause`, `resume`, `cancel` (with a task id; `0` for commands about the whole mission) |
 | `M_PLAN` | `int revision`, `int n`, `n × tid task` | P2P, from the issuer | The recipient's route from the central planner (G-C, spec 10 §2.3), in order. A higher revision replaces the route; a lower or equal one is ignored |
+| `M_ZONE` | `int zone`, `id op`, `num stamp` | broadcast | The sender wants (`want`) or frees (`free`) a zone; robots line up by `stamp` (spec 18 §4.2) |
 
 Example: `r2` claims task `op.17` for 30 s.
 
@@ -144,7 +145,7 @@ The journal lets a robot resume its work after a battery swap or a restart (JB d
 | `J_T` | `num stamp`, `id pool_state`, `int iterator`, `T` | A task's pool or execution state changes. `T` is the full task with its current execution state in the state slot; `iterator` is its action iterator |
 | `J_K` | `num stamp`, `int n`, `n × tid` | The active-task stack changes; listed bottom to top |
 | `J_C` | `num stamp`, `tid task`, `id owner`, `num expiry` | A claim is made, renewed, lost or released (`expiry = 0` means released) |
-| `J_E` | `num stamp`, `id event` | Lifecycle events: `start`, `swap_land`, `restart`, `end` |
+| `J_E` | `num stamp`, `id event` | Lifecycle events: `start`, `swap_land`, `restart`, `end`, and `recharge` / `recharged` around a recharge at a pad (spec 18 §3.5) |
 
 Rules:
 * Records are appended and flushed at once. A partly written last record (no final `/`) is ignored on reload.

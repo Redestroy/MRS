@@ -35,10 +35,16 @@ namespace MRS {
 			if (messages) {
 				m.views.insert({"V_PEER", "V_FLD", "V_DET"});
 				m.actions.insert("A_SY");
+				m.actions.insert("A_ZQ");  // zones are queued over the radio (spec 18 §4)
 			}
 			auto resolution = catalog.Resolve(m.views);
 			m.fields = std::move(resolution.fields);
 			m.processors = std::move(resolution.active);
+			// The MRS layer keeps the robot's place in the zone queues (spec 18 §4).
+			if (messages) {
+				m.fields.insert("zone");
+				m.measured.insert("zone");
+			}
 			return m;
 		}
 

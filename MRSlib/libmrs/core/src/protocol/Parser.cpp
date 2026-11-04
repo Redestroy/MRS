@@ -626,7 +626,7 @@ namespace MRS {
 				c.Num();  // stamp
 				static const std::map<std::string, int> plain = {
 					{"V_GEO", 3}, {"V_POS3", 3}, {"V_VEL3", 3}, {"V_ATT", 3}, {"V_RATE", 3}, {"V_ACC", 3},
-					{"V_BARO", 1}, {"V_MAG", 1}, {"V_RNG", 1}, {"V_PAY", 1}, {"V_BAT", 3}, {"V_P2", 3}};
+					{"V_BARO", 1}, {"V_MAG", 1}, {"V_RNG", 1}, {"V_PAY", 1}, {"V_BAT", 3}, {"V_P2", 3}, {"V_TAG", 6}, {"V_SLG", 3}};
 				auto it = plain.find(code);
 				if (it != plain.end()) return c.Nums(it->second);
 				if (code == "V_PEER") {
@@ -736,7 +736,7 @@ namespace MRS {
 					c.Id();
 					c.Num();
 				} else if (code == "J_E") {
-					c.IdIn({"start", "swap_land", "restart", "end"});
+					c.IdIn({"start", "swap_land", "restart", "end", "recharge", "recharged"});
 				}
 			}
 
@@ -771,6 +771,11 @@ namespace MRS {
 					c.Int();
 				} else if (code == "M_STATE") c.Label('V');
 				else if (code == "M_SYNC") c.Labels("V", 1);
+				else if (code == "M_ZONE") {
+					c.Int();  // zone
+					c.Id();   // want | free
+					c.Num();  // stamp of the want
+				}
 				else if (code == "M_PROFILE") {
 					c.Id();
 					std::int64_t n = c.Count();
@@ -811,7 +816,7 @@ namespace MRS {
 					for (const auto& info : Device::ActionRegistry()) s.codes[info.code] = ActionSlots;
 					add({"F_K", "F_L", "F_X", "F_S", "F_P", "F_C"}, FunctionSlots);
 					add({"V_GEO", "V_POS3", "V_VEL3", "V_ATT", "V_RATE", "V_ACC", "V_BARO", "V_MAG", "V_RNG", "V_BAT",
-					     "V_PEER", "V_REL3", "V_DET", "V_P2", "V_PAY", "V_FLD"}, ViewSlots);
+					     "V_PEER", "V_REL3", "V_DET", "V_P2", "V_PAY", "V_FLD", "V_TAG", "V_SLG"}, ViewSlots);
 					add({"D_H", "D_J", "D_X", "D_S", "D_A", "D_C", "D_M"}, DeviceSlots);
 					add({"P_R", "P_A"}, PortSlots);
 					add({"K_A", "K_V", "K_M", "K_Q"}, CapabilitySlots);
@@ -821,7 +826,7 @@ namespace MRS {
 					add({"J_H", "J_T", "J_K", "J_C", "J_E"}, JournalSlots);
 					add({"B_E"}, BehaviourSlots);
 					add({"M_MISSION", "M_TASK", "M_CLAIM", "M_RELEASE", "M_DONE", "M_FAIL", "M_DUMP", "M_STATE",
-					     "M_PROFILE", "M_BID", "M_INFOREQ", "M_INFO", "M_CMD", "M_PLAN", "M_SYNC"}, MessageSlots);
+					     "M_PROFILE", "M_BID", "M_INFOREQ", "M_INFO", "M_CMD", "M_PLAN", "M_SYNC", "M_ZONE"}, MessageSlots);
 					s.reserved = {"T_D", "T_G", "T_U", "C_Q", "F_E",
 					              // legacy 2021 action codes (spec 02 §4.5)
 					              "A_l", "A_p", "A_t", "A_f", "A_b", "A_r", "A_y", "A_c", "A_d", "A_D", "A_M", "A_R",

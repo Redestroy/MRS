@@ -51,6 +51,9 @@ namespace MRS {
 			robot_.SetEventListener([this](const Robot::RaisedEvent& e) { raised_.push_back(e); });
 			robot_.Executor().SetSync([this](const std::vector<std::string>& topics, double t) { return AskPeers(topics, t); });
 			if (robot_.HasMission()) messenger_.SetMission(robot_.MissionId());
+			messenger_.SetRelay(c_.relay);
+			for (const auto& z : c_.zones) zones_[z.id].spec = z;
+			robot_.Executor().SetZone([this](std::int64_t zone, double t) { OnZoneWant(zone, t); });
 			AllocatorContext ctx;
 			ctx.pool = &pool_;
 			ctx.peers = &peers_;
@@ -97,6 +100,7 @@ namespace MRS {
 			pool_.ExpireClaims(t);
 			UpdateTrees(t);
 			if (robot_.HasMission()) Allocate(t);
+			UpdateZones(t);
 			robot_.Tick(t);
 			AfterRobot(t);
 			if (robot_.HasMission()) {
@@ -125,6 +129,7 @@ namespace MRS {
 			}
 			if (code == "M_TASK") return OnTasks(m, t);
 			if (code == "M_SYNC" || code == "M_INFO") return OnShared(m);
+			if (code == "M_ZONE") return OnZoneMessage(m, t);
 			if (code == "M_INFOREQ") return OnInfoRequest(m, t);
 			if (code == "M_STATE") {
 				auto view = Environment::ViewFromRecord(m.Child(0));
