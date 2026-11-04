@@ -132,6 +132,18 @@ namespace MRS {
 			double tol_xy = 0.25, tol_z = 0.5;  // m, of the point above the pile
 			double mass_min = 0.2, mass_max = 0.5;  // kg, drawn per package
 			unsigned long long seed = 1;   // destinations and masses
+			// Zones (spec 18 §4): wait in line for the pile and for the destination area.
+			bool zones = false;
+			double zone_radius = 3.0;      // m
+			double hold_offset = 6.0;      // m from the zone's centre to its holding point
+			std::int64_t dest_zone_base = 200;
+		};
+
+		// A zone of the job: source s is zone s + 1, destination area a is dest_zone_base + a.
+		struct ZoneDef {
+			std::int64_t id = 0;
+			Point centre{0, 0, 0}, hold{0, 0, 0};
+			double radius = 3.0;
 		};
 
 		// One package of the manifest: what its tag says, and the pile it starts in.
@@ -146,6 +158,7 @@ namespace MRS {
 		struct DeliveryJob {
 			std::vector<ManifestEntry> manifest;  // in pile order per source, bottom first
 			std::vector<Protocol::Record> tasks;  // one delivery unit per package
+			std::vector<ZoneDef> zones;           // with DeliveryOptions::zones
 		};
 
 		// n packages split over the sources in turn, each with a destination drawn from `destinations`
@@ -154,7 +167,9 @@ namespace MRS {
 		DeliveryJob DeliveryTasks(int n, const std::vector<Point>& sources, const std::vector<Point>& destinations,
 		                          const DeliveryOptions& o, const std::string& issuer = "op", int first_id = 1);
 		// A delivery unit for a pile at `source` whose top loop is at `top_loop` m (spec 18 §5.1).
-		Protocol::Record DeliveryTask(const std::string& id, const Point& source, double top_loop, const DeliveryOptions& o);
+		// With o.zones, source_zone is the pile's zone number.
+		Protocol::Record DeliveryTask(const std::string& id, const Point& source, double top_loop, const DeliveryOptions& o,
+		                              std::int64_t source_zone = 0);
 		// The manifest as CSV: package,source,area,dest_x,dest_y,dest_z,mass.
 		std::string ManifestCsv(const DeliveryJob& job);
 

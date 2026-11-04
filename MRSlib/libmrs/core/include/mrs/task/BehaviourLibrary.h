@@ -19,6 +19,8 @@ namespace MRS {
 			std::shared_ptr<const Task> behaviour;  // normally a T_B
 		};
 
+		bool QualifierMatches(const std::string& pattern, const std::string& name);
+
 		class BehaviourLibrary {
 		public:
 			void Add(BehaviourEntry entry);

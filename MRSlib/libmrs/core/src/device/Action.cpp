@@ -60,6 +60,7 @@ namespace MRS {
 				{"A_CAM", "CAPTURE", ArgLayout::U32X2},
 				{"A_GMB", "GIMBAL", ArgLayout::F32X2},
 				{"A_REL", "RELEASE", ArgLayout::I64},
+				{"A_ZQ", "ZONE_QUEUE", ArgLayout::I64},
 			};
 			return registry;
 		}

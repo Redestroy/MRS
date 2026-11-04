@@ -306,6 +306,15 @@ namespace MRS {
 					Finish(TaskState::FAILED, FailReason::MISSING_FIELD);
 					return false;
 				}
+				if (command->entries.size() == 1 && command->entries[0].action.code == "A_ZQ") {
+					if (!ex.zone_) {
+						Finish(TaskState::FAILED, FailReason::NO_ACTUATOR);
+						return false;
+					}
+					ex.zone_(Device::UnpackIntegers(Device::ArgLayout::I64, command->entries[0].action.arg).at(0), t);
+					++f.iterator;
+					return false;
+				}
 				result.dispatched = *command;
 				switch (ex.sink_.Dispatch(*command, t)) {
 				case Device::ActionStatus::DONE: ++f.iterator; break;

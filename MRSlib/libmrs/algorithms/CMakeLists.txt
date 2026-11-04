@@ -2,6 +2,7 @@ add_library(mrs_algorithms
 	src/TaskPool.cpp
 	src/Allocator.cpp
 	src/MrsLayer.cpp
+	src/MrsZones.cpp
 	src/MrsSync.cpp
 	src/TaskIssuer.cpp
 	src/Planner.cpp

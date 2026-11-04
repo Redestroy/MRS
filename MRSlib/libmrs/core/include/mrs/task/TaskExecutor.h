@@ -54,6 +54,9 @@ namespace MRS {
 			// A_SY (spec 15 §2.5): asks the live peers for these world-field topics and returns how
 			// many were asked. Unset, or 0 asked: A_SY fails at once with NOT_KNOWN.
 			void SetSync(std::function<int(const std::vector<std::string>& topics, double t)> f) { sync_ = std::move(f); }
+			// A_ZQ zone (spec 18 §4): this robot wants the zone; the MRS layer queues it. Unset:
+			// A_ZQ fails with NO_ACTUATOR.
+			void SetZone(std::function<void(std::int64_t zone, double t)> f) { zone_ = std::move(f); }
 
 			// Starts a task when the stack is empty, or preempts the top task (spec 03 §8.6).
 			void Push(std::unique_ptr<Task> task);
@@ -87,6 +90,7 @@ namespace MRS {
 			std::function<std::optional<std::string>(const std::string&)> pool_state_;
 			const CapabilityProfile* profile_ = nullptr;
 			std::function<int(const std::vector<std::string>&, double)> sync_;
+			std::function<void(std::int64_t, double)> zone_;
 			std::vector<std::unique_ptr<Frame>> stack_;
 		};
 	}

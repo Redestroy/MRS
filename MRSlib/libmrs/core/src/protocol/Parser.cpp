@@ -771,6 +771,11 @@ namespace MRS {
 					c.Int();
 				} else if (code == "M_STATE") c.Label('V');
 				else if (code == "M_SYNC") c.Labels("V", 1);
+				else if (code == "M_ZONE") {
+					c.Int();  // zone
+					c.Id();   // want | free
+					c.Num();  // stamp of the want
+				}
 				else if (code == "M_PROFILE") {
 					c.Id();
 					std::int64_t n = c.Count();
@@ -821,7 +826,7 @@ namespace MRS {
 					add({"J_H", "J_T", "J_K", "J_C", "J_E"}, JournalSlots);
 					add({"B_E"}, BehaviourSlots);
 					add({"M_MISSION", "M_TASK", "M_CLAIM", "M_RELEASE", "M_DONE", "M_FAIL", "M_DUMP", "M_STATE",
-					     "M_PROFILE", "M_BID", "M_INFOREQ", "M_INFO", "M_CMD", "M_PLAN", "M_SYNC"}, MessageSlots);
+					     "M_PROFILE", "M_BID", "M_INFOREQ", "M_INFO", "M_CMD", "M_PLAN", "M_SYNC", "M_ZONE"}, MessageSlots);
 					s.reserved = {"T_D", "T_G", "T_U", "C_Q", "F_E",
 					              // legacy 2021 action codes (spec 02 §4.5)
 					              "A_l", "A_p", "A_t", "A_f", "A_b", "A_r", "A_y", "A_c", "A_d", "A_D", "A_M", "A_R",

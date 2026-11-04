@@ -24,6 +24,16 @@ namespace MRS {
 			double period = 1.0;
 		};
 
+		// A place only `capacity` robots may use at once: a pickup spot, a drop spot, a charging
+		// pad (spec 18 §4). Waiting robots hold in a vertical stack above (hold_x, hold_y).
+		struct ZoneSpec {
+			std::int64_t id = 0;
+			double x = 0, y = 0, z = 0;  // centre, ENU
+			double radius = 3.0;         // m, horizontal
+			int capacity = 1;
+			double hold_x = 0, hold_y = 0;
+		};
+
 		struct MrsConfig {
 			double state_period = 0.5;     // s between M_STATE (2 Hz, spec 06 §4)
 			double profile_period = 10.0;  // s between M_PROFILE, so late joiners learn it
@@ -45,6 +55,13 @@ namespace MRS {
 			double sync_share = 0.25;
 			// Forward every message heard once, for agents beyond one radio range (spec 18 §6).
 			bool relay = false;
+			// Zones and queues (spec 18 §4).
+			std::vector<ZoneSpec> zones;
+			double zone_renew = 2.0;      // s between repeated wants
+			double zone_timeout = 10.0;   // s: a want not repeated for this long lapses
+			double hold_base = 8.0;       // m: the first place in line holds at this altitude
+			double hold_step = 3.0;       // m between places in line
+			std::int64_t dest_zone_base = 200;  // the zone of destination area a is dest_zone_base + a
 		};
 
 		struct MrsStats {
@@ -107,6 +124,11 @@ namespace MRS {
 			void PostViews(const std::string& code, const std::string& recipient, const std::vector<Environment::View>& views, double t);
 			void SendDump(const std::string& id, const std::string& reason, bool is_static, long progress, double t);
 			void CheckImpossible(PoolEntry& e, double t);
+			// Zones (spec 18 §4, MrsZones.cpp).
+			void OnZoneWant(std::int64_t zone, double t);
+			void OnZoneMessage(const Comm::Message& m, double t);
+			void UpdateZones(double t);
+			void SendZone(std::int64_t zone, const char* op, double stamp, double t);
 			bool StaticOk(const Task::Task& task) const;
 
 			Robot::RobotController& robot_;
@@ -136,6 +158,13 @@ namespace MRS {
 			double now_ = 0.0;
 			double last_state_ = -1e9, last_profile_ = -1e9;
 			std::size_t max_payload_ = 0;
+			struct ZoneState {
+				ZoneSpec spec;
+				std::map<std::string, std::pair<double, double>> wants;  // robot -> (stamp of its want, heard)
+				bool wanted = false, entered = false;
+				double stamp = 0.0, sent = -1e9;
+			};
+			std::map<std::int64_t, ZoneState> zones_;
 			std::map<std::string, double> sync_next_;   // by prefix: when it is due
 			std::map<std::string, double> sync_sent_;   // by field path or detection id: stamp last sent
 			std::set<std::string> asked_;               // peers sent an M_INFOREQ
