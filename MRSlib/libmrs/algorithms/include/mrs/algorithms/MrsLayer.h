@@ -43,6 +43,8 @@ namespace MRS {
 			std::vector<SyncEntry> sync{{"det.", 1.0}};
 			double sync_range = 0.0;
 			double sync_share = 0.25;
+			// Forward every message heard once, for agents beyond one radio range (spec 18 §6).
+			bool relay = false;
 		};
 
 		struct MrsStats {

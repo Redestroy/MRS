@@ -51,6 +51,7 @@ namespace MRS {
 			robot_.SetEventListener([this](const Robot::RaisedEvent& e) { raised_.push_back(e); });
 			robot_.Executor().SetSync([this](const std::vector<std::string>& topics, double t) { return AskPeers(topics, t); });
 			if (robot_.HasMission()) messenger_.SetMission(robot_.MissionId());
+			messenger_.SetRelay(c_.relay);
 			AllocatorContext ctx;
 			ctx.pool = &pool_;
 			ctx.peers = &peers_;

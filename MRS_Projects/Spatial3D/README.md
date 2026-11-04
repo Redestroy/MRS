@@ -34,6 +34,7 @@ Branch: `spatial-3d`. Status: **WP8 done** (WP0–WP8). Library code is in [`MRS
 | 15 | [Worldview sync, relative positions and repulsion](spec/15_Sync_and_Neighbours.md) | Sharing world fields and detections (M_SYNC, ask a peer), the ranging sensor, neighbours, the repulsion processor and its opt-in use, the sync behaviour and the capability guard (WP11) |
 | 16 | [Device identity, discovery and bench mode](spec/16_Device_Discovery_and_Bench.md) | Draft, version 0.2: identities and identity maps for unknown and swapped devices, joints as port providers, open port types, scoped names, parts and the device library, discovery, the boot check, bench mode, C API touchpoints |
 | 17 | [Track files and the MRS dot viewer](spec/17_Replay_Viewer.md) | Robot poses over time as CSV with mission and task events, written by the Webots supervisor and QuadSim; task markers from the protocol files; `mrs_dot_viewer`, the SFML replay window |
+| 18 | [Package delivery](spec/18_Package_Delivery.md) | Draft: sling, delivery behaviours, zones and queues, delivery generator; range-limited radio and message relaying (done) |
 
 ## WP0 acceptance (from the plan)
 
