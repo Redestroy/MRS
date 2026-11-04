@@ -184,6 +184,7 @@ namespace MRS {
 			robot = Device::BuildRobot(definition, devices, sim, &map);
 			Robot::ControllerConfig cc;
 			cc.safety.repulsion_lead = c.repulsion_lead;
+			cc.recharge = c.recharge;
 			cc.robot = "r" + std::to_string(id);
 			cc.robot_id = id;
 			ctl = std::make_unique<Robot::RobotController>(robot, library, functions, cc);
@@ -210,6 +211,8 @@ namespace MRS {
 				robots.back()->sim.robot_id = static_cast<int>(robots.size());
 				robots.back()->sim.sling_length = c.sling_length;
 				robots.back()->sim.sling_length_open = c.sling_length + 0.1;
+				robots.back()->sim.pads = c.pads;
+				robots.back()->sim.charge_w = c.charge_w;
 			}
 			for (auto& r : robots)  // every robot is a peer of every other, for the ranging sensor
 				for (auto& q : robots)

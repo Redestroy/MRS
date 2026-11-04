@@ -736,7 +736,7 @@ namespace MRS {
 					c.Id();
 					c.Num();
 				} else if (code == "J_E") {
-					c.IdIn({"start", "swap_land", "restart", "end"});
+					c.IdIn({"start", "swap_land", "restart", "end", "recharge", "recharged"});
 				}
 			}
 

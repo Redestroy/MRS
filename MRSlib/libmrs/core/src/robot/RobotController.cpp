@@ -1,8 +1,10 @@
 #include "mrs/robot/RobotController.h"
 
 #include <algorithm>
+#include <cmath>
 
 #include "mrs/BuildError.h"
+#include "mrs/protocol/Writer.h"
 
 namespace MRS {
 	namespace Robot {
@@ -238,7 +240,8 @@ namespace MRS {
 					HandleTaskEvents(result.events, t);
 					JournalStack(t);
 					// A swap waits for the current task to end (spec 08 §4 BATTERY_LOW).
-					if (swap_pending_ && !returning_ && !swap_landed_ && executor_.Empty()) {
+					if (swap_pending_ && !returning_ && !swap_landed_ && !recharging_ && executor_.Empty() && c_.recharge) PushRecharge(t);
+					if (swap_pending_ && !returning_ && !swap_landed_ && !recharging_ && executor_.Empty()) {
 						if (Airborne()) {
 							PushReturn();
 						} else {
@@ -351,6 +354,28 @@ namespace MRS {
 			executor_.Push(std::move(task));
 		}
 
+		void RobotController::PushRecharge(double t) {
+			// The pad the MRS layer chose: wait for it, fly above it, land, charge (spec 18 §3.5).
+			const auto& w = model_.world;
+			const auto px = w.Scalar("zone.pad.x", t), py = w.Scalar("zone.pad.y", t), pid = w.Scalar("zone.pad.id", t);
+			if (!px || !py || !pid) return;
+			auto num = [](double v) { return Protocol::FormatNumber(std::round(v * 1000.0) / 1000.0); };
+			const std::string id = "0";  // the parts carry no ids of their own; the root becomes safety.recharge
+			const std::string text = "T: T_S " + id + " 1 0 C_1 C_2 T_1..4/\nC_1: C_N/\nC_2: C_N/\n"
+			                         "T_1: T_A " + id + " 1 0 C_1 C_2 A_1/\nC_1: C_? ?_1/\n?_1: zone.pad.mine T/\nC_2: C_N/\nA_1: A_N/\n"
+			                         "T_2: T_A " + id + " 1 0 C_1 C_2 A_1/\nC_1: C_P3 " + num(*px) + " " + num(*py) + " " + num(c_.pad_approach) +
+			                         " 0.3 0.5 0 -1/\nC_2: C_N/\nA_1: A_N/\n"
+			                         "T_3: T_A " + id + " 1 0 C_1 C_2 A_1/\nC_1: C_? ?_1/\n?_1: landed T/\nC_2: C_N/\nA_1: A_N/\n"
+			                         "T_4: T_B " + id + " 1 0 C_1 C_2 C_3 T_1/\nC_1: C_N/\nC_2: C_N/\nC_3: C_m battery.remaining ge " + num(c_.recharge_full) +
+			                         " 0/\nT_1: T_A 0 1 0 C_1 C_2 A_1..2/\nC_1: C_N/\nC_2: C_N/\nA_1: A_W 1/\nA_2: A_N/\n";
+			auto tasks = factory_.BuildTasks(text);
+			if (tasks.size() != 1) return;
+			tasks.front()->SetId(std::string(kSafetyPrefix) + "recharge");
+			executor_.Push(std::move(tasks.front()));
+			recharging_ = true;
+			journal_.Event(t, "recharge");
+		}
+
 		void RobotController::PushReturn() {
 			// Pushed in reverse: the robot flies home, then lands.
 			PushSafety("land");
@@ -394,7 +419,10 @@ namespace MRS {
 				blocked_ = true;
 				swap_pending_ = true;
 				// Finish the current task only if the energy for it, the way home and the reserve is there.
-				if (airborne && !returning_ && current_ && !resources_.Feasible(*current_, w, t)) PushReturn();
+				if (airborne && !returning_ && current_ && !resources_.Feasible(*current_, w, t)) {
+					if (c_.recharge) PushRecharge(t);
+					if (!recharging_) PushReturn();
+				}
 			}
 			low_prev_ = low;
 
@@ -415,6 +443,16 @@ namespace MRS {
 				if (!e.behaviour && IsSafety(e.task_id)) {
 					if (!ended) continue;
 					const std::string name = e.task_id.substr(std::string(kSafetyPrefix).size());
+					if (name == "recharge") {
+						recharging_ = false;
+						if (e.state == Task::TaskState::SUCCEEDED) {
+							// Charged: take tasks again. A preempted task resumes from the stack.
+							blocked_ = false;
+							swap_pending_ = false;
+							journal_.Event(t, "recharged");
+						}
+						continue;
+					}
 					if (name == "land" || name == "emergency_land") {
 						returning_ = false;
 						if (swap_pending_) {
@@ -428,6 +466,7 @@ namespace MRS {
 					continue;
 				}
 				if (e.behaviour) continue;
+				if (recharging_ && e.task_id == "0") continue;  // a part of the recharge
 				if (!records_.count(e.task_id)) {
 					// A child of a complex task: the listener hears it, the journal does not (spec 12 §2.2).
 					if (listener_) listener_(e, t);

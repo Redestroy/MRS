@@ -109,6 +109,9 @@ namespace MRS {
 			std::array<double, 3> operator_pos{0, 0, 0};   // ENU, where the issuer's radio is
 			PackageWorld* packages = nullptr;              // the delivery packages every sling sees (spec 18 §2.4)
 			double sling_length = 2.0;                     // m
+			std::vector<std::array<double, 3>> pads;       // charging pads (spec 18 §3.5)
+			double charge_w = 200.0;
+			bool recharge = false;                         // robots recharge at pads instead of a swap
 		};
 
 		// Times Select of the allocator it wraps (the decision time of spec 10 §5).

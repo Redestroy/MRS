@@ -49,7 +49,7 @@ namespace MRS {
 				if (z.wanted) {
 					// Release: the robot has no unit any more, or it was in the zone and has left it.
 					const double d = px && py ? std::hypot(*px - z.spec.x, *py - z.spec.y) : 1e9;
-					if (assigned_.empty() || (z.entered && d > z.spec.radius + 1.0)) {
+					if ((assigned_.empty() && !robot_.Recharging()) || (z.entered && d > z.spec.radius + 1.0)) {
 						z.wanted = false;
 						SendZone(id, "free", z.stamp, t);
 					} else {
@@ -69,6 +69,29 @@ namespace MRS {
 				w.SetScalar(p + ".place", place, t, "zones");
 				const double line = std::max(0, place - z.spec.capacity + 1);
 				w.SetVec3(p + ".hold", z.spec.hold_x, z.spec.hold_y, c_.hold_base + line * c_.hold_step, t, "zones");
+			}
+			// The charging pad for this robot: the one it already wants, else the one with the
+			// shortest line, then the nearest (spec 18 §3.5).
+			const ZoneState* pad = nullptr;
+			double best = 1e18;
+			for (const auto& [id, z] : zones_) {
+				if (!z.spec.pad) continue;
+				if (z.wanted) {
+					pad = &z;
+					break;
+				}
+				const double d = px && py ? std::hypot(*px - z.spec.x, *py - z.spec.y) : 0.0;
+				const double score = static_cast<double>(z.wants.size()) * 1e6 + d;
+				if (score < best) {
+					best = score;
+					pad = &z;
+				}
+			}
+			if (pad) {
+				w.SetScalar("zone.pad.id", static_cast<double>(pad->spec.id), t, "zones");
+				w.SetScalar("zone.pad.x", pad->spec.x, t, "zones");
+				w.SetScalar("zone.pad.y", pad->spec.y, t, "zones");
+				w.SetBool("zone.pad.mine", *w.Bool("zone." + std::to_string(pad->spec.id) + ".mine", t), t, "zones");
 			}
 			// The destination zone of the carried package.
 			const auto area = w.Scalar("payload.area", t);

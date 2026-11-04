@@ -44,6 +44,11 @@ namespace MRS {
 			SafetyConfig safety;            // speed and climb limits come from the fcu when there is one
 			ResourceConfig resources;       // cruise speed and climb rate likewise
 			Task::ExecutorConfig executor;
+			// Recharge at a charging pad instead of landing at home for a swap (spec 18 §3.5). The
+			// pad comes from the MRS layer (zone.pad.*); without one the robot swaps as before.
+			bool recharge = false;
+			double recharge_full = 0.95;   // battery.remaining that ends charging
+			double pad_approach = 4.0;     // m above the pad before landing
 		};
 
 		class RobotController {
@@ -101,6 +106,8 @@ namespace MRS {
 			bool ListDone() const { return list_done_; }
 			bool TasksBlocked() const { return blocked_; }
 			bool Returning() const { return returning_; }
+			// A recharge (spec 18 §3.5) is on the stack.
+			bool Recharging() const { return recharging_; }
 
 			// The last state of a task of the list, by id.
 			std::optional<Task::TaskState> StateOf(const std::string& id) const;
@@ -173,6 +180,8 @@ namespace MRS {
 
 			// Events.
 			bool blocked_ = false, swap_pending_ = false, returning_ = false, swap_landed_ = false;
+			bool recharging_ = false;
+			void PushRecharge(double t);
 			bool crit_prev_ = false, low_prev_ = false, fence_prev_ = true, failsafe_prev_ = false;
 			std::vector<RaisedEvent> events_;
 			std::vector<LoggedTaskEvent> task_log_;

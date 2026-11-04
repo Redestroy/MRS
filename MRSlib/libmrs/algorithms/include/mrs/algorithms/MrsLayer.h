@@ -32,6 +32,7 @@ namespace MRS {
 			double radius = 3.0;         // m, horizontal
 			int capacity = 1;
 			double hold_x = 0, hold_y = 0;
+			bool pad = false;            // a charging pad (spec 18 §3.5)
 		};
 
 		struct MrsConfig {

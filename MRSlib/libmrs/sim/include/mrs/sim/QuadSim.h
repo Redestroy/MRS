@@ -64,6 +64,10 @@ namespace MRS {
 			double hook_open_s = 1.0;
 			std::int64_t carried = 0;      // package id on the hook, 0 for none
 			bool carried_resting = false;  // the carried package stands on something (the line is slack)
+			// Charging pads (spec 18 §3.5): a robot on the ground within pad_radius of one charges at charge_w.
+			std::vector<std::array<double, 3>> pads;
+			double pad_radius = 0.6, charge_w = 200.0;
+			double energy_charged_wh = 0.0;
 			std::vector<std::string> sent;
 			std::deque<std::string> inbox;
 			bool crashed = false;
@@ -184,6 +188,13 @@ namespace MRS {
 				               R_[8] * thrust - p_.drag * vel[2] - mass * 9.81 + wind[2]};
 				const bool grounded = pos[2] <= 1e-6 && f[2] <= 0.0;
 				if (grounded) {
+					for (const auto& pad : pads)
+						if (std::hypot(pos[0] - pad[0], pos[1] - pad[1]) <= pad_radius) {
+							const double add = std::min(charge_w * dt / 3600.0, p_.capacity_wh - energy_wh_);
+							energy_wh_ += add;
+							energy_charged_wh += add;
+							break;
+						}
 					vel = {0, 0, 0};
 					omega = {0, 0, 0};
 					const double yaw = Yaw();

@@ -239,3 +239,52 @@ TEST_CASE("three robots share one pile: they wait in line, and every package arr
 	MESSAGE("makespan " << *team.issuer.Makespan() << " s, carried " << carriers[1] << "/" << carriers[2] << "/" << carriers[3]
 	                    << ", breaches " << team.metrics.separation_breaches);
 }
+
+TEST_CASE("a robot low on battery recharges at a pad and finishes the deliveries") {
+	Generators::DeliveryOptions o;
+	o.seed = 5;
+	o.zones = true;
+	const std::vector<Generators::Point> sources{{0, 0, 0}};
+	const std::vector<Generators::Point> dests{{30, 20, 0}, {-25, 30, 0}};
+	auto job = Generators::DeliveryTasks(4, sources, dests, o);
+	Sim::PackageWorld world;
+	LoadPiles(world, job, sources, o);
+
+	Sim::TeamConfig c;
+	c.mission.homes = {{0, -8, 0}};
+	c.packages = &world;
+	c.mrs.zones = ZonesOf(job);
+	Algorithms::ZoneSpec pad;
+	pad.id = 101;
+	pad.x = 8;
+	pad.y = -8;
+	pad.radius = 1.5;
+	pad.hold_x = 8;
+	pad.hold_y = -14;
+	pad.pad = true;
+	c.mrs.zones.push_back(pad);
+	c.pads = {{8, -8, 0}};
+	c.charge_w = 3000.0;  // a fast charger, so the test stays short
+	c.recharge = true;
+	Sim::Team team(SlingFiles(), c);
+	team.robots[0]->sim.SetEnergy(0.34 * 50.0);
+	team.issuer.LoadTimeline(TimelineOf(job));
+	bool done = false;
+	while (!done && team.Time() < 900.0) {
+		team.Run(0.5, false);
+		done = team.Time() > 2.0 && team.issuer.Done();
+	}
+	for (const auto& [id, it] : team.issuer.Tasks()) {
+		CAPTURE(id);
+		CHECK(it.done.has_value());
+		CHECK_FALSE(it.failed.has_value());
+	}
+	REQUIRE(done);
+	CHECK(world.Placed() == 4);
+	auto& r = *team.robots[0];
+	CHECK(r.sim.energy_charged_wh > 10.0);
+	CHECK_FALSE(r.ctl->SwapLanded());
+	CHECK_FALSE(r.ctl->Stopped());
+	CHECK_FALSE(r.sim.crashed);
+	MESSAGE("makespan " << *team.issuer.Makespan() << " s, charged " << r.sim.energy_charged_wh << " Wh");
+}
