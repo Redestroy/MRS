@@ -626,7 +626,7 @@ namespace MRS {
 				c.Num();  // stamp
 				static const std::map<std::string, int> plain = {
 					{"V_GEO", 3}, {"V_POS3", 3}, {"V_VEL3", 3}, {"V_ATT", 3}, {"V_RATE", 3}, {"V_ACC", 3},
-					{"V_BARO", 1}, {"V_MAG", 1}, {"V_RNG", 1}, {"V_PAY", 1}, {"V_BAT", 3}, {"V_P2", 3}};
+					{"V_BARO", 1}, {"V_MAG", 1}, {"V_RNG", 1}, {"V_PAY", 1}, {"V_BAT", 3}, {"V_P2", 3}, {"V_TAG", 6}, {"V_SLG", 3}};
 				auto it = plain.find(code);
 				if (it != plain.end()) return c.Nums(it->second);
 				if (code == "V_PEER") {
@@ -811,7 +811,7 @@ namespace MRS {
 					for (const auto& info : Device::ActionRegistry()) s.codes[info.code] = ActionSlots;
 					add({"F_K", "F_L", "F_X", "F_S", "F_P", "F_C"}, FunctionSlots);
 					add({"V_GEO", "V_POS3", "V_VEL3", "V_ATT", "V_RATE", "V_ACC", "V_BARO", "V_MAG", "V_RNG", "V_BAT",
-					     "V_PEER", "V_REL3", "V_DET", "V_P2", "V_PAY", "V_FLD"}, ViewSlots);
+					     "V_PEER", "V_REL3", "V_DET", "V_P2", "V_PAY", "V_FLD", "V_TAG", "V_SLG"}, ViewSlots);
 					add({"D_H", "D_J", "D_X", "D_S", "D_A", "D_C", "D_M"}, DeviceSlots);
 					add({"P_R", "P_A"}, PortSlots);
 					add({"K_A", "K_V", "K_M", "K_Q"}, CapabilitySlots);

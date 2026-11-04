@@ -32,7 +32,7 @@ namespace MRS {
 			static const char* kSelf[] = {"pose",    "vel",   "acc",     "att",  "rate",   "alt",    "heading",
 			                              "battery", "geo",   "airborne", "landed", "armed", "home",  "layer",
 			                              "geofence", "peer", "rel",     "sync", "repulse", "time", "payload",
-			                              "target",  "task"};
+			                              "target",  "task",  "sling",   "zone"};
 			const std::string head = path.substr(0, path.find('.'));
 			for (const char* s : kSelf)
 				if (head == s) return true;

@@ -336,6 +336,67 @@ namespace MRS {
 				sense->SetLatch(latch);
 			}
 
+			// --- Sling -----------------------------------------------------------------------
+
+			void SlingTag::OnConfigure() {
+				Declare(Capability::ViewOf("V_PAY"));
+				Declare(Capability::ViewOf("V_TAG"));
+				DeclarePort("tag", PortTypeOf(GetParams()), Required(GetParams(), "device"), true, RateParams());
+			}
+
+			std::int64_t SlingTag::Carried() { return carried_; }
+
+			void SlingTag::Sample(double t, std::vector<View>& out) {
+				std::vector<double> v;
+				Port::Port* port = GetPort("tag");
+				if (!port || !port->Read(v) || v.empty()) return;
+				carried_ = static_cast<std::int64_t>(std::llround(v[0]));
+				out.push_back({"V_PAY", t, {static_cast<double>(carried_)}, {}, {}});
+				if (carried_ != 0 && v.size() >= 6) out.push_back({"V_TAG", t, {v[0], v[1], v[2], v[3], v[4], v[5]}, {}, {}});
+			}
+
+			void SlingLoad::OnConfigure() {
+				Declare(Capability::ViewOf("V_SLG"));
+				DeclarePort("load", PortTypeOf(GetParams()), Required(GetParams(), "device"), true, RateParams());
+			}
+
+			void SlingLoad::Sample(double t, std::vector<View>& out) {
+				std::vector<double> v;
+				Port::Port* port = GetPort("load");
+				if (!port || !port->Read(v) || v.size() < 2) return;
+				out.push_back({"V_SLG", t, {v[0], v[1], v.size() >= 3 ? v[2] : 0.0}, {}, {}});
+			}
+
+			void SlingHook::OnConfigure() {
+				Declare(Capability::Act("A_REL", {}));
+				DeclarePort("hook", PortTypeOf(GetParams()), Required(GetParams(), "device"), true, RateParams());
+			}
+
+			ActionStatus SlingHook::Apply(const Action& action, double) {
+				if (action.code != "A_REL") return ActionStatus::REJECTED;
+				const auto package = UnpackIntegers(ArgLayout::I64, action.arg).at(0);
+				if (package == 0 || !tag_ || tag_->Carried() != package) return ActionStatus::FAILED;
+				Port::Port* port = GetPort("hook");
+				if (!port || !port->Write({0.0})) return ActionStatus::FAILED;
+				return ActionStatus::DONE;
+			}
+
+			void Sling::Expand(const DeviceRegistry& registry) {
+				const Params& p = GetParams();
+				const std::string platform = Platform();
+				auto make = [&](const char* key, const char* name, const char* param) {
+					Params np;
+					np.Add("device", StrValue(Required(p, param)));
+					Pass(p, np, {"port", "rate_hz"});
+					return &AddVirtual(registry, std::string(key) + "." + platform, name, np);
+				};
+				auto* tag = dynamic_cast<SlingTag*>(make("slingtag", "tag", "tag"));
+				auto* hook = dynamic_cast<SlingHook*>(make("hook", "hook", "hook"));
+				auto* load = dynamic_cast<SlingLoad*>(make("loadcell", "load", "load"));
+				if (!tag || !hook || !load) throw BuildError("sling." + platform + ": a part is not of the sling's classes");
+				hook->SetTag(tag);
+			}
+
 			// --- Quadrotor -------------------------------------------------------------------
 
 			void Quadrotor::Expand(const DeviceRegistry& registry) {
@@ -389,6 +450,10 @@ namespace MRS {
 				r.Register<Payload>("payload.webots", {{"device", StrValue("connector")}});
 				r.Register<PayloadLatch>("latch.webots");
 				r.Register<PayloadSense>("cargo.default");
+				r.Register<Sling>("sling.webots", {{"hook", StrValue("hook")}, {"load", StrValue("load cell")}, {"tag", StrValue("tag reader")}});
+				r.Register<SlingHook>("hook.webots");
+				r.Register<SlingLoad>("loadcell.webots");
+				r.Register<SlingTag>("slingtag.webots");
 				r.Register<Radio>("radio.webots",
 				                  {{"emitter", StrValue("emitter")}, {"receiver", StrValue("receiver")}, {"channel", NumValue(1)}});
 			}

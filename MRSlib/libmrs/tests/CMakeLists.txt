@@ -24,6 +24,7 @@ add_executable(mrs_tests
 	sync/test_sync.cpp
 	replay/test_replay.cpp
 	delivery/test_relay.cpp
+	delivery/test_delivery.cpp
 )
 target_include_directories(mrs_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/third_party)
 # Include the std headers instead of doctest forward-declaring std::tuple (MSVC warning C5285).

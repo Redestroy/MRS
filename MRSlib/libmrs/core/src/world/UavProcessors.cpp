@@ -1,6 +1,8 @@
 #include "mrs/world/UavProcessors.h"
 
+#include <array>
 #include <cmath>
+#include <cstdint>
 #include <map>
 #include <set>
 
@@ -143,6 +145,90 @@ namespace MRS {
 				void Process(const View& v, Worldview& w, double) override {
 					if (!v.values.empty()) w.SetScalar("payload.id", v.values[0], v.stamp, "payload");
 				}
+			};
+
+			// The sling and the package on it (spec 18 §3.3): payload.dest, .area, .mass from the tag;
+			// sling.load, sling.length, sling.open from the load cell; the predicates payload.held,
+			// payload.grounded and payload.at_dest; and payload.goal, where the package flight
+			// aims: a via point beside the straight line (offset from the package id), then the
+			// destination at approach height.
+			class SlingProcessor : public IViewProcessor {
+			public:
+				explicit SlingProcessor(const DeliveryConfig& c) : c_(c) {}
+				std::string Name() const override { return "SlingProcessor"; }
+				std::vector<std::string> Subscriptions() const override { return {"V_TAG", "V_SLG"}; }
+				std::vector<std::string> Needs() const override { return {"pose.enu", "payload.id"}; }
+				std::vector<std::string> Provides() const override {
+					return {"payload.dest", "payload.area", "payload.mass", "payload.goal", "payload.held", "payload.grounded",
+					        "payload.at_dest", "sling.load", "sling.length", "sling.open"};
+				}
+				void Process(const View& v, Worldview& w, double t) override {
+					if (v.code == "V_SLG" && v.values.size() >= 3) {
+						w.SetScalar("sling.load", v.values[0], v.stamp, "sling");
+						w.SetScalar("sling.length", v.values[1], v.stamp, "sling");
+						w.SetBool("sling.open", v.values[2] > 0.5, v.stamp, "sling");
+					} else if (v.code == "V_TAG" && v.values.size() >= 6) {
+						const auto id = static_cast<std::int64_t>(std::llround(v.values[0]));
+						w.SetVec3("payload.dest", v.values[1], v.values[2], v.values[3], v.stamp, "tag");
+						w.SetScalar("payload.area", v.values[4], v.stamp, "tag");
+						w.SetScalar("payload.mass", v.values[5], v.stamp, "tag");
+						if (id != package_) NewPackage(id, w, t, v.values[1], v.values[2]);
+					}
+				}
+				void Tick(Worldview& w, double t) override {
+					const auto id = w.Scalar("payload.id", t);
+					const auto px = w.Scalar("pose.enu.x", t), py = w.Scalar("pose.enu.y", t);
+					if (!id || !px || !py) {
+						for (const char* f : {"payload.held", "payload.grounded", "payload.at_dest"}) w.Invalidate(f, t);
+						return;
+					}
+					const bool held = *id > 0.5;
+					w.SetBool("payload.held", held, t, "sling");
+					if (!held) {
+						package_ = 0;
+						w.SetBool("payload.grounded", false, t, "sling");
+						w.SetBool("payload.at_dest", false, t, "sling");
+						return;
+					}
+					const double dx = RawScalar(w, "payload.dest.x", *px), dy = RawScalar(w, "payload.dest.y", *py);
+					const double dz = RawScalar(w, "payload.dest.z", 0.0);
+					const double to_dest = std::hypot(dx - *px, dy - *py);
+					const double gz = dz + RawScalar(w, "sling.length", 2.0) + c_.approach + 0.5;
+					const double pz = w.Scalar("pose.enu.z", t).value_or(gz);
+					// At the destination: above it, at the approach height (within 1 m).
+					w.SetBool("payload.at_dest", to_dest <= c_.dest_tol && std::fabs(pz - gz) <= 1.0, t, "sling");
+					const double load = RawScalar(w, "sling.load", 0.0), mass = RawScalar(w, "payload.mass", 0.0);
+					w.SetBool("payload.grounded", load < c_.grounded_ratio * mass, t, "sling");
+					if (!via_done_ && (std::hypot(via_[0] - *px, via_[1] - *py) <= c_.via_radius ||
+					                   to_dest < std::hypot(via_[0] - dx, via_[1] - dy)))
+						via_done_ = true;
+					if (via_done_) w.SetVec3("payload.goal", dx, dy, gz, t, "sling");
+					else w.SetVec3("payload.goal", via_[0], via_[1], gz, t, "sling");
+				}
+
+			private:
+				void NewPackage(std::int64_t id, Worldview& w, double t, double dx, double dy) {
+					package_ = id;
+					const double fx = w.Scalar("pose.enu.x", t).value_or(dx), fy = w.Scalar("pose.enu.y", t).value_or(dy);
+					// A fixed offset per package in [-1, 1], so a replay flies the same path.
+					std::uint64_t h = static_cast<std::uint64_t>(id) * 0x9E3779B97F4A7C15ULL;
+					h ^= h >> 29;
+					h *= 0xBF58476D1CE4E5B9ULL;
+					h ^= h >> 32;
+					const double u = static_cast<double>(h % 2001) / 1000.0 - 1.0;
+					const double lx = dx - fx, ly = dy - fy, len = std::hypot(lx, ly);
+					via_ = {(fx + dx) / 2.0, (fy + dy) / 2.0};
+					if (len > 1e-6) {
+						via_[0] += -ly / len * u * c_.via_offset;
+						via_[1] += lx / len * u * c_.via_offset;
+					}
+					via_done_ = len < 2.0 * c_.via_radius;
+				}
+
+				DeliveryConfig c_;
+				std::int64_t package_ = 0;
+				std::array<double, 2> via_{0, 0};
+				bool via_done_ = true;
 			};
 
 			class AglFromAmslProcessor : public IViewProcessor {
@@ -485,6 +571,7 @@ namespace MRS {
 			p.push_back(std::make_unique<PeerStateProcessor>());
 			p.push_back(std::make_unique<DetectionProcessor>(c));
 			p.push_back(std::make_unique<PayloadProcessor>());
+			p.push_back(std::make_unique<SlingProcessor>(c.delivery));
 			p.push_back(std::make_unique<RelativePositionProcessor>());
 			p.push_back(std::make_unique<WorldviewSyncProcessor>());
 			p.push_back(std::make_unique<RepulsionProcessor>(c));

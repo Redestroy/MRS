@@ -107,6 +107,8 @@ namespace MRS {
 			double ranging_noise = -1.0;                   // m; at least 0: every robot has a ranging sensor (spec 15 §3.1)
 			double radio_range = 0.0;                      // m; 0: no limit. Above 0, see Air::range_m (spec 18 §6)
 			std::array<double, 3> operator_pos{0, 0, 0};   // ENU, where the issuer's radio is
+			PackageWorld* packages = nullptr;              // the delivery packages every sling sees (spec 18 §2.4)
+			double sling_length = 2.0;                     // m
 		};
 
 		// Times Select of the allocator it wraps (the decision time of spec 10 §5).

@@ -3,6 +3,7 @@
 // become atomic tasks with a preset action; lines, areas, perimeters and points of interest
 // become tree tasks (spec 03 §6) that the robots split between them.
 #include <array>
+#include <cstdint>
 #include <cmath>
 #include <limits>
 #include <string>
@@ -119,6 +120,44 @@ namespace MRS {
 
 		// A task file (.mrst) of top-level tasks.
 		std::string TaskFile(const std::vector<Protocol::Record>& tasks, const std::string& comment = {});
+
+		// --- package delivery (spec 18 §5) ------------------------------------------------------
+
+		struct DeliveryOptions {
+			double priority = 1.0;
+			double sling_length = 2.0;     // m, body to hook (closed)
+			double package_height = 0.25;  // m, for the height of a pile
+			double loop_height = 0.10;     // m, the loop above a package
+			double approach = 1.0;         // m: the hook starts its descent this far above the top loop
+			double tol_xy = 0.25, tol_z = 0.5;  // m, of the point above the pile
+			double mass_min = 0.2, mass_max = 0.5;  // kg, drawn per package
+			unsigned long long seed = 1;   // destinations and masses
+		};
+
+		// One package of the manifest: what its tag says, and the pile it starts in.
+		struct ManifestEntry {
+			std::int64_t package = 0;
+			std::size_t source = 0;  // index into the source list
+			std::size_t area = 0;    // index into the destination list (1-based on the tag)
+			Point dest{0, 0, 0};
+			double mass = 0.3;
+		};
+
+		struct DeliveryJob {
+			std::vector<ManifestEntry> manifest;  // in pile order per source, bottom first
+			std::vector<Protocol::Record> tasks;  // one delivery unit per package
+		};
+
+		// n packages split over the sources in turn, each with a destination drawn from `destinations`
+		// (seeded). One task per package: "deliver the next package from source s" (spec 18 §5).
+		// Task ids are <issuer>.<first_id + k>.
+		DeliveryJob DeliveryTasks(int n, const std::vector<Point>& sources, const std::vector<Point>& destinations,
+		                          const DeliveryOptions& o, const std::string& issuer = "op", int first_id = 1);
+		// A delivery unit for a pile at `source` whose top loop is at `top_loop` m (spec 18 §5.1).
+		Protocol::Record DeliveryTask(const std::string& id, const Point& source, double top_loop, const DeliveryOptions& o);
+		// The manifest as CSV: package,source,area,dest_x,dest_y,dest_z,mass.
+		std::string ManifestCsv(const DeliveryJob& job);
+
 		// A timeline (.mrsl): each task at its dispatch time.
 		std::string Timeline(const std::vector<std::pair<double, Protocol::Record>>& entries, const std::string& comment = {});
 

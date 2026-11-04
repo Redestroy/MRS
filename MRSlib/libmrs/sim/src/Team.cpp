@@ -206,6 +206,10 @@ namespace MRS {
 				const int id = static_cast<int>(k + 1);
 				robots.push_back(std::make_unique<TeamRobot>(id, c.mission.homes[k], !c.without_leds.count(id), files, c));
 				air.Add(&robots.back()->sim);
+				robots.back()->sim.world = c.packages;
+				robots.back()->sim.robot_id = static_cast<int>(robots.size());
+				robots.back()->sim.sling_length = c.sling_length;
+				robots.back()->sim.sling_length_open = c.sling_length + 0.1;
 			}
 			for (auto& r : robots)  // every robot is a peer of every other, for the ranging sensor
 				for (auto& q : robots)

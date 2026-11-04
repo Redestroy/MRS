@@ -144,6 +144,63 @@ namespace MRS {
 			throw JsonError("unknown point action");
 		}
 
+		Record DeliveryTask(const std::string& id, const Point& source, double top_loop, const DeliveryOptions& o) {
+			const Point above{source[0], source[1], source[2] + top_loop + o.sling_length + o.approach};
+			const std::string held = "C_? ?_1/\n?_1: payload.held ";
+			// 1. Fly above the pile, not carrying anything.
+			Record go = Parse("T: T_A 0 1 0 C_1 C_2 R_1 A_1/\nC_1: " + P3(above, o.tol_xy, o.tol_z) + "/\nC_2: C_N/\nR_1: R_C C_1/\nC_1: " + held +
+			                  "F/\nA_1: A_N/\n");
+			// 2. Pick up: the pickup behaviour descends until the hook holds a package.
+			Record pick = Parse("T: T_A 0 1 0 C_1 C_2 R_1 A_1/\nC_1: " + held + "T/\nC_2: " + held + "T/\nR_1: R_K " + id + ".1/\nA_1: A_N/\n");
+			// 3. Package flight to the destination on the tag.
+			Record fly = Parse("T: T_A 0 1 0 C_1 C_2 R_1 A_1/\nC_1: C_? ?_1/\n?_1: payload.at_dest T/\nC_2: C_N/\nR_1: R_S R_1 R_2/\nR_1: R_K " + id +
+			                   ".2/\nR_2: R_C C_1/\nC_1: " + held + "T/\nA_1: A_N/\n");
+			// 4. Lower the package to the ground, release it, wait for the hook.
+			Record drop = Parse("T: T_P 0 1 0 C_1 C_2 R_1 A_1..3/\nC_1: C_? ?_1/\n?_1: payload.grounded T/\nC_2: " + held + "F/\nR_1: R_K " + id +
+			                    ".3/\nA_1: A_FN A_REL F_1/\nF_1: F_L 1 1 0 payload.id/\nA_2: A_W 1/\nA_3: A_N/\n");
+			// 5. Return home (normal flight).
+			Record back = Parse("T: T_A 0 1 0 C_1 C_2 R_1 A_1/\nC_1: C_? ?_1/\n?_1: home T/\nC_2: C_N/\nR_1: R_K " + id + ".4/\nA_1: A_N/\n");
+			return Node("T_S", id, o.priority, 0, {go, pick, fly, drop, back});
+		}
+
+		DeliveryJob DeliveryTasks(int n, const std::vector<Point>& sources, const std::vector<Point>& destinations, const DeliveryOptions& o,
+		                          const std::string& issuer, int first_id) {
+			if (n < 0) throw JsonError("delivery: the number of packages is negative");
+			if (sources.empty() || destinations.empty()) throw JsonError("delivery: needs at least one source and one destination");
+			DeliveryJob job;
+			unsigned long long seed = o.seed * 6364136223846793005ULL + 1442695040888963407ULL;
+			auto uniform = [&seed] {
+				seed = seed * 6364136223846793005ULL + 1442695040888963407ULL;
+				return static_cast<double>(seed >> 11) / 9007199254740992.0;
+			};
+			std::vector<int> per_source(sources.size(), 0);
+			for (int k = 0; k < n; ++k) {
+				ManifestEntry e;
+				e.package = 1001 + k;
+				e.source = static_cast<std::size_t>(k) % sources.size();
+				e.area = std::min(destinations.size() - 1, static_cast<std::size_t>(uniform() * static_cast<double>(destinations.size())));
+				e.dest = destinations[e.area];
+				e.mass = std::round((o.mass_min + (o.mass_max - o.mass_min) * uniform()) * 1000.0) / 1000.0;
+				++per_source[e.source];
+				job.manifest.push_back(e);
+			}
+			for (int k = 0; k < n; ++k) {
+				const std::size_t s = job.manifest[static_cast<std::size_t>(k)].source;
+				const double top_loop = per_source[s] * o.package_height + o.loop_height;
+				job.tasks.push_back(DeliveryTask(issuer + "." + std::to_string(first_id + k), sources[s], top_loop, o));
+			}
+			return job;
+		}
+
+		std::string ManifestCsv(const DeliveryJob& job) {
+			std::ostringstream out;
+			out << "package,source,area,dest_x,dest_y,dest_z,mass\n";
+			for (const auto& e : job.manifest)
+				out << e.package << "," << e.source + 1 << "," << e.area + 1 << "," << Num(e.dest[0]) << "," << Num(e.dest[1]) << "," << Num(e.dest[2])
+				    << "," << Num(e.mass) << "\n";
+			return out.str();
+		}
+
 		Record ChainTask(const std::string& id, const std::vector<Point>& wps, const ChainOptions& o) {
 			if (wps.empty()) throw JsonError("a chain needs at least one waypoint");
 			std::vector<Record> leaves{FirstLeaf(wps[0], o)};

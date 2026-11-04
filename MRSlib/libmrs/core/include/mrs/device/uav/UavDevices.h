@@ -200,6 +200,57 @@ namespace MRS {
 				void Expand(const DeviceRegistry& registry) override;
 			};
 
+			// --- Sling (spec 18 §2) ------------------------------------------------------------
+
+			// The tag reader of a sling: reads the label of the package on the hook. V_PAY with the
+			// package id (0 for none) and, while a package is on the hook, V_TAG with its id,
+			// destination (ENU), destination area and mass.
+			class SlingTag : public Sensor {
+			public:
+				void Sample(double t, std::vector<View>& out) override;
+				// The package on the hook now, 0 for none (from the last reading).
+				std::int64_t Carried();
+
+			protected:
+				void OnConfigure() override;
+
+			private:
+				std::int64_t carried_ = 0;
+			};
+
+			// The load cell of a sling: V_SLG with the load on the line (kg), the line length (m) and
+			// whether the hook is open.
+			class SlingLoad : public Sensor {
+			public:
+				void Sample(double t, std::vector<View>& out) override;
+
+			protected:
+				void OnConfigure() override;
+			};
+
+			// The hook of a sling: passive (it catches a package's loop by itself) and opened by
+			// A_REL package, which releases the package on the hook if it is that package.
+			class SlingHook : public Actuator {
+			public:
+				ActionStatus Apply(const Action& action, double t) override;
+				// The hook keeps what it holds: closed is its safe state.
+				void OnTimeout(double) override {}
+				void SetTag(SlingTag* tag) { tag_ = tag; }
+
+			protected:
+				void OnConfigure() override;
+
+			private:
+				SlingTag* tag_ = nullptr;
+			};
+
+			// sling.*: a fixed-length line with a passive hook (spec 18 §2). Expands to hook (A_REL),
+			// load (V_SLG) and tag (V_PAY, V_TAG). Parameters: hook, load, tag (port addresses).
+			class Sling : public ComplexDevice {
+			public:
+				void Expand(const DeviceRegistry& registry) override;
+			};
+
 			// quadrotor.*: expands to m_fl, m_fr, m_rl, m_rr, fcu and imu (spec 04 §3). The fcu is
 			// fcu.<platform> when the registry has it (spec 14 §4), otherwise fcu.default.
 			class Quadrotor : public ComplexDevice {
