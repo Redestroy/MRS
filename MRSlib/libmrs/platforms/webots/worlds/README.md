@@ -41,3 +41,43 @@ to turn it off.
 
 To fly another task set, copy it here from `MRS_Projects/Spatial3D/experiments/uav_spatial/` and
 change the issuer's second argument.
+
+## mavic_delivery.wbt (package delivery, spec 18 §9)
+
+Three Mavic 2 Pro with a sling deliver 12 packages from three piles (x = −6, 0, 6 on y = 0) to four
+destinations (`delivery_destinations.csv`). r3 starts at 40 % battery and charges at the pad
+(x 10, y −8) first. The world and its files are generated:
+
+```
+mrs_generate delivery 12 delivery_sources.csv delivery_destinations.csv --zones --at 2 \
+    --manifest delivery_manifest.csv --zones-out delivery_zones.csv > delivery_12.mrsl
+python3 make_delivery_world.py delivery_manifest.csv delivery_sources.csv delivery_zones.csv \
+    delivery_12.mrsl mavic_delivery.wbt --low 3:0.4
+```
+
+The script writes `mavic_delivery.wbt` and the mission header `mavic_delivery_mission.mrs`. Run it as
+the team world: build with `WEBOTS_HOME` set (the controller folder gets `mavic_sling_webots.mrsd`
+and `.mrsp`), open the world from this folder, run. When every delivery has ended the issuer writes
+`mavic_delivery_results.csv` and the track, and pauses.
+
+What the world sets:
+
+* Each package is a Solid box (0.3 × 0.3 × 0.25 m, its mass from the manifest) whose `description`
+  is its tag, `tag <id> <dest x> <dest y> <dest z> <area> <mass>`, with a passive `Connector`
+  "loop" (model `sling`) 0.1 m above its top.
+* Each Mavic has `supervisor TRUE` (the tag reader looks up the package on the hook) and the sling
+  in `bodySlot`: a 2 m line on a `BallJoint` below the centre of mass, a `SliderJoint` spring with a
+  `PositionSensor` "load cell" (150 N/m), and the active `Connector` "hook". Its `controllerArgs`
+  name the sling robot files and pass `--zones delivery_zones.csv --pad 101,10,-8,16,-8`.
+* A `Charger` at the pad (radius 1.2 m) charges a landed Mavic's battery.
+
+Set `MRS_SLING_DEBUG=1` in the environment Webots starts from to print the hook's state once a
+second and each catch.
+
+Status (2026-11-05, headless Webots R2025a on Linux): the hook catches top packages, Mavics fly them
+on the line, lower and release them at their destinations, and r3 charges at the pad (about 45 s).
+One full run delivered 4 of the 12 packages, then stalled. The open problem is the swing of the
+loaded line: descending 15 to 25 m from the cruise layer to the drop height, a Mavic can overshoot.
+The package then hits the ground, the line jerks, and the Mavic flips. More damping on the line's
+ball joint (1.0) made it worse (all three flipped). The next steps are a slower loaded descent and
+FCU gains for loaded flight.

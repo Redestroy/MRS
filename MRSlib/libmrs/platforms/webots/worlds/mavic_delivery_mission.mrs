@@ -1,0 +1,5 @@
+# Mission header for mavic_delivery.wbt (spec 06 §6), written by make_delivery_world.py: fence ±100 m,
+# 60 m high, layers from 20 m every 5 m, claim grace 120 s, homes on y = -8.
+@: MRS 0.1/
+
+H: H_M m1 56.9496 24.1052 10 -100 100 -100 100 60 20 5 120 3 1 -4 -8 0 2 0 -8 0 3 4 -8 0/

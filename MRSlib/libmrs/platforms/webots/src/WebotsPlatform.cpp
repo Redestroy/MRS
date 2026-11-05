@@ -2,7 +2,10 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <limits>
+#include <sstream>
 #include <string>
 
 #include <webots/Accelerometer.hpp>
@@ -19,7 +22,10 @@
 #include <webots/Motor.hpp>
 #include <webots/Receiver.hpp>
 #include <webots/Robot.hpp>
+#include <webots/Field.hpp>
 #include <webots/Node.hpp>
+#include <webots/PositionSensor.hpp>
+#include <webots/Supervisor.hpp>
 
 namespace MRS {
 	namespace Platform {
@@ -40,6 +46,7 @@ namespace MRS {
 				case webots::Node::RECEIVER: return "Receiver";
 				case webots::Node::CAMERA: return "Camera";
 				case webots::Node::CONNECTOR: return "Connector";
+				case webots::Node::POSITION_SENSOR: return "PositionSensor";
 				default: return "";
 				}
 			}
@@ -187,6 +194,182 @@ namespace MRS {
 				webots::Connector* connector_;
 			};
 
+			// Sling hook (spec 18 §2.2): a passive hook, an "active" Connector at the end of the line
+			// with autoLock FALSE. It catches a package's "passive" loop connector when the two are
+			// present to each other, unless it was opened in the last hook_open_s s or has not yet left
+			// the package it let go of. Every sling port services the hook when it is read, since the
+			// devices may read only some of them.
+			// Only the top package of a pile can be hooked (spec 18 §2.4): with a supervisor, a loop
+			// with another package resting on it gets the connector model "sling covered", which the
+			// hook (model "sling") does not dock with.
+			void CoverLoops(WebotsPlatform::SlingState& s) {
+				if (!s.supervisor) return;
+				if (!s.scanned) {
+					s.scanned = true;
+					webots::Field* children = s.supervisor->getRoot()->getField("children");
+					for (int k = 0; k < children->getCount(); ++k) {
+						webots::Node* n = children->getMFNode(k);
+						webots::Field* desc = n ? n->getField("description") : nullptr;
+						if (!desc || desc->getSFString().rfind("tag ", 0) != 0) continue;
+						webots::Field* parts = n->getField("children");
+						for (int j = 0; parts && j < parts->getCount(); ++j) {
+							webots::Node* c = parts->getMFNode(j);
+							if (c && c->getTypeName() == "Connector") s.loops.push_back({n, c->getField("model")});
+						}
+					}
+				}
+				for (auto& [package, model] : s.loops) {
+					const double* p = package->getPosition();
+					bool covered = false;
+					for (const auto& [other, unused] : s.loops) {
+						if (other == package) continue;
+						const double* q = other->getPosition();
+						const double dz = q[2] - p[2];
+						if (dz > 0.1 && dz < 0.4 && std::hypot(q[0] - p[0], q[1] - p[1]) < 0.25) covered = true;
+					}
+					const std::string want = covered ? "sling covered" : "sling";
+					if (model->getSFString() != want) model->setSFString(want);
+				}
+			}
+
+			void ServiceHook(WebotsPlatform::SlingState& s, double t) {
+				if (!s.hook) return;
+				CoverLoops(s);
+				const int presence = s.hook->getPresence();
+				if (presence == 0) s.armed = true;
+				s.open = t < s.open_until;
+				if (t > 0.1 && !s.hook->isLocked() && !s.open && s.armed && presence == 1) {
+					s.hook->lock();
+					if (std::getenv("MRS_SLING_DEBUG") && s.supervisor) {
+						const double* h = s.supervisor->getFromDevice(s.hook)->getPosition();
+						std::printf("sling lock t=%.3f hook (%.2f, %.2f, %.2f)\n", t, h[0], h[1], h[2]);
+					}
+				}
+				if (std::getenv("MRS_SLING_DEBUG") && t >= s.debug_next) {
+					s.debug_next = t + 1.0;
+					std::printf("sling t=%.1f presence=%d locked=%d armed=%d open=%d\n", t, presence, static_cast<int>(s.hook->isLocked()),
+					            static_cast<int>(s.armed), static_cast<int>(s.open));
+				}
+			}
+
+			// Read: held (locked), open. A write of 0 opens the hook.
+			class SlingHookPort : public SampledPort {
+			public:
+				SlingHookPort(P::PortAssignment a, webots::Robot& robot, int period_ms, webots::Connector* connector,
+				              std::shared_ptr<WebotsPlatform::SlingState> state)
+				    : SampledPort(std::move(a), robot, period_ms), connector_(connector), state_(std::move(state)) {
+					connector_->enablePresence(period_ms);
+					state_->hook = connector_;
+					open_s_ = Assignment().params.Num("hook_open_s", 1.0);
+				}
+				bool Read(std::vector<double>& values) override {
+					if (!Due()) return false;
+					ServiceHook(*state_, robot_.getTime());
+					values = {connector_->isLocked() ? 1.0 : 0.0, state_->open ? 1.0 : 0.0};
+					return true;
+				}
+				bool Write(const std::vector<double>& values) override {
+					if (values.empty() || values[0] >= 0.5) return !values.empty();
+					connector_->unlock();
+					state_->open_until = robot_.getTime() + open_s_;
+					state_->open = true;
+					state_->armed = false;
+					return true;
+				}
+
+			private:
+				webots::Connector* connector_;
+				std::shared_ptr<WebotsPlatform::SlingState> state_;
+				double open_s_ = 1.0;
+			};
+
+			// Load cell (spec 18 §2.2): a PositionSensor on a vertical SliderJoint with a spring in the
+			// line. Read: load (kg, the spring force less the parts below the cell), line length (m),
+			// open. Parameters: spring (N/m, the joint's springConstant), tare (kg below the cell),
+			// length and length_open (m).
+			class LoadCellPort : public SampledPort {
+			public:
+				LoadCellPort(P::PortAssignment a, webots::Robot& robot, int period_ms, webots::PositionSensor* sensor,
+				             std::shared_ptr<WebotsPlatform::SlingState> state)
+				    : SampledPort(std::move(a), robot, period_ms), sensor_(sensor), state_(std::move(state)) {
+					sensor_->enable(period_ms);
+					const auto& p = Assignment().params;
+					spring_ = p.Num("spring", 300.0);
+					tare_ = p.Num("tare", 0.05);
+					length_ = p.Num("length", 2.0);
+					length_open_ = p.Num("length_open", length_ + 0.1);
+				}
+				bool Read(std::vector<double>& values) override {
+					if (!Due()) return false;
+					ServiceHook(*state_, robot_.getTime());
+					const double x = sensor_->getValue();  // m along +z: negative when stretched
+					if (!std::isfinite(x)) return false;
+					const double load = std::max(0.0, -x * spring_ / 9.81 - tare_);
+					values = {load, state_->open ? length_open_ : length_, state_->open ? 1.0 : 0.0};
+					return true;
+				}
+
+			private:
+				webots::PositionSensor* sensor_;
+				std::shared_ptr<WebotsPlatform::SlingState> state_;
+				double spring_, tare_, length_, length_open_;
+			};
+
+			// Tag reader (spec 18 §2.2): what is written on the package on the hook. A package is a
+			// Solid whose description is "tag <id> <dest x> <dest y> <dest z> <area> <mass>"; the
+			// reader finds the tagged Solid nearest the hook, within `reach` m (0.6), while the hook
+			// is locked. Needs the robot's supervisor field TRUE. Read: id, dest (3), area, mass, or 0.
+			class TagReaderPort : public SampledPort {
+			public:
+				TagReaderPort(P::PortAssignment a, webots::Supervisor& supervisor, int period_ms, std::shared_ptr<WebotsPlatform::SlingState> state)
+				    : SampledPort(std::move(a), supervisor, period_ms), supervisor_(supervisor), state_(std::move(state)) {
+					reach_ = Assignment().params.Num("reach", 0.6);
+				}
+				bool Read(std::vector<double>& values) override {
+					if (!Due()) return false;
+					values = {0.0};
+					ServiceHook(*state_, robot_.getTime());
+					if (!state_->hook || !state_->hook->isLocked()) {
+						tagged_ = nullptr;
+						return true;
+					}
+					webots::Node* hook = supervisor_.getFromDevice(state_->hook);
+					if (!hook) return true;
+					const double* h = hook->getPosition();
+					if (!tagged_) tagged_ = Nearest(h);
+					if (!tagged_) return true;
+					std::istringstream tag(tagged_->getField("description")->getSFString());
+					std::string word;
+					double id = 0, dx = 0, dy = 0, dz = 0, area = 0, mass = 0;
+					if (tag >> word >> id >> dx >> dy >> dz >> area >> mass && word == "tag") values = {id, dx, dy, dz, area, mass};
+					return true;
+				}
+
+			private:
+				webots::Node* Nearest(const double* h) {
+					webots::Field* children = supervisor_.getRoot()->getField("children");
+					webots::Node* best = nullptr;
+					double best_d = reach_;
+					for (int k = 0; k < children->getCount(); ++k) {
+						webots::Node* n = children->getMFNode(k);
+						webots::Field* desc = n ? n->getField("description") : nullptr;
+						if (!desc || desc->getSFString().rfind("tag ", 0) != 0) continue;
+						// The loop is on top of the package: compare with the package's top centre.
+						const double* p = n->getPosition();
+						const double d = std::sqrt((p[0] - h[0]) * (p[0] - h[0]) + (p[1] - h[1]) * (p[1] - h[1]) + (p[2] - h[2]) * (p[2] - h[2]));
+						if (d < best_d) {
+							best_d = d;
+							best = n;
+						}
+					}
+					return best;
+				}
+				webots::Supervisor& supervisor_;
+				std::shared_ptr<WebotsPlatform::SlingState> state_;
+				webots::Node* tagged_ = nullptr;
+				double reach_;
+			};
+
 			class LedPort : public P::Port {
 			public:
 				LedPort(P::PortAssignment a, webots::LED* led) : P::Port(std::move(a)), led_(led) {
@@ -302,6 +485,7 @@ namespace MRS {
 
 		WebotsPlatform::WebotsPlatform(webots::Robot& robot)
 		    : robot_(robot), basic_ms_(static_cast<int>(robot.getBasicTimeStep())) {
+			if (robot_.getSupervisor()) sling_->supervisor = static_cast<webots::Supervisor*>(&robot_);
 			if (basic_ms_ < 1) basic_ms_ = 1;
 		}
 
@@ -321,6 +505,7 @@ namespace MRS {
 			}
 			out.push_back({P::PortType::SIM, "battery", "Battery"});
 			out.push_back({P::PortType::SIM, "ranging", "Ranging"});
+			if (robot_.getSupervisor()) out.push_back({P::PortType::SIM, "tag reader", "TagReader"});
 			return out;
 		}
 
@@ -337,8 +522,19 @@ namespace MRS {
 				static_cast<webots::InertialUnit*>(imu)->enable(period);
 				return std::make_unique<RangingPort>(a, robot_, period, static_cast<webots::InertialUnit*>(imu), bearings_);
 			}
+			if (a.address == "tag reader") {
+				if (!robot_.getSupervisor()) return nullptr;  // the Mavic's supervisor field must be TRUE
+				return std::make_unique<TagReaderPort>(a, static_cast<webots::Supervisor&>(robot_), period, sling_);
+			}
 			webots::Device* d = robot_.getDevice(a.address);
 			if (!d) return nullptr;
+			if (a.params.Text("mode", "") == "sling") {
+				if (d->getNodeType() == webots::Node::CONNECTOR)
+					return std::make_unique<SlingHookPort>(a, robot_, period, static_cast<webots::Connector*>(d), sling_);
+				if (d->getNodeType() == webots::Node::POSITION_SENSOR)
+					return std::make_unique<LoadCellPort>(a, robot_, period, static_cast<webots::PositionSensor*>(d), sling_);
+				return nullptr;
+			}
 			switch (d->getNodeType()) {
 			case webots::Node::GPS: {
 				auto* gps = static_cast<webots::GPS*>(d);

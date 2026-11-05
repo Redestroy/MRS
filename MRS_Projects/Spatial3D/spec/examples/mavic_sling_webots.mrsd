@@ -1,7 +1,7 @@
 # The Mavic of mavic_webots.mrsd with a sling for package delivery (spec 18 §2).
 # sling.webots expands to hook (A_REL, passive hook-and-loop), load (V_SLG, the load cell) and
 # tag (V_PAY and V_TAG, the reader of the package's label). The line has a fixed length; the
-# hook opening is its only length change. QuadSim models it; the Webots parts are spec 18 §9.
+# hook opening is its only length change. QuadSim models it; in Webots it is a Connector on a line (spec 18 §9).
 @: MRS 0.1/
 
 D: D_H uav head.default 3 robot_type mavic2pro role delivery_uav id 1 D_1/

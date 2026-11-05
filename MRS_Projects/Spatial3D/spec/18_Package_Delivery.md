@@ -235,3 +235,21 @@ With recharge on (§3.5), an idle robot (nothing running, no swap pending) whose
 
 * Relay (`tests/delivery/test_relay.cpp`): on a three-agent chain, a broadcast crosses once per agent; hearing it again sends nothing; a unicast passes through a relay that does not take it; a unicast to the relay is not sent on.
 * Range: three QuadSim robots 25 m apart, the operator 20 m before the first, range 30 m. Without relay only the first robot learns the mission within 5 s; with relay all three do, and the first two have relayed messages.
+
+## 9. Webots
+
+### 9.1 Sling ports (`WebotsPlatform`)
+
+The parts of `sling.webots` (§2.2) map to Webots as follows:
+
+| Port (mrsp address) | Webots | Read | Write |
+|---|---|---|---|
+| `hook`, parameter `mode sling` | an `active` Connector, model `sling`, autoLock FALSE, at the end of the line | held (locked), open | 0 opens |
+| `load cell`, `mode sling` | a PositionSensor on a vertical SliderJoint spring in the line | load kg = −x · `spring` / g − `tare`; line length (`length` 2 m, `length_open` + 0.1 m); open | |
+| `tag reader` | (no device; the robot's `supervisor` must be TRUE) | the tag of the package nearest the hook within `reach` 0.6 m while the hook is locked: id, destination, area, mass; else 0 | |
+
+The hook is passive in the sense of §2.1: whenever a sling port is read, a closed hook that is present to a loop connector locks to it, unless it was opened in the last `hook_open_s` (1 s) or has not yet left the package it let go of. A package is a Solid whose `description` is its tag, `tag <id> <dest x> <dest y> <dest z> <area> <mass>`, with a `passive` loop Connector (model `sling`) 0.1 m above its top. Only the top of a pile can be caught: on each read the platform sets the loop model of every package with another package resting on it to `sling covered`, which the hook does not dock with. `MRS_SLING_DEBUG` in the environment prints the hook state once a second and each catch.
+
+### 9.2 World
+
+`platforms/webots/worlds/make_delivery_world.py` writes the world from the generator's manifest, sources, zones and timeline (§5.3): the piles; per Mavic the sling in `bodySlot` (2 m line on a BallJoint below the centre of mass, x = −0.075 m; a 150 N/m load-cell spring; a 0.1 kg hook), `supervisor TRUE` and `mrs_uav … --zones <zones.csv> --pad <id,x,y,hold_x,hold_y>`; a Charger at the pad; and the mission header. `mrs_uav` options: `--zones`, `--pad` (also turns recharging on), `--drop-area X,Y,R` (repeatable, §7) and `--relay` (§6.2). See the worlds README.
