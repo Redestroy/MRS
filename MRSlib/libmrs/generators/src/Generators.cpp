@@ -144,7 +144,9 @@ namespace MRS {
 			throw JsonError("unknown point action");
 		}
 
-		Record DeliveryTask(const std::string& id, const Point& source, double top_loop, const DeliveryOptions& o, std::int64_t source_zone) {
+		namespace {
+			Record DeliveryUnit(const std::string& id, const Point& source, double top_loop, const DeliveryOptions& o, std::int64_t source_zone,
+			                    bool pickup) {
 			const Point above{source[0], source[1], source[2] + top_loop + o.sling_length + o.approach};
 			const std::string held = "C_? ?_1/\n?_1: payload.held ";
 			std::vector<Record> leaves;
@@ -166,12 +168,17 @@ namespace MRS {
 				leaves.push_back(Parse("T: " + code + " 0 1 0 C_1 C_2" + req + " " + actions + "/\nC_1: " + start + "\nC_2: " + end + "\n" + req_subs + subs));
 			};
 			const std::string not_held = held + "F/", is_held = held + "T/";
+			if (pickup) {
 			// Wait in line for the pile (with zones).
 			if (o.zones) leaf("T_A", "C_? ?_1/\n?_1: zone." + std::to_string(source_zone) + ".mine T/", "C_N/", not_held, "A_1", "A_1: A_N/\n");
 			// Fly above the pile, not carrying anything.
 			leaf("T_A", P3(above, o.tol_xy, o.tol_z) + "/", "C_N/", not_held, "A_1", "A_1: A_N/\n");
 			// Pick up: the pickup behaviour descends until the hook holds a package.
 			leaf("T_A", is_held, is_held, "", "A_1", "A_1: A_N/\n");
+			} else {
+			// Carry only: the package is on the hook already (spec 18 §7.5).
+			leaf("T_A", is_held, "C_N/", is_held, "A_1", "A_1: A_N/\n");
+			}
 			// Wait in line for the destination area read from the tag (with zones).
 			if (o.zones) leaf("T_A", "C_? ?_1/\n?_1: zone.dest.mine T/", "C_N/", is_held, "A_1", "A_1: A_N/\n");
 			// Package flight to the destination on the tag.
@@ -182,7 +189,14 @@ namespace MRS {
 			// Return home (normal flight).
 			leaf("T_A", "C_? ?_1/\n?_1: home T/", "C_N/", "", "A_1", "A_1: A_N/\n");
 			return Node("T_S", id, o.priority, 0, leaves);
+			}
 		}
+
+		Record DeliveryTask(const std::string& id, const Point& source, double top_loop, const DeliveryOptions& o, std::int64_t source_zone) {
+			return DeliveryUnit(id, source, top_loop, o, source_zone, true);
+		}
+
+		Record CarryTask(const std::string& id, const DeliveryOptions& o) { return DeliveryUnit(id, {0, 0, 0}, 0.0, o, 0, false); }
 
 		std::vector<Point> RelayPoints(const std::vector<Point>& destinations, const DeliveryOptions& o) {
 			std::vector<Point> out;

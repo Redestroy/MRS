@@ -116,7 +116,7 @@ A **zone** is a place only `capacity` robots may use at once: the pickup spot of
 |---|---|---|---|
 | `M_ZONE` | `int zone`, `id op` (`want` or `free`), `num stamp` | broadcast | The sender wants the zone since `stamp`, or no longer wants it |
 
-A robot sends `want` when it first asks for the zone and repeats it every `zone_renew` (2 s); a want not heard for `zone_timeout` (10 s) lapses. Robots line up by the stamp of their want, then by robot number; the first `capacity` hold the zone. A robot frees a zone when it has been inside the zone's radius while holding it and has moved more than 1 m beyond it, or when it has no unit any more (and no recharge running).
+A robot sends `want` when it first asks for the zone and repeats it every `zone_renew` (2 s); a want not heard for `zone_timeout` (10 s) lapses. Robots line up by the stamp of their want, then by robot number; the first `capacity` hold the zone. A robot frees a zone when it has been inside the zone's radius while holding it and has moved more than 1 m beyond it, or when it has no unit any more (and no recharge running). A robot left without a unit while it is airborne inside the column of a pile or drop zone (within the radius + 1 m) keeps the zone and flies out to the zone's holding point first (`idle.away`, which the idle-at-layer hold of spec 08 §3.3 follows), since another robot may already be descending into it. A pad is freed at once.
 
 `A_ZQ zone` (`ZONE_QUEUE`, `I64`) asks for a zone. The executor hands it to the MRS layer (`TaskExecutor::SetZone`) and moves on; a robot with a radio has it in its profile, like `A_SY`.
 
@@ -220,6 +220,10 @@ The energy model is of the robot alone: one-second windows in which `payload.hel
 
 With recharge on (§3.5), an idle robot (nothing running, no swap pending) whose battery is below `recharge_idle_below` (60 %) goes to a pad and charges before it takes more work.
 
+### 7.5 A package without a task
+
+A unit can end while its package is on the hook: in the open RTA two robots may run the same unit, and the one that loses it is cancelled after its pickup; a unit can also be dumped after the pickup. The layer remembers the task that was running when the hook caught. When the robot has run another task (or none) for `orphan_after` (3 s) while still holding the package, and is not returning or recharging, it adds a task of its own, `Generators::CarryTask` (id `<robot>.<k>`, priority `carry_priority` 5): the rest of a delivery from "the package is held", that is the destination queue, package flight, lowering and release, and return home. Only this robot learns of the task. `MrsLayer::Carries()` counts these. The original unit stays with the issuer: whoever runs it next finds the pile one package shorter.
+
 ## 8. Tests
 
 * Generator: five bound leaves per unit (seven with zones), the point above a pile of three, the manifest, the same job for the same seed.
@@ -228,6 +232,7 @@ With recharge on (§3.5), an idle robot (nothing running, no swap pending) whose
 * One robot delivers three packages from one pile to two destinations read at pickup: all units done, every package within 1.5 m of its destination, released less than 0.3 m above the ground (makespan about 190 s).
 * Three robots share one pile and deliver nine packages to three destinations with zones on: all done, every robot carries some, no two robots below 7 m within 2 m of each other (makespan about 420 s).
 * A robot that starts at 34 % battery recharges at a pad (3 kW charger in the test) and delivers all four packages without a swap.
+* Lost unit: one robot hooks a package, then its unit is cancelled. It carries the package on under its own task and places it within 1.5 m of the destination (`Carries() == 1`).
 * Intermediate drops: one package for (400, 0), drop areas at x = 150 and 280, one robot with a pad at home. With 7 Wh (the sling Mavic of §9.3) the package goes through both areas (at least two drops) and is placed within 1.5 m of its destination. With 6.75 Wh even a fully charged robot cannot take it on from 280: it is stranded there, no robot crashes.
 * Relay positions: destinations at (35, 15), (130, 0) and (−20, 110) with a 60 m range give four points (two each for the far ones, the near one needs none), the first two at x = 43.3 and 86.7 m, at the relay altitude; a job puts `relay.1`, `relay.2` before its deliveries.
 * Relay chain: one package from the origin to (130, 0), operator at the origin with a 60 m radio, three relaying robots. With relay positions two robots hold them and the issuer hears the release leaf's `M_DONE` within 3 s of the package being placed (about 1 s); without them it hears it late or never.

@@ -326,8 +326,16 @@ namespace MRS {
 			const auto z = w.Scalar("pose.enu.z", t);
 			if (!layer || !std::holds_alternative<double>(layer->value) || !z) return;
 			if (!idle_yaw_) idle_yaw_ = w.Scalar("att.yaw", t).value_or(0.0);
-			// The horizontal setpoint stays where the last task left it (spec 02 §4.2).
+			// The horizontal setpoint stays where the last task left it (spec 02 §4.2), unless the
+			// MRS layer asks the robot to clear a place (idle.away, spec 18 §4.4).
 			Device::ActionMap a;
+			const auto ax = w.Scalar("idle.away.x", t), ay = w.Scalar("idle.away.y", t);
+			if (ax && ay) {
+				Device::Action pxy;
+				pxy.code = "A_PXY";
+				pxy.arg = *Device::PackArgument(Device::ArgLayout::F32X2, std::vector<double>{*ax, *ay});
+				a.entries.push_back({"any", pxy});
+			}
 			Device::Action pzy;
 			pzy.code = "A_PZY";
 			pzy.arg = *Device::PackArgument(Device::ArgLayout::F32X2, std::vector<double>{std::get<double>(layer->value), *idle_yaw_});

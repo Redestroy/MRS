@@ -23,7 +23,34 @@ namespace MRS {
 			auto& w = robot_.World();
 			const auto id = w.Scalar("payload.id", t);
 			const std::int64_t held = id ? static_cast<std::int64_t>(std::llround(*id)) : 0;
-			if (held != held_) held_since_ = t;
+			if (held != held_) {
+				held_since_ = t;
+				hook_task_ = robot_.CurrentTask();
+				orphan_since_ = -1.0;
+			}
+			// An orphan: the task that hooked the package is not running any more (spec 18 §7.5).
+			if (held != 0 && held == held_) {
+				const std::string& now = robot_.CurrentTask();
+				if (hook_task_.empty() && !now.empty()) hook_task_ = now;
+				auto same = [](const std::string& a, const std::string& b) {  // a unit or one of its parts
+					return a == b || a.rfind(b + ".", 0) == 0 || b.rfind(a + ".", 0) == 0;
+				};
+				if (!now.empty() && same(now, hook_task_)) {
+					orphan_since_ = -1.0;
+				} else if (orphan_since_ < 0.0) {
+					orphan_since_ = t;
+				} else if (t - orphan_since_ >= c_.orphan_after && !robot_.Returning() && !robot_.Recharging()) {
+					Generators::DeliveryOptions o;
+					o.zones = !zones_.empty();
+					o.priority = c_.carry_priority;
+					const std::string task_id = self_ + "." + std::to_string(++own_tasks_);
+					AddTaskRecord(Generators::CarryTask(task_id, o), t);  // only this robot can carry it on
+					if (pool_.Find(hook_task_) && hook_task_.rfind(self_ + ".", 0) != 0) carry_for_[task_id] = hook_task_;
+					hook_task_ = task_id;
+					orphan_since_ = -1.0;
+					++carries_;
+				}
+			}
 			if (held == 0) planned_ = 0;
 			else if (held != planned_ && !c_.drop_areas.empty() && PlanLeg(held, t)) planned_ = held;
 			// Released at the leg point: the package waits there for the next robot.

@@ -455,6 +455,18 @@ namespace MRS {
 						++stats_.done;
 					}
 					OnFinished(e.task_id, PoolState::DONE, self_, et);
+					// A carry task finished the delivery of a unit that lost its package (spec 18 §7.5).
+					if (auto c = carry_for_.find(e.task_id); c != carry_for_.end()) {
+						const std::string unit = c->second;
+						carry_for_.erase(c);
+						if (PoolEntry* u = pool_.Find(unit); u && !Finished(u->state)) {
+							auto r = messenger_.Begin("M_DONE", "all", et);
+							r.fields.push_back(Tid(unit));
+							messenger_.Post(r);
+							++stats_.done;
+							OnFinished(unit, PoolState::DONE, self_, et);
+						}
+					}
 				} else if (e.state == TaskState::FAILED) {
 					if (assigned_ == e.task_id) assigned_.clear();
 					const long progress = static_cast<long>(robot_.Executor().IteratorOf(e.task_id));

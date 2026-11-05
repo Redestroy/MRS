@@ -179,6 +179,9 @@ namespace MRS {
 		// With o.zones, source_zone is the pile's zone number.
 		Protocol::Record DeliveryTask(const std::string& id, const Point& source, double top_loop, const DeliveryOptions& o,
 		                              std::int64_t source_zone = 0);
+		// The rest of a delivery for a package already on the hook (spec 18 §7.5): wait for the
+		// destination area, package flight, lower and release, return home.
+		Protocol::Record CarryTask(const std::string& id, const DeliveryOptions& o);
 		// Relay positions (spec 18 §6.3): for each destination farther than spacing x range from the
 		// operator, evenly spaced points on the line between them so that no link is longer than
 		// spacing x range, at the relay altitude. A point within 0.3 x range of one already chosen

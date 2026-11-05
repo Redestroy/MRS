@@ -42,14 +42,24 @@ namespace MRS {
 			if (zones_.empty()) return;
 			auto& w = robot_.World();
 			const auto px = w.Scalar("pose.enu.x", t), py = w.Scalar("pose.enu.y", t);
+			const bool airborne = w.Bool("airborne", t).value_or(false);
+			const ZoneState* clear = nullptr;  // a zone this robot must fly out of before it lets go
 			for (auto& [id, z] : zones_) {
 				for (auto it = z.wants.begin(); it != z.wants.end();)
 					it = t - it->second.second > c_.zone_timeout ? z.wants.erase(it) : std::next(it);
 				int place = -1;
 				if (z.wanted) {
-					// Release: the robot has no unit any more, or it was in the zone and has left it.
+					// Release: the robot has no unit any more, or it was in the zone and has left it. A
+					// robot without a unit inside the column of a pile or drop zone keeps it until it
+					// has flown out to the holding point: another robot may already be descending
+					// into it (spec 18 §4.4). A pad is let go of at once, the robot may sit on it.
 					const double d = px && py ? std::hypot(*px - z.spec.x, *py - z.spec.y) : 1e9;
-					if ((assigned_.empty() && !robot_.Recharging()) || (z.entered && d > z.spec.radius + 1.0)) {
+					const bool inside = d <= z.spec.radius + 1.0;
+					const bool idle = assigned_.empty() && !robot_.Recharging();
+					if (idle && inside && !z.spec.pad && airborne) {
+						clear = &z;
+					}
+					if ((idle && (z.spec.pad || !inside || !airborne)) || (z.entered && !inside)) {
 						z.wanted = false;
 						SendZone(id, "free", z.stamp, t);
 					} else {
@@ -70,6 +80,8 @@ namespace MRS {
 				const double line = std::max(0, place - z.spec.capacity + 1);
 				w.SetVec3(p + ".hold", z.spec.hold_x, z.spec.hold_y, c_.hold_base + line * c_.hold_step, t, "zones");
 			}
+			if (clear) w.SetVec3("idle.away", clear->spec.hold_x, clear->spec.hold_y, 0.0, t, "zones");
+			else w.Invalidate("idle.away", t);
 			// The charging pad for this robot: the one it already wants, else the one with the
 			// shortest line, then the nearest (spec 18 §3.5).
 			const ZoneState* pad = nullptr;

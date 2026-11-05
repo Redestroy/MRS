@@ -155,6 +155,37 @@ TEST_CASE("one robot delivers three packages from a pile to destinations read at
 }
 
 
+TEST_CASE("a package whose unit is lost after the pickup is carried on by the robot's own task") {
+	// The unit that hooked the package ends while the package is on the hook (here it is cancelled;
+	// in Webots two robots had taken the same unit). The robot must not fly about with it: it
+	// carries it on under a task of its own (spec 18 §7.5).
+	Generators::DeliveryOptions o;
+	o.seed = 3;
+	const std::vector<Generators::Point> sources{{0, 0, 0}};
+	const std::vector<Generators::Point> dests{{30, 20, 0}};
+	auto job = Generators::DeliveryTasks(1, sources, dests, o);
+	Sim::PackageWorld world;
+	LoadPiles(world, job, sources, o);
+	Sim::TeamConfig c;
+	c.mission.homes = {{0, -6, 0}};
+	c.packages = &world;
+	c.sling_length = o.sling_length;
+	Sim::Team team(SlingFiles(), c);
+	team.issuer.LoadTimeline(TimelineOf(job));
+	auto& r = *team.robots[0];
+	while (team.Time() < 300.0 && world.packages[0].state != Sim::Package::State::CARRIED) team.Run(0.5, false);
+	REQUIRE(world.packages[0].state == Sim::Package::State::CARRIED);
+	team.Run(5.0, false);
+	REQUIRE(r.ctl->CancelTask(r.ctl->CurrentTask(), team.Time()));
+	while (team.Time() < 600.0 && world.packages[0].state != Sim::Package::State::PLACED) team.Run(1.0, false);
+	CHECK(r.layer->Carries() == 1);
+	team.Run(30.0, false);
+	CHECK(r.layer->StateOf("op.1") == Algorithms::PoolState::DONE);  // the carry finished the lost unit
+	CHECK(world.packages[0].state == Sim::Package::State::PLACED);
+	CHECK(std::hypot(world.packages[0].pos[0] - 30, world.packages[0].pos[1] - 20) < 1.5);
+	CHECK_FALSE(r.sim.crashed);
+}
+
 namespace {
 	std::vector<Algorithms::ZoneSpec> ZonesOf(const Generators::DeliveryJob& job) {
 		std::vector<Algorithms::ZoneSpec> out;

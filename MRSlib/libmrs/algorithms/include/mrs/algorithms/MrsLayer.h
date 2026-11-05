@@ -80,6 +80,11 @@ namespace MRS {
 			double loaded_speed = 4.5;      // m/s, the package flight's cruise speed (pkg_x lead x kp_pos)
 			double leg_margin = 1.1;        // the leg planner's energy estimate is multiplied by this
 			double leg_min_progress = 10.0; // m: a drop area closer to the destination than this is no progress
+			// A package on the hook that no task of this robot carries any more (its unit was
+			// cancelled or given up after the pickup) is carried on by a task of the robot's own
+			// after this long (spec 18 §7.5), at this priority.
+			double orphan_after = 3.0;
+			double carry_priority = 5.0;
 		};
 
 		struct MrsStats {
@@ -193,6 +198,10 @@ namespace MRS {
 			std::int64_t held_ = 0;                      // the package on the hook at the last tick
 			std::int64_t planned_ = 0;                   // the package the planner has looked at
 			double held_since_ = 0.0;                    // s, when held_ was hooked
+			std::string hook_task_;                      // the task that hooked held_ (or carries it on)
+			double orphan_since_ = -1.0;                 // s, since held_ has had no task carrying it
+			long carries_ = 0;
+			std::map<std::string, std::string> carry_for_;  // carry task -> the unit whose package it carries
 			long own_tasks_ = 0;                         // ids r<N>.<k> of tasks this robot posted
 			long legs_planned_ = 0;
 			bool leg_abandon_ = false;  // the planned drop is a give-up: no robot can carry the package further
@@ -200,6 +209,7 @@ namespace MRS {
 		public:
 			long LegsPlanned() const { return legs_planned_; }
 			long Stranded() const { return stranded_; }  // packages left where no robot could take them further
+			long Carries() const { return carries_; }    // packages carried on after their unit was lost
 		private:
 			std::map<std::string, double> sync_next_;   // by prefix: when it is due
 			std::map<std::string, double> sync_sent_;   // by field path or detection id: stamp last sent
