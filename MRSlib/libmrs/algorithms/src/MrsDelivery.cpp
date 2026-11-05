@@ -45,7 +45,7 @@ namespace MRS {
 					o.priority = c_.carry_priority;
 					const std::string task_id = self_ + "." + std::to_string(++own_tasks_);
 					AddTaskRecord(Generators::CarryTask(task_id, o), t);  // only this robot can carry it on
-					if (pool_.Find(hook_task_) && hook_task_.rfind(self_ + ".", 0) != 0) carry_for_[task_id] = hook_task_;
+					if (pool_.Find(hook_task_)) carry_for_[task_id] = hook_task_;
 					hook_task_ = task_id;
 					orphan_since_ = -1.0;
 					++carries_;

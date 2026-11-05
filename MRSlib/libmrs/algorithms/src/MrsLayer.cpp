@@ -457,8 +457,23 @@ namespace MRS {
 					OnFinished(e.task_id, PoolState::DONE, self_, et);
 					// A carry task finished the delivery of a unit that lost its package (spec 18 §7.5).
 					if (auto c = carry_for_.find(e.task_id); c != carry_for_.end()) {
-						const std::string unit = c->second;
+						std::string unit = c->second;
 						carry_for_.erase(c);
+						// Packages of one pile are alike: when another robot finished the lost unit, the
+						// carried package was the one a later unit from the same pile would have taken.
+						if (PoolEntry* lost = pool_.Find(unit); lost && Finished(lost->state)) {
+							const auto from = Robot::ResourceManager::Targets(*lost->task);
+							unit.clear();
+							for (const PoolEntry* e : pool_.Entries()) {
+								if (Finished(e->state) || !from.size()) continue;
+								const auto to = Robot::ResourceManager::Targets(*e->task);
+								if (!to.empty() && std::hypot(to.front()[0] - from.front()[0], to.front()[1] - from.front()[1]) < 0.5 &&
+								    std::fabs(to.front()[2] - from.front()[2]) < 0.5) {
+									unit = e->id;
+									break;
+								}
+							}
+						}
 						if (PoolEntry* u = pool_.Find(unit); u && !Finished(u->state)) {
 							auto r = messenger_.Begin("M_DONE", "all", et);
 							r.fields.push_back(Tid(unit));

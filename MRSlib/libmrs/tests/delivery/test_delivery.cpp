@@ -186,6 +186,44 @@ TEST_CASE("a package whose unit is lost after the pickup is carried on by the ro
 	CHECK_FALSE(r.sim.crashed);
 }
 
+TEST_CASE("a carried package whose unit another robot finished counts for the next unit from the same pile") {
+	// Two units from one pile. The robot hooks a package for op.1, then hears that op.1 is done
+	// (another robot ran it too) and drops the unit. It carries its package on; the package is the
+	// one op.2 would have taken, so op.2 is reported done (spec 18 §7.5).
+	Generators::DeliveryOptions o;
+	o.seed = 3;
+	const std::vector<Generators::Point> sources{{0, 0, 0}};
+	const std::vector<Generators::Point> dests{{30, 20, 0}};
+	auto job = Generators::DeliveryTasks(2, sources, dests, o);
+	Sim::PackageWorld world;
+	LoadPiles(world, job, sources, o);
+	Sim::TeamConfig c;
+	c.mission.homes = {{0, -6, 0}};
+	c.packages = &world;
+	c.sling_length = o.sling_length;
+	Sim::Team team(SlingFiles(), c);
+	team.issuer.LoadTimeline(TimelineOf(job));
+	auto& r = *team.robots[0];
+	auto carried = [&] {
+		for (const auto& p : world.packages)
+			if (p.state == Sim::Package::State::CARRIED) return true;
+		return false;
+	};
+	while (team.Time() < 300.0 && !carried()) team.Run(0.5, false);
+	REQUIRE(carried());
+	team.Run(5.0, false);
+	const std::string unit = r.ctl->CurrentTask();
+	REQUIRE(!unit.empty());
+	r.layer->Pool().Find(unit)->state = Algorithms::PoolState::DONE;  // as if another robot reported it
+	REQUIRE(r.ctl->CancelTask(unit, team.Time()));
+	while (team.Time() < 600.0 && world.Placed() == 0) team.Run(1.0, false);
+	team.Run(30.0, false);
+	CHECK(r.layer->Carries() == 1);
+	CHECK(world.Placed() == 1);
+	const std::string other = unit == "op.1" ? "op.2" : "op.1";
+	CHECK(r.layer->StateOf(other) == Algorithms::PoolState::DONE);
+}
+
 namespace {
 	std::vector<Algorithms::ZoneSpec> ZonesOf(const Generators::DeliveryJob& job) {
 		std::vector<Algorithms::ZoneSpec> out;
