@@ -45,6 +45,7 @@ namespace MRS {
 				if (fcu) {
 					c.cruise_speed = 0.75 * fcu->Gains().max_speed_xy;
 					c.climb_rate = fcu->Gains().max_climb;
+					c.sink_rate = fcu->Gains().max_descent > 0 ? fcu->Gains().max_descent : fcu->Gains().max_climb;
 				}
 				return c;
 			}

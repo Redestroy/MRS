@@ -309,3 +309,16 @@ TEST_CASE("invalidating a vector clears components written after an earlier inva
 	w.Invalidate("payload.leg", 2.5);
 	CHECK(w.Scalar("payload.legs", 2.5).has_value());  // a sibling with the same prefix is not a component
 }
+
+TEST_CASE("invalidating a flag keeps deeper fields under the same name") {
+	// The flight-state processor invalidates "home" while the pose is unknown; the home position
+	// "home.enu" is a field of its own and must survive (it once did not, and every delivery's
+	// return-home leaf then failed for a missing field in Webots).
+	Environment::Worldview w;
+	w.SetVec3("home.enu", 0, -8, 0, 0.0, "mission");
+	w.SetBool("home", true, 0.0, "flight_state");
+	w.Invalidate("home", 1.0);
+	CHECK_FALSE(w.Bool("home", 1.0).has_value());
+	CHECK(w.Scalar("home.enu.x", 1.0).has_value());
+	CHECK(w.Scalar("home.enu.y", 1.0).has_value());
+}

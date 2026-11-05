@@ -177,7 +177,7 @@ int main(int argc, char** argv) {
 		}
 		Algorithms::MrsLayer layer(controller, transport, functions, std::move(allocator), mrs);
 
-		std::string last;
+		std::string last, last_stack;
 		double next_status = 0.0;
 		while (platform.Step()) {
 			const double t = platform.Time();
@@ -199,7 +199,16 @@ int main(int argc, char** argv) {
 					std::printf("%8.2f r%d running %s\n", t, id, stack.c_str());
 				}
 			}
+			if (!layer.Assigned().empty()) {  // what ran last, to say where a task ended
+				last_stack.clear();
+				for (const auto& l : controller.Executor().StackLabels(true)) last_stack += l + " ";
+			}
 			if (layer.Assigned() != last) {
+				if (!last.empty()) {
+					const auto s = layer.StateOf(last);
+					std::printf("%8.2f r%d task %s ended %s (done %ld, failed %ld, switches %ld, dumps %ld/%ld, cancels %ld) in: %s\n", t, id, last.c_str(),
+					            s ? Algorithms::PoolStateName(*s) : "?", layer.Stats().done, layer.Stats().failed, layer.Stats().switches, layer.Stats().dumps_static, layer.Stats().dumps_dynamic, layer.Stats().cancels, last_stack.c_str());
+				}
 				last = layer.Assigned();
 				std::printf("%8.2f r%d task %s\n", t, id, last.empty() ? "-" : last.c_str());
 			}

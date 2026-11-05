@@ -115,7 +115,7 @@ namespace MRS {
 			std::vector<FlightSegment> plan;
 			const double dz = b[2] - a[2];
 			if (dz > 0.0) plan.push_back({dz / c_.climb_rate, 0.0, c_.climb_rate});
-			else if (dz < 0.0) plan.push_back({-dz / c_.climb_rate, 0.0, -c_.climb_rate});
+			else if (dz < 0.0) plan.push_back({-dz / c_.sink_rate, 0.0, -c_.sink_rate});
 			const double d = std::hypot(b[0] - a[0], b[1] - a[1]);
 			if (d > 0.0) plan.push_back({d / c_.cruise_speed, c_.cruise_speed, 0.0});
 			return plan;

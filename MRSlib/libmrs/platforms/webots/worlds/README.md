@@ -76,8 +76,8 @@ second and each catch.
 
 Status (2026-11-05, headless Webots R2025a on Linux): the hook catches top packages, Mavics fly them
 on the line, lower and release them at their destinations, and r3 charges at the pad (about 45 s).
-One full run delivered 4 of the 12 packages, then stalled. The open problem is the swing of the
-loaded line: descending 15 to 25 m from the cruise layer to the drop height, a Mavic can overshoot.
-The package then hits the ground, the line jerks, and the Mavic flips. More damping on the line's
-ball joint (1.0) made it worse (all three flipped). The next steps are a slower loaded descent and
-FCU gains for loaded flight.
+Status (headless R2025a run): 9 of the 12 packages delivered in about 1,090 s, no Mavic flipped.
+The sling Mavic descends at 1 m/s and has softer outer-loop gains (spec 18 §9.3), because with the
+default gains the swinging package drove a pitch oscillation that flipped it. Open problem: after
+the first pickup from the pile at (-6, 0), every later hook attempt there fails, so its three
+remaining packages are never taken (the other two piles empty normally).

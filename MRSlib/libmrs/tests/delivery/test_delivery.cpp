@@ -343,9 +343,9 @@ namespace {
 }
 
 TEST_CASE("a delivery out of range is left in drop areas and finished from there") {
-	// 6.5 Wh: the full trip does not fit, so the package goes to the area at 150, then 280, then
+	// 7 Wh (the sling Mavic descends at 1 m/s, with soft position gains): the full trip does not fit, so the package goes to the area at 150, then 280, then
 	// to the destination, with recharges at home in between.
-	const auto run = RunLegs(6.5);
+	const auto run = RunLegs(7.0);
 	CHECK(run.planned >= 2);
 	CHECK(run.pkg.legs >= 2);
 	CHECK(run.stranded == 0);
@@ -356,9 +356,9 @@ TEST_CASE("a delivery out of range is left in drop areas and finished from there
 }
 
 TEST_CASE("a package no robot can carry further stays in its drop area") {
-	// 6 Wh: even a fully charged robot cannot take the package on from 280, so it is put down
+	// 6.75 Wh: even a fully charged robot cannot take the package on from 280, so it is put down
 	// there and no new delivery is posted.
-	const auto run = RunLegs(6.0);
+	const auto run = RunLegs(6.75);
 	CHECK(run.stranded == 1);
 	CHECK(run.pkg.state == Sim::Package::State::PILE);
 	CHECK(std::hypot(run.pkg.pos[0] - 280, run.pkg.pos[1]) < 5.0);

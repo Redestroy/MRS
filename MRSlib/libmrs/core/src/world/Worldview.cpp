@@ -134,20 +134,19 @@ namespace MRS {
 		}
 
 		void Worldview::Invalidate(const std::string& path, double stamp) {
-			// The field itself and every sub-field (a vector's .x/.y/.z): a placeholder entry for
-			// the path must not hide sub-fields written later.
+			// The field itself and its vector components (.x/.y/.z): a placeholder entry for the
+			// path must not hide components written later. Other sub-fields are fields of their own
+			// ("home" is not "home.enu.x").
 			bool any = false;
-			if (auto it = fields_.find(path); it != fields_.end()) {
-				it->second.valid = false;
-				it->second.stamp = stamp;
-				any = true;
-			}
-			const std::string prefix = path + ".";
-			for (auto it = fields_.lower_bound(prefix); it != fields_.end() && it->first.compare(0, prefix.size(), prefix) == 0; ++it) {
-				it->second.valid = false;
-				it->second.stamp = stamp;
-				any = true;
-			}
+			auto drop = [&](const std::string& p) {
+				if (auto it = fields_.find(p); it != fields_.end()) {
+					it->second.valid = false;
+					it->second.stamp = stamp;
+					any = true;
+				}
+			};
+			drop(path);
+			for (const char* c : {".x", ".y", ".z"}) drop(path + c);
 			if (!any) fields_[path] = {0.0, stamp, false, {}};
 		}
 
