@@ -101,6 +101,7 @@ namespace MRS {
 			UpdateTrees(t);
 			if (robot_.HasMission()) Allocate(t);
 			UpdateZones(t);
+			UpdateDelivery(t);
 			robot_.Tick(t);
 			AfterRobot(t);
 			if (robot_.HasMission()) {
@@ -192,19 +193,24 @@ namespace MRS {
 		void MrsLayer::OnTasks(const Comm::Message& m, double t) {
 			for (std::size_t k = 0; k < m.SlotCount(); ++k) {
 				if (m.Slot(k).type != FieldType::Ref) continue;
-				const Record& r = m.Child(k);
+				AddTaskRecord(m.Child(k), t);
+			}
+		}
+
+		void MrsLayer::AddTaskRecord(const Record& r, double t) {
+			{
 				// A task repeated by the issuer that this robot already did: the M_DONE was lost on
 				// the way (a limited channel drops messages, spec 13 §3), so say it again.
 				if (!r.fields.empty()) Redone(r.fields[0].s, t);
 				if (c_.split_trees && IsComplexTask(r)) {
 					AddTree(r, t);
-					continue;
+					return;
 				}
 				std::shared_ptr<const Task::Task> task;
 				try {
 					task = factory_.BuildTask(r);
 				} catch (const Task::TaskLoadError&) {
-					continue;  // a task this robot cannot load is a task it cannot do
+					return;  // a task this robot cannot load is a task it cannot do
 				}
 				AddEntry(task, t);
 			}

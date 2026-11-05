@@ -21,6 +21,7 @@ namespace MRS {
 			int carrier = 0;                      // robot id while CARRIED, and of the last carrier
 			double t_picked = -1, t_placed = -1;  // s
 			double drop_height = 0;               // m above the ground when released
+			int legs = 0;                         // intermediate drops on the way
 		};
 
 		// Every package of a run. One world is shared by the team's simulators.
@@ -30,6 +31,7 @@ namespace MRS {
 			double capture_xy = 0.35;   // m: the hook catches a loop this close horizontally
 			double capture_z = 0.15;    // m, and vertically
 			double hard_drop = 0.3;     // m: a release higher than this above the ground is a drop
+			double place_radius = 3.0;  // m: released this close to its destination, a package is delivered; farther, it is a new pile
 
 			// A stack of n packages at (x, y) on the ground, ids from first_id, with the given tags.
 			void AddPile(double x, double y, const std::vector<Package>& tags) {

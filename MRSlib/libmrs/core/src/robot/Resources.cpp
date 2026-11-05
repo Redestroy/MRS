@@ -75,7 +75,10 @@ namespace MRS {
 			remaining_ = *energy;
 			const auto vx = w.Scalar("vel.enu.x", t), vy = w.Scalar("vel.enu.y", t), vz = w.Scalar("vel.enu.z", t);
 			const bool airborne = w.Bool("airborne", t).value_or(false);
-			if (vx && vy && vz && airborne) {
+			// The model is of the robot alone: flight with a package on the sling (spec 18 §7) is
+			// not a calibration sample, the leg planner scales for the load itself.
+			const bool loaded = w.Bool("payload.held", t).value_or(false);
+			if (vx && vy && vz && airborne && !loaded) {
 				speed_sum_ += std::hypot(*vx, *vy);
 				climb_sum_ += *vz;
 				++window_n_;

@@ -49,6 +49,7 @@ namespace MRS {
 			bool recharge = false;
 			double recharge_full = 0.95;   // battery.remaining that ends charging
 			double pad_approach = 4.0;     // m above the pad before landing
+			double recharge_idle_below = 0.6;  // an idle robot below this battery.remaining recharges first
 		};
 
 		class RobotController {

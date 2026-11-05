@@ -134,19 +134,20 @@ namespace MRS {
 		}
 
 		void Worldview::Invalidate(const std::string& path, double stamp) {
-			auto it = fields_.find(path);
-			if (it != fields_.end()) {
+			// The field itself and every sub-field (a vector's .x/.y/.z): a placeholder entry for
+			// the path must not hide sub-fields written later.
+			bool any = false;
+			if (auto it = fields_.find(path); it != fields_.end()) {
 				it->second.valid = false;
 				it->second.stamp = stamp;
-				return;
+				any = true;
 			}
-			bool any = false;
-			for (auto& [p, entry] : fields_)
-				if (p.size() > path.size() && p.compare(0, path.size(), path) == 0 && p[path.size()] == '.') {
-					entry.valid = false;
-					entry.stamp = stamp;
-					any = true;
-				}
+			const std::string prefix = path + ".";
+			for (auto it = fields_.lower_bound(prefix); it != fields_.end() && it->first.compare(0, prefix.size(), prefix) == 0; ++it) {
+				it->second.valid = false;
+				it->second.stamp = stamp;
+				any = true;
+			}
 			if (!any) fields_[path] = {0.0, stamp, false, {}};
 		}
 

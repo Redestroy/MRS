@@ -1,6 +1,8 @@
 #pragma once
 // The MRS layer of one robot (plan §8, spec 09 §5): messages in and out, the task pool, the
 // peer table, the dump rule, and the allocator that feeds the robot controller.
+#include <array>
+#include <cstdint>
 #include <deque>
 #include <map>
 #include <optional>
@@ -35,6 +37,11 @@ namespace MRS {
 			bool pad = false;            // a charging pad (spec 18 §3.5)
 		};
 
+		// An area on the ground where a package may be left for another robot (spec 18 §7).
+		struct DropArea {
+			double x = 0, y = 0, radius = 5.0;
+		};
+
 		struct MrsConfig {
 			double state_period = 0.5;     // s between M_STATE (2 Hz, spec 06 §4)
 			double profile_period = 10.0;  // s between M_PROFILE, so late joiners learn it
@@ -63,6 +70,16 @@ namespace MRS {
 			double hold_base = 8.0;       // m: the first place in line holds at this altitude
 			double hold_step = 3.0;       // m between places in line
 			std::int64_t dest_zone_base = 200;  // the zone of destination area a is dest_zone_base + a
+			// Intermediate drops (spec 18 §7): when a package cannot be carried to its destination
+			// and the robot home on the battery left, leave it in the drop area closest to the
+			// destination that the robot can reach, and post a new delivery from there.
+			std::vector<DropArea> drop_areas;
+			double package_hover_s = 40.0;  // s of hover at a drop: descent, lowering, release
+			double sling_length = 2.0;      // m, for the new delivery's approach
+			double frame_mass = 0.9;        // kg, the robot without a package (loaded power scales as ((M + m) / M)^1.5)
+			double loaded_speed = 4.5;      // m/s, the package flight's cruise speed (pkg_x lead x kp_pos)
+			double leg_margin = 1.1;        // the leg planner's energy estimate is multiplied by this
+			double leg_min_progress = 10.0; // m: a drop area closer to the destination than this is no progress
 		};
 
 		struct MrsStats {
@@ -130,6 +147,11 @@ namespace MRS {
 			void OnZoneMessage(const Comm::Message& m, double t);
 			void UpdateZones(double t);
 			void SendZone(std::int64_t zone, const char* op, double stamp, double t);
+			// Intermediate drops (spec 18 §7, MrsDelivery.cpp).
+			void UpdateDelivery(double t);
+			bool PlanLeg(std::int64_t package, double t);  // false: the tag or the battery is not read yet
+			void PostTask(const Protocol::Record& task, double t);
+			void AddTaskRecord(const Protocol::Record& r, double t);
 			bool StaticOk(const Task::Task& task) const;
 
 			Robot::RobotController& robot_;
@@ -166,6 +188,19 @@ namespace MRS {
 				double stamp = 0.0, sent = -1e9;
 			};
 			std::map<std::int64_t, ZoneState> zones_;
+			std::int64_t leg_package_ = 0;               // the package a leg was planned for (0: none)
+			std::optional<std::array<double, 3>> leg_;   // where to leave it, ENU ground
+			std::int64_t held_ = 0;                      // the package on the hook at the last tick
+			std::int64_t planned_ = 0;                   // the package the planner has looked at
+			double held_since_ = 0.0;                    // s, when held_ was hooked
+			long own_tasks_ = 0;                         // ids r<N>.<k> of tasks this robot posted
+			long legs_planned_ = 0;
+			bool leg_abandon_ = false;  // the planned drop is a give-up: no robot can carry the package further
+			long stranded_ = 0;
+		public:
+			long LegsPlanned() const { return legs_planned_; }
+			long Stranded() const { return stranded_; }  // packages left where no robot could take them further
+		private:
 			std::map<std::string, double> sync_next_;   // by prefix: when it is due
 			std::map<std::string, double> sync_sent_;   // by field path or detection id: stamp last sent
 			std::set<std::string> asked_;               // peers sent an M_INFOREQ

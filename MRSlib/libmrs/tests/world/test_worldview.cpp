@@ -295,3 +295,17 @@ TEST_CASE("time series and requirements") {
 	CHECK_FALSE(r.Satisfiable({"pose.enu"}));
 	CHECK(Environment::WorldviewRequirements{{"pose.enu.x", -1}}.Satisfiable({"pose.enu"}));
 }
+
+TEST_CASE("invalidating a vector clears components written after an earlier invalidation") {
+	Environment::Worldview w;
+	w.Invalidate("payload.leg", 0.0);  // no field yet: leaves a placeholder for the path
+	w.SetVec3("payload.leg", 1, 2, 0, 1.0, "legs");
+	CHECK(w.Scalar("payload.leg.x", 1.0).has_value());
+	w.Invalidate("payload.leg", 2.0);
+	CHECK_FALSE(w.Scalar("payload.leg.x", 2.0).has_value());
+	CHECK_FALSE(w.Scalar("payload.leg.y", 2.0).has_value());
+	CHECK_FALSE(w.Scalar("payload.legs", 2.0).has_value());
+	w.SetScalar("payload.legs", 3, 2.0, "x");
+	w.Invalidate("payload.leg", 2.5);
+	CHECK(w.Scalar("payload.legs", 2.5).has_value());  // a sibling with the same prefix is not a component
+}

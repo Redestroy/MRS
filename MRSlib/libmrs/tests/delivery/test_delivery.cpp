@@ -1,6 +1,8 @@
 // Package delivery (spec 18): the sling in the test simulator, the delivery generator and the
 // delivery behaviours on one robot.
 #include <cmath>
+#include <regex>
+#include <sstream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -84,6 +86,7 @@ TEST_CASE("sling in the test simulator: the passive hook catches the top loop, a
 	Sim::Package a, b;
 	a.id = 1;
 	b.id = 2;
+	b.dest = {5, 0, 0};
 	world.AddPile(0, 0, {a, b});
 	CHECK(world.Top(world.packages[1]));
 	CHECK_FALSE(world.Top(world.packages[0]));
@@ -287,4 +290,76 @@ TEST_CASE("a robot low on battery recharges at a pad and finishes the deliveries
 	CHECK_FALSE(r.ctl->Stopped());
 	CHECK_FALSE(r.sim.crashed);
 	MESSAGE("makespan " << *team.issuer.Makespan() << " s, charged " << r.sim.energy_charged_wh << " Wh");
+}
+
+namespace {
+	// One package for (400, 0), drop areas at x = 150 and 280, one robot with a small battery and a
+	// charging pad at home (spec 18 §7). Runs until the package is placed, stranded or 1800 s pass.
+	struct LegRun {
+		Sim::Package pkg;
+		long planned = 0, stranded = 0;
+		bool crashed = false;
+	};
+	LegRun RunLegs(double capacity_wh) {
+		Generators::DeliveryOptions o;
+		o.seed = 2;
+		const std::vector<Generators::Point> sources{{0, 0, 0}};
+		const std::vector<Generators::Point> dests{{400, 0, 0}};
+		auto job = Generators::DeliveryTasks(1, sources, dests, o, "op", 1);
+		Sim::PackageWorld world;
+		LoadPiles(world, job, sources, o);
+
+		Sim::TeamConfig c;
+		c.mission.xmin = -50;
+		c.mission.xmax = 450;
+		c.mission.homes = {{0, -8, 0}};
+		c.packages = &world;
+		c.quad.capacity_wh = capacity_wh;
+		c.mrs.drop_areas = {{150, 0, 5}, {280, 0, 5}};
+		c.mrs.frame_mass = c.quad.mass;
+		Algorithms::ZoneSpec pad;
+		pad.id = 101;
+		pad.x = 4;
+		pad.y = -8;
+		pad.radius = 1.5;
+		pad.hold_x = 4;
+		pad.hold_y = -14;
+		pad.pad = true;
+		c.mrs.zones = {pad};
+		c.pads = {{4, -8, 0}};
+		c.charge_w = 2000.0;
+		c.recharge = true;
+		auto files = SlingFiles();
+		std::ostringstream cap;
+		cap << "capacity_wh " << capacity_wh;
+		files.definition = std::regex_replace(files.definition, std::regex("capacity_wh 50"), cap.str());
+		Sim::Team team(files, c);
+		team.issuer.LoadTimeline(TimelineOf(job));
+		auto& r = *team.robots[0];
+		while (team.Time() < 1800.0 && world.packages[0].state != Sim::Package::State::PLACED && r.layer->Stranded() == 0) team.Run(1.0, false);
+		return {world.packages[0], r.layer->LegsPlanned(), r.layer->Stranded(), r.sim.crashed};
+	}
+}
+
+TEST_CASE("a delivery out of range is left in drop areas and finished from there") {
+	// 6.5 Wh: the full trip does not fit, so the package goes to the area at 150, then 280, then
+	// to the destination, with recharges at home in between.
+	const auto run = RunLegs(6.5);
+	CHECK(run.planned >= 2);
+	CHECK(run.pkg.legs >= 2);
+	CHECK(run.stranded == 0);
+	CHECK(run.pkg.state == Sim::Package::State::PLACED);
+	CHECK(std::hypot(run.pkg.pos[0] - 400, run.pkg.pos[1]) < 1.5);
+	CHECK_FALSE(run.crashed);
+	MESSAGE("delivered at t " << run.pkg.t_placed << " s after " << run.pkg.legs << " intermediate drop(s)");
+}
+
+TEST_CASE("a package no robot can carry further stays in its drop area") {
+	// 6 Wh: even a fully charged robot cannot take the package on from 280, so it is put down
+	// there and no new delivery is posted.
+	const auto run = RunLegs(6.0);
+	CHECK(run.stranded == 1);
+	CHECK(run.pkg.state == Sim::Package::State::PILE);
+	CHECK(std::hypot(run.pkg.pos[0] - 280, run.pkg.pos[1]) < 5.0);
+	CHECK_FALSE(run.crashed);
 }
