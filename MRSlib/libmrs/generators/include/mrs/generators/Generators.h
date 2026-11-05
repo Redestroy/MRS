@@ -137,6 +137,14 @@ namespace MRS {
 			double zone_radius = 3.0;      // m
 			double hold_offset = 6.0;      // m from the zone's centre to its holding point
 			std::int64_t dest_zone_base = 200;
+			// Relay positions (spec 18 §6.3): with relay_range > 0, hold-position tasks on the line
+			// from the operator to each destination farther than relay_spacing x relay_range.
+			double relay_range = 0.0;        // m, the radio range; 0: no relay tasks
+			Point operator_pos{0, 0, 0};     // ENU, the issuer's radio
+			double relay_spacing = 0.8;      // links are at most this fraction of the range
+			double relay_altitude = 40.0;    // m, above the robots' altitude layers (spec 06 §6)
+			double relay_hold_s = 600.0;     // s a relay holds its position
+			double relay_priority = 2.0;     // above the deliveries, so idle robots take them first
 		};
 
 		// A zone of the job: source s is zone s + 1, destination area a is dest_zone_base + a.
@@ -159,6 +167,7 @@ namespace MRS {
 			std::vector<ManifestEntry> manifest;  // in pile order per source, bottom first
 			std::vector<Protocol::Record> tasks;  // one delivery unit per package
 			std::vector<ZoneDef> zones;           // with DeliveryOptions::zones
+			std::vector<Point> relays;            // relay positions, with DeliveryOptions::relay_range (tasks relay.1.., first in `tasks`)
 		};
 
 		// n packages split over the sources in turn, each with a destination drawn from `destinations`
@@ -170,6 +179,11 @@ namespace MRS {
 		// With o.zones, source_zone is the pile's zone number.
 		Protocol::Record DeliveryTask(const std::string& id, const Point& source, double top_loop, const DeliveryOptions& o,
 		                              std::int64_t source_zone = 0);
+		// Relay positions (spec 18 §6.3): for each destination farther than spacing x range from the
+		// operator, evenly spaced points on the line between them so that no link is longer than
+		// spacing x range, at the relay altitude. A point within 0.3 x range of one already chosen
+		// is shared.
+		std::vector<Point> RelayPoints(const std::vector<Point>& destinations, const DeliveryOptions& o);
 		// The manifest as CSV: package,source,area,dest_x,dest_y,dest_z,mass.
 		std::string ManifestCsv(const DeliveryJob& job);
 

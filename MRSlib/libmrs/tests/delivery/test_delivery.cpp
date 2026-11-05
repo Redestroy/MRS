@@ -4,6 +4,7 @@
 #include <regex>
 #include <sstream>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 #include "doctest.h"
@@ -362,4 +363,76 @@ TEST_CASE("a package no robot can carry further stays in its drop area") {
 	CHECK(run.pkg.state == Sim::Package::State::PILE);
 	CHECK(std::hypot(run.pkg.pos[0] - 280, run.pkg.pos[1]) < 5.0);
 	CHECK_FALSE(run.crashed);
+}
+
+namespace {
+	// One package from the pile at the origin to (130, 0); the operator at the origin with a 60 m
+	// radio, three robots relaying (spec 18 §6). Returns when the issuer heard the release leaf's
+	// M_DONE, or not at all, and when the package was placed.
+	struct RelayRun {
+		std::optional<double> heard;
+		double placed = -1.0;
+		std::size_t relays = 0;
+		long out_of_range = 0;
+	};
+	RelayRun RunRelay(bool relay_tasks) {
+		Generators::DeliveryOptions o;
+		o.seed = 4;
+		o.relay_range = relay_tasks ? 60.0 : 0.0;
+		const std::vector<Generators::Point> sources{{0, 0, 0}};
+		const std::vector<Generators::Point> dests{{130, 0, 0}};
+		auto job = Generators::DeliveryTasks(1, sources, dests, o);
+		Sim::PackageWorld world;
+		LoadPiles(world, job, sources, o);
+
+		Sim::TeamConfig c;
+		c.mission.xmin = -50;
+		c.mission.xmax = 180;
+		c.mission.homes = {{-4, -6, 0}, {0, -6, 0}, {4, -6, 0}};
+		c.packages = &world;
+		c.radio_range = 60.0;
+		c.operator_pos = {0, 0, 0};
+		c.mrs.relay = true;
+		Sim::Team team(SlingFiles(), c);
+		team.issuer.LoadTimeline(TimelineOf(job));
+		auto& pkg = world.packages[0];
+		while (team.Time() < 400.0 && !(pkg.state == Sim::Package::State::PLACED && team.Time() > pkg.t_placed + 20.0)) team.Run(1.0, false);
+		RelayRun r;
+		r.placed = pkg.t_placed;
+		r.relays = job.relays.size();
+		r.out_of_range = team.air.out_of_range;
+		const auto& leaves = team.issuer.Leaves();
+		if (auto it = leaves.find("op.1.4"); it != leaves.end()) r.heard = it->second.done;
+		return r;
+	}
+}
+
+TEST_CASE("relay positions: the generator spaces relays so no link is longer than the spacing") {
+	Generators::DeliveryOptions o;
+	o.relay_range = 60.0;
+	const auto points = Generators::RelayPoints({{35, 15, 0}, {130, 0, 0}, {-20, 110, 0}}, o);
+	// (35, 15) is in range; 130 m needs two relays, 111.8 m needs two; none is shared.
+	REQUIRE(points.size() == 4);
+	CHECK(points[0][0] == doctest::Approx(130.0 / 3));
+	CHECK(points[1][0] == doctest::Approx(260.0 / 3));
+	for (const auto& p : points) CHECK(p[2] == doctest::Approx(o.relay_altitude));
+	auto job = Generators::DeliveryTasks(2, {{0, 0, 0}}, {{130, 0, 0}}, o);
+	REQUIRE(job.relays.size() == 2);
+	REQUIRE(job.tasks.size() == 4);
+	CHECK(job.tasks[0].fields.at(0).s == "relay.1");
+	CHECK(Generators::RelayPoints({{40, 0, 0}}, o).empty());
+}
+
+TEST_CASE("relay positions: idle robots hold a chain, and the issuer hears the release at a far destination") {
+	const auto with = RunRelay(true);
+	REQUIRE(with.relays == 2);
+	REQUIRE(with.placed > 0);
+	REQUIRE(with.heard.has_value());
+	CHECK(*with.heard - with.placed < 3.0);
+	const auto without = RunRelay(false);
+	REQUIRE(without.placed > 0);
+	// Without relays the release M_DONE is sent out of range: the issuer hears it late or never.
+	CHECK((!without.heard || *without.heard - without.placed > 10.0));
+	MESSAGE("release heard " << (*with.heard - with.placed) << " s after placing with relays; without: "
+	                         << (without.heard ? std::to_string(*without.heard - without.placed) + " s" : std::string("never")));
 }

@@ -1,6 +1,6 @@
 # 18 Package delivery
 
-Status: **draft**, started 2026-11-04 from JB's delivery demo request. Plan: `/mnt/project-files/delivery/Package_Delivery_Plan.md` (project files). JB's answers of 2026-11-04 are applied: fixed-length sling with a passive hook and loop; the destination is read from the package at pickup; intermediate drops go to allowed drop areas; relaying carries all messages; recharge at pads, swap as fallback.
+Status: **draft**, started 2026-11-04 from JB's delivery demo request. Plan: `/mnt/project-files/delivery/Package_Delivery_Plan.md` (project files). JB's answers of 2026-11-04 are applied: fixed-length sling with a passive hook and loop; the destination is read from the package at pickup; intermediate drops go to allowed drop areas; relaying carries all messages and idle robots hold relay positions; recharge at pads, swap as fallback.
 
 ## 1. Scope
 
@@ -180,9 +180,13 @@ Every robot relays when the option is on; there are no designated relay robots i
 * the spec 15 rule that sync is "never relayed" is about the content (a robot does not re-publish fields it learned from peers in its own `M_SYNC`); relaying the original `M_SYNC` message unchanged is allowed;
 * the issuer does not relay.
 
-### 6.3 Relay positions (*pending* Q5)
+### 6.3 Relay positions
 
-When a delivery's destination is beyond the issuer's range and no chain of robots covers the gap, the generator adds hold-position tasks at points along the line, spaced below `range_m`, for idle robots. Details follow the answer to Q5.
+JB, 2026-11-04 (Q5): relaying carries every message, and idle robots hold relay positions when a destination is out of the issuer's range.
+
+`DeliveryOptions::relay_range` (m, 0 = off) with `operator_pos` turns on relay positions in the generator. `Generators::RelayPoints` takes each destination farther than `relay_spacing` × range (0.8) from the operator and puts the fewest evenly spaced points on the line between them so that no link is longer than that; a point within 0.3 × range of one already chosen is shared. The points are at `relay_altitude` (40 m, above the robots' layers). Each becomes a HOVER point task (spec 11 §3.1) `relay.<k>` that holds for `relay_hold_s` (600 s), tolerance 2 m / 1 m, priority `relay_priority` (2, above the deliveries, so the first idle robots take them). Their tasks come first in the job, before the deliveries. On the command line: `--relay-range M --operator X,Y [--relay-hold S]` (§5.3).
+
+A robot holding a relay position runs no delivery; with `MrsConfig::relay` on (§6.2) it sends on what it hears, so the chain carries the delivering robot's messages (claims, `M_DONE` of each leaf) to the issuer and the issuer's to it. The battery rules (spec 08 §7) end a hold early as for any task.
 
 ## 7. Intermediate drops in drop areas
 
@@ -225,6 +229,8 @@ With recharge on (§3.5), an idle robot (nothing running, no swap pending) whose
 * Three robots share one pile and deliver nine packages to three destinations with zones on: all done, every robot carries some, no two robots below 7 m within 2 m of each other (makespan about 420 s).
 * A robot that starts at 34 % battery recharges at a pad (3 kW charger in the test) and delivers all four packages without a swap.
 * Intermediate drops: one package for (400, 0), drop areas at x = 150 and 280, one robot with a pad at home. With 6.5 Wh the package goes through both areas (at least two drops) and is placed within 1.5 m of its destination (about 500 s). With 6 Wh even a fully charged robot cannot take it on from 280: it is stranded there, no robot crashes.
+* Relay positions: destinations at (35, 15), (130, 0) and (−20, 110) with a 60 m range give four points (two each for the far ones, the near one needs none), the first two at x = 43.3 and 86.7 m, at the relay altitude; a job puts `relay.1`, `relay.2` before its deliveries.
+* Relay chain: one package from the origin to (130, 0), operator at the origin with a 60 m radio, three relaying robots. With relay positions two robots hold them and the issuer hears the release leaf's `M_DONE` within 3 s of the package being placed (about 1 s); without them it hears it late or never.
 * Worldview: invalidating a vector after an earlier invalidation left a placeholder still clears its components (the cause of a leg point that outlived its package).
 
 * Relay (`tests/delivery/test_relay.cpp`): on a three-agent chain, a broadcast crosses once per agent; hearing it again sends nothing; a unicast passes through a relay that does not take it; a unicast to the relay is not sent on.

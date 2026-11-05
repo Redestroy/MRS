@@ -184,6 +184,26 @@ namespace MRS {
 			return Node("T_S", id, o.priority, 0, leaves);
 		}
 
+		std::vector<Point> RelayPoints(const std::vector<Point>& destinations, const DeliveryOptions& o) {
+			std::vector<Point> out;
+			if (o.relay_range <= 0.0) return out;
+			const double link = o.relay_spacing * o.relay_range;
+			const Point& op = o.operator_pos;
+			for (const auto& d : destinations) {
+				const double l = std::hypot(d[0] - op[0], d[1] - op[1]);
+				if (l <= link) continue;
+				const int n = static_cast<int>(std::ceil(l / link)) - 1;  // relays between operator and destination
+				for (int k = 1; k <= n; ++k) {
+					const double f = static_cast<double>(k) / (n + 1);
+					const Point p{op[0] + (d[0] - op[0]) * f, op[1] + (d[1] - op[1]) * f, o.relay_altitude};
+					bool shared = false;
+					for (const auto& q : out) shared = shared || std::hypot(q[0] - p[0], q[1] - p[1]) < 0.3 * o.relay_range;
+					if (!shared) out.push_back(p);
+				}
+			}
+			return out;
+		}
+
 		DeliveryJob DeliveryTasks(int n, const std::vector<Point>& sources, const std::vector<Point>& destinations, const DeliveryOptions& o,
 		                          const std::string& issuer, int first_id) {
 			if (n < 0) throw JsonError("delivery: the number of packages is negative");
@@ -204,6 +224,18 @@ namespace MRS {
 				e.mass = std::round((o.mass_min + (o.mass_max - o.mass_min) * uniform()) * 1000.0) / 1000.0;
 				++per_source[e.source];
 				job.manifest.push_back(e);
+			}
+			if (o.relay_range > 0.0) {
+				// Hold-position tasks first, so they are dispatched before the deliveries.
+				job.relays = RelayPoints(destinations, o);
+				PointOptions h;
+				h.action = PointAction::HOVER;
+				h.priority = o.relay_priority;
+				h.duration = o.relay_hold_s;
+				h.tol_xy = 2.0;
+				h.tol_z = 1.0;
+				for (std::size_t k = 0; k < job.relays.size(); ++k)
+					job.tasks.push_back(PointTask("relay." + std::to_string(k + 1), job.relays[k], h));
 			}
 			for (int k = 0; k < n; ++k) {
 				const std::size_t s = job.manifest[static_cast<std::size_t>(k)].source;

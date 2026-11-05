@@ -3,6 +3,7 @@
 //                     [--issuer op] [--first N]
 //        mrs_generate delivery <packages> <sources.csv> <destinations.csv> [--seed S] [--zones]
 //                     [--at SECONDS] [--issuer op] [--first N] [--manifest FILE] [--zones-out FILE]
+//                     [--relay-range M] [--operator X,Y] [--relay-hold S]
 // The delivery form (spec 18 §5) reads one point per line, "x,y" or "x,y,z" (ENU, m; lines starting
 // with # are skipped), writes the timeline to standard output, the manifest CSV to --manifest and
 // the zones (id,x,y,z,radius,hold_x,hold_y) to --zones-out.
@@ -57,7 +58,7 @@ namespace {
 	int Delivery(int argc, char** argv) {
 		if (argc < 5) {
 			std::cerr << "usage: mrs_generate delivery <packages> <sources.csv> <destinations.csv> [--seed S] [--zones] [--at SECONDS]"
-			             " [--issuer op] [--first N] [--manifest FILE] [--zones-out FILE]\n";
+			             " [--issuer op] [--first N] [--manifest FILE] [--zones-out FILE] [--relay-range M] [--operator X,Y] [--relay-hold S]\n";
 			return 2;
 		}
 		Generators::DeliveryOptions o;
@@ -78,6 +79,13 @@ namespace {
 			else if (a == "--first") first = std::stoi(v);
 			else if (a == "--manifest") manifest = v;
 			else if (a == "--zones-out") zones_out = v;
+			else if (a == "--relay-range") o.relay_range = std::stod(v);
+			else if (a == "--relay-hold") o.relay_hold_s = std::stod(v);
+			else if (a == "--operator") {
+				const auto c = v.find(',');
+				if (c == std::string::npos) throw std::runtime_error("--operator expects X,Y");
+				o.operator_pos = {std::stod(v.substr(0, c)), std::stod(v.substr(c + 1)), 0.0};
+			}
 			else throw std::runtime_error("unknown option " + a);
 		}
 		const auto job = Generators::DeliveryTasks(std::stoi(argv[2]), ReadPoints(argv[3]), ReadPoints(argv[4]), o, issuer, first);
