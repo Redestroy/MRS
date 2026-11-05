@@ -464,12 +464,12 @@ namespace MRS {
 						if (PoolEntry* lost = pool_.Find(unit); lost && Finished(lost->state)) {
 							const auto from = Robot::ResourceManager::Targets(*lost->task);
 							unit.clear();
-							for (const PoolEntry* e : pool_.Entries()) {
-								if (Finished(e->state) || !from.size()) continue;
-								const auto to = Robot::ResourceManager::Targets(*e->task);
+							for (const PoolEntry* other : pool_.Entries()) {
+								if (Finished(other->state) || !from.size()) continue;
+								const auto to = Robot::ResourceManager::Targets(*other->task);
 								if (!to.empty() && std::hypot(to.front()[0] - from.front()[0], to.front()[1] - from.front()[1]) < 0.5 &&
 								    std::fabs(to.front()[2] - from.front()[2]) < 0.5) {
-									unit = e->id;
+									unit = other->id;
 									break;
 								}
 							}
