@@ -76,8 +76,8 @@ second and each catch.
 
 Status (2026-11-05, headless Webots R2025a on Linux): the hook catches top packages, Mavics fly them
 on the line, lower and release them at their destinations, and r3 charges at the pad (about 45 s).
-Status (headless R2025a run): 9 of the 12 packages delivered in about 1,090 s, no Mavic flipped.
-The sling Mavic descends at 1 m/s and has softer outer-loop gains (spec 18 §9.3), because with the
-default gains the swinging package drove a pitch oscillation that flipped it. Open problem: after
-the first pickup from the pile at (-6, 0), every later hook attempt there fails, so its three
-remaining packages are never taken (the other two piles empty normally).
+Status (headless R2025a run): 11 of the 12 packages delivered in about 550 s. The sling Mavic
+descends at 1 m/s and has softer outer-loop gains (spec 18 §9.3); a pickup gives up 2.2 m above
+the ground; the hook does not catch while rising. Open problem: one Mavic ended up holding a
+package with no task (two robots had taken the same last unit), flew to its holding point with
+the package swinging and flipped, so the last package was not delivered.

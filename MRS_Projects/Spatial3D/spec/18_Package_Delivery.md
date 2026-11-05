@@ -71,7 +71,7 @@ All in [`examples/uav_behaviours.mrsb`](examples/uav_behaviours.mrsb):
 
 | Entry | Fulfils | What it does |
 |---|---|---|
-| `pickup` | `C_? payload.held` | Airborne; descends at 0.3 m/s where it is until the hook holds a package. Fails after 30 s (`R_C NOT C_W 30`) |
+| `pickup` | `C_? payload.held` | Airborne; descends at 0.3 m/s where it is until the hook holds a package. Fails after 30 s (`R_C NOT C_W 30`) or at 2.2 m above the ground (`R_C C_m alt.agl gt 2.2`), where the hook has missed and reached the ground |
 | `flyto.package` | `C_? payload.at_dest` | Package flight: towards `payload.goal` at the robot's layer (`pkg_x`, `pkg_y`, `pkg_z`, `yaw_to_goal`), the setpoint at most 5.5 m ahead (about 5 m/s with `kp_pos` 0.9), descending to the approach altitude within 3 m. Fails if the package is lost (`R_C payload.held`) |
 | `lower_package` | `C_? payload.grounded` | Descends at 0.4 m/s until the line goes slack. Fails after 40 s or if the package is lost |
 | `wait_in_line` | `C_? zone._.mine` | §4.3 |
@@ -248,7 +248,7 @@ The parts of `sling.webots` (§2.2) map to Webots as follows:
 | `load cell`, `mode sling` | a PositionSensor on a vertical SliderJoint spring in the line | load kg = −x · `spring` / g − `tare`; line length (`length` 2 m, `length_open` + 0.1 m); open | |
 | `tag reader` | (no device; the robot's `supervisor` must be TRUE) | the tag of the package nearest the hook within `reach` 0.6 m while the hook is locked: id, destination, area, mass; else 0 | |
 
-The hook is passive in the sense of §2.1: whenever a sling port is read, a closed hook that is present to a loop connector locks to it, unless it was opened in the last `hook_open_s` (1 s) or has not yet left the package it let go of. A package is a Solid whose `description` is its tag, `tag <id> <dest x> <dest y> <dest z> <area> <mass>`, with a `passive` loop Connector (model `sling`) 0.1 m above its top. Only the top of a pile can be caught: on each read the platform sets the loop model of every package with another package resting on it to `sling covered`, which the hook does not dock with. `MRS_SLING_DEBUG` in the environment prints the hook state once a second and each catch.
+The hook is passive in the sense of §2.1: whenever a sling port is read, a closed hook that is present to a loop connector locks to it, unless it was opened in the last `hook_open_s` (1 s) or has not yet left the package it let go of, or (with a supervisor) the hook is rising faster than 0.1 m/s: a robot that missed and climbs away does not snag the package on its way up. A package is a Solid whose `description` is its tag, `tag <id> <dest x> <dest y> <dest z> <area> <mass>`, with a `passive` loop Connector (model `sling`) 0.1 m above its top. Only the top of a pile can be caught: on each read the platform sets the loop model of every package with another package resting on it to `sling covered`, which the hook does not dock with. `MRS_SLING_DEBUG` in the environment prints the hook state, the hook position and the nearest package once a second, and each catch.
 
 ### 9.2 World
 

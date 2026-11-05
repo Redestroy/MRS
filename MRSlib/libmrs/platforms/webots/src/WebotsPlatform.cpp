@@ -238,7 +238,14 @@ namespace MRS {
 				const int presence = s.hook->getPresence();
 				if (presence == 0) s.armed = true;
 				s.open = t < s.open_until;
-				if (t > 0.1 && !s.hook->isLocked() && !s.open && s.armed && presence == 1) {
+				// The hook catches a loop as it is lowered onto it, not while it rises: a robot that
+				// missed and climbs away must not snag the package on its way up (spec 18 §9.1).
+				bool rising = false;
+				if (s.supervisor) {
+					const double* v = s.supervisor->getFromDevice(s.hook)->getVelocity();
+					rising = v && v[2] > 0.1;
+				}
+				if (t > 0.1 && !s.hook->isLocked() && !s.open && s.armed && presence == 1 && !rising) {
 					s.hook->lock();
 					if (std::getenv("MRS_SLING_DEBUG") && s.supervisor) {
 						const double* h = s.supervisor->getFromDevice(s.hook)->getPosition();
@@ -247,8 +254,24 @@ namespace MRS {
 				}
 				if (std::getenv("MRS_SLING_DEBUG") && t >= s.debug_next) {
 					s.debug_next = t + 1.0;
-					std::printf("sling t=%.1f presence=%d locked=%d armed=%d open=%d\n", t, presence, static_cast<int>(s.hook->isLocked()),
+					std::printf("sling t=%.1f presence=%d locked=%d armed=%d open=%d", t, presence, static_cast<int>(s.hook->isLocked()),
 					            static_cast<int>(s.armed), static_cast<int>(s.open));
+					if (s.supervisor) {  // the hook, and the nearest package with its loop's model
+						const double* h = s.supervisor->getFromDevice(s.hook)->getPosition();
+						std::printf(" hook (%.2f, %.2f, %.2f)", h[0], h[1], h[2]);
+						const std::pair<webots::Node*, webots::Field*>* near = nullptr;
+						double best = 1e9;
+						for (const auto& l : s.loops) {
+							const double* q = l.first->getPosition();
+							const double d = std::hypot(std::hypot(q[0] - h[0], q[1] - h[1]), q[2] - h[2]);
+							if (d < best) best = d, near = &l;
+						}
+						if (near) {
+							const double* q = near->first->getPosition();
+							std::printf(" nearest (%.2f, %.2f, %.2f) %s", q[0], q[1], q[2], near->second->getSFString().c_str());
+						}
+					}
+					std::printf("\n");
 				}
 			}
 
