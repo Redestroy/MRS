@@ -75,7 +75,10 @@ namespace MRS {
 			remaining_ = *energy;
 			const auto vx = w.Scalar("vel.enu.x", t), vy = w.Scalar("vel.enu.y", t), vz = w.Scalar("vel.enu.z", t);
 			const bool airborne = w.Bool("airborne", t).value_or(false);
-			if (vx && vy && vz && airborne) {
+			// The model is of the robot alone: flight with a package on the sling (spec 18 §7) is
+			// not a calibration sample, the leg planner scales for the load itself.
+			const bool loaded = w.Bool("payload.held", t).value_or(false);
+			if (vx && vy && vz && airborne && !loaded) {
 				speed_sum_ += std::hypot(*vx, *vy);
 				climb_sum_ += *vz;
 				++window_n_;
@@ -112,7 +115,7 @@ namespace MRS {
 			std::vector<FlightSegment> plan;
 			const double dz = b[2] - a[2];
 			if (dz > 0.0) plan.push_back({dz / c_.climb_rate, 0.0, c_.climb_rate});
-			else if (dz < 0.0) plan.push_back({-dz / c_.climb_rate, 0.0, -c_.climb_rate});
+			else if (dz < 0.0) plan.push_back({-dz / c_.sink_rate, 0.0, -c_.sink_rate});
 			const double d = std::hypot(b[0] - a[0], b[1] - a[1]);
 			if (d > 0.0) plan.push_back({d / c_.cruise_speed, c_.cruise_speed, 0.0});
 			return plan;

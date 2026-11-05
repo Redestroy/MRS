@@ -295,3 +295,30 @@ TEST_CASE("time series and requirements") {
 	CHECK_FALSE(r.Satisfiable({"pose.enu"}));
 	CHECK(Environment::WorldviewRequirements{{"pose.enu.x", -1}}.Satisfiable({"pose.enu"}));
 }
+
+TEST_CASE("invalidating a vector clears components written after an earlier invalidation") {
+	Environment::Worldview w;
+	w.Invalidate("payload.leg", 0.0);  // no field yet: leaves a placeholder for the path
+	w.SetVec3("payload.leg", 1, 2, 0, 1.0, "legs");
+	CHECK(w.Scalar("payload.leg.x", 1.0).has_value());
+	w.Invalidate("payload.leg", 2.0);
+	CHECK_FALSE(w.Scalar("payload.leg.x", 2.0).has_value());
+	CHECK_FALSE(w.Scalar("payload.leg.y", 2.0).has_value());
+	CHECK_FALSE(w.Scalar("payload.legs", 2.0).has_value());
+	w.SetScalar("payload.legs", 3, 2.0, "x");
+	w.Invalidate("payload.leg", 2.5);
+	CHECK(w.Scalar("payload.legs", 2.5).has_value());  // a sibling with the same prefix is not a component
+}
+
+TEST_CASE("invalidating a flag keeps deeper fields under the same name") {
+	// The flight-state processor invalidates "home" while the pose is unknown; the home position
+	// "home.enu" is a field of its own and must survive (it once did not, and every delivery's
+	// return-home leaf then failed for a missing field in Webots).
+	Environment::Worldview w;
+	w.SetVec3("home.enu", 0, -8, 0, 0.0, "mission");
+	w.SetBool("home", true, 0.0, "flight_state");
+	w.Invalidate("home", 1.0);
+	CHECK_FALSE(w.Bool("home", 1.0).has_value());
+	CHECK(w.Scalar("home.enu.x", 1.0).has_value());
+	CHECK(w.Scalar("home.enu.y", 1.0).has_value());
+}

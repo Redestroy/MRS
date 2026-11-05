@@ -59,6 +59,7 @@ namespace MRS {
 		struct ResourceConfig {
 			double cruise_speed = 6.0;   // m/s: max_speed_xy * 0.75
 			double climb_rate = 2.0;     // m/s: max_climb
+			double sink_rate = 2.0;      // m/s: max_descent (a flight descent, not a landing)
 			double descent_rate = 0.7;   // m/s: the landing rate
 			double reserve_fraction = 0.15;
 			double sample_period = 1.0;  // s between calibration samples

@@ -36,6 +36,7 @@ namespace MRS {
 				num("max_motor", g_.max_motor);
 				num("max_speed_xy", g_.max_speed_xy);
 				num("max_climb", g_.max_climb);
+				num("max_descent", g_.max_descent);
 				num("max_tilt", g_.max_tilt);
 				num("max_yaw_rate", g_.max_yaw_rate);
 				num("kp_pos", g_.kp_pos);
@@ -226,7 +227,7 @@ namespace MRS {
 					vx *= g_.max_speed_xy / vxy;
 					vy *= g_.max_speed_xy / vxy;
 				}
-				double climb_limit = g_.max_climb, descent_limit = g_.max_climb;
+				double climb_limit = g_.max_climb, descent_limit = g_.max_descent > 0 ? g_.max_descent : g_.max_climb;
 				if (mode_ == FcuMode::TAKEOFF) climb_limit = rate_;
 				if (mode_ == FcuMode::LANDING) {
 					vz = -rate_;

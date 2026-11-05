@@ -45,6 +45,7 @@ namespace MRS {
 				if (fcu) {
 					c.cruise_speed = 0.75 * fcu->Gains().max_speed_xy;
 					c.climb_rate = fcu->Gains().max_climb;
+					c.sink_rate = fcu->Gains().max_descent > 0 ? fcu->Gains().max_descent : fcu->Gains().max_climb;
 				}
 				return c;
 			}
@@ -236,6 +237,10 @@ namespace MRS {
 				HandleEvents(t);
 				// 4. The executor; its dispatch goes through the safety supervisor.
 				if (!stopped_) {
+					// An idle robot with a pad tops up before it takes more work (spec 18 §3.5).
+					if (c_.recharge && !recharging_ && !swap_pending_ && executor_.Empty() &&
+					    model_.world.Scalar("battery.remaining", t).value_or(1.0) < c_.recharge_idle_below)
+						PushRecharge(t);
 					auto result = executor_.Tick(model_.world, t);
 					HandleTaskEvents(result.events, t);
 					JournalStack(t);
@@ -321,8 +326,16 @@ namespace MRS {
 			const auto z = w.Scalar("pose.enu.z", t);
 			if (!layer || !std::holds_alternative<double>(layer->value) || !z) return;
 			if (!idle_yaw_) idle_yaw_ = w.Scalar("att.yaw", t).value_or(0.0);
-			// The horizontal setpoint stays where the last task left it (spec 02 §4.2).
+			// The horizontal setpoint stays where the last task left it (spec 02 §4.2), unless the
+			// MRS layer asks the robot to clear a place (idle.away, spec 18 §4.4).
 			Device::ActionMap a;
+			const auto ax = w.Scalar("idle.away.x", t), ay = w.Scalar("idle.away.y", t);
+			if (ax && ay) {
+				Device::Action pxy;
+				pxy.code = "A_PXY";
+				pxy.arg = *Device::PackArgument(Device::ArgLayout::F32X2, std::vector<double>{*ax, *ay});
+				a.entries.push_back({"any", pxy});
+			}
 			Device::Action pzy;
 			pzy.code = "A_PZY";
 			pzy.arg = *Device::PackArgument(Device::ArgLayout::F32X2, std::vector<double>{std::get<double>(layer->value), *idle_yaw_});
@@ -373,6 +386,7 @@ namespace MRS {
 			tasks.front()->SetId(std::string(kSafetyPrefix) + "recharge");
 			executor_.Push(std::move(tasks.front()));
 			recharging_ = true;
+			blocked_ = true;
 			journal_.Event(t, "recharge");
 		}
 
@@ -450,6 +464,8 @@ namespace MRS {
 							blocked_ = false;
 							swap_pending_ = false;
 							journal_.Event(t, "recharged");
+						} else if (!swap_pending_) {
+							blocked_ = false;  // a top-up that failed: work on with what is left
 						}
 						continue;
 					}

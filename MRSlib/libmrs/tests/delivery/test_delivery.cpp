@@ -1,7 +1,10 @@
 // Package delivery (spec 18): the sling in the test simulator, the delivery generator and the
 // delivery behaviours on one robot.
 #include <cmath>
+#include <regex>
+#include <sstream>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 #include "doctest.h"
@@ -84,6 +87,7 @@ TEST_CASE("sling in the test simulator: the passive hook catches the top loop, a
 	Sim::Package a, b;
 	a.id = 1;
 	b.id = 2;
+	b.dest = {5, 0, 0};
 	world.AddPile(0, 0, {a, b});
 	CHECK(world.Top(world.packages[1]));
 	CHECK_FALSE(world.Top(world.packages[0]));
@@ -150,6 +154,75 @@ TEST_CASE("one robot delivers three packages from a pile to destinations read at
 	MESSAGE("makespan " << *team.issuer.Makespan() << " s");
 }
 
+
+TEST_CASE("a package whose unit is lost after the pickup is carried on by the robot's own task") {
+	// The unit that hooked the package ends while the package is on the hook (here it is cancelled;
+	// in Webots two robots had taken the same unit). The robot must not fly about with it: it
+	// carries it on under a task of its own (spec 18 §7.5).
+	Generators::DeliveryOptions o;
+	o.seed = 3;
+	const std::vector<Generators::Point> sources{{0, 0, 0}};
+	const std::vector<Generators::Point> dests{{30, 20, 0}};
+	auto job = Generators::DeliveryTasks(1, sources, dests, o);
+	Sim::PackageWorld world;
+	LoadPiles(world, job, sources, o);
+	Sim::TeamConfig c;
+	c.mission.homes = {{0, -6, 0}};
+	c.packages = &world;
+	c.sling_length = o.sling_length;
+	Sim::Team team(SlingFiles(), c);
+	team.issuer.LoadTimeline(TimelineOf(job));
+	auto& r = *team.robots[0];
+	while (team.Time() < 300.0 && world.packages[0].state != Sim::Package::State::CARRIED) team.Run(0.5, false);
+	REQUIRE(world.packages[0].state == Sim::Package::State::CARRIED);
+	team.Run(5.0, false);
+	REQUIRE(r.ctl->CancelTask(r.ctl->CurrentTask(), team.Time()));
+	while (team.Time() < 600.0 && world.packages[0].state != Sim::Package::State::PLACED) team.Run(1.0, false);
+	CHECK(r.layer->Carries() == 1);
+	team.Run(30.0, false);
+	CHECK(r.layer->StateOf("op.1") == Algorithms::PoolState::DONE);  // the carry finished the lost unit
+	CHECK(world.packages[0].state == Sim::Package::State::PLACED);
+	CHECK(std::hypot(world.packages[0].pos[0] - 30, world.packages[0].pos[1] - 20) < 1.5);
+	CHECK_FALSE(r.sim.crashed);
+}
+
+TEST_CASE("a carried package whose unit another robot finished counts for the next unit from the same pile") {
+	// Two units from one pile. The robot hooks a package for op.1, then hears that op.1 is done
+	// (another robot ran it too) and drops the unit. It carries its package on; the package is the
+	// one op.2 would have taken, so op.2 is reported done (spec 18 §7.5).
+	Generators::DeliveryOptions o;
+	o.seed = 3;
+	const std::vector<Generators::Point> sources{{0, 0, 0}};
+	const std::vector<Generators::Point> dests{{30, 20, 0}};
+	auto job = Generators::DeliveryTasks(2, sources, dests, o);
+	Sim::PackageWorld world;
+	LoadPiles(world, job, sources, o);
+	Sim::TeamConfig c;
+	c.mission.homes = {{0, -6, 0}};
+	c.packages = &world;
+	c.sling_length = o.sling_length;
+	Sim::Team team(SlingFiles(), c);
+	team.issuer.LoadTimeline(TimelineOf(job));
+	auto& r = *team.robots[0];
+	auto carried = [&] {
+		for (const auto& p : world.packages)
+			if (p.state == Sim::Package::State::CARRIED) return true;
+		return false;
+	};
+	while (team.Time() < 300.0 && !carried()) team.Run(0.5, false);
+	REQUIRE(carried());
+	team.Run(5.0, false);
+	const std::string unit = r.ctl->CurrentTask();
+	REQUIRE(!unit.empty());
+	r.layer->Pool().Find(unit)->state = Algorithms::PoolState::DONE;  // as if another robot reported it
+	REQUIRE(r.ctl->CancelTask(unit, team.Time()));
+	while (team.Time() < 600.0 && world.Placed() == 0) team.Run(1.0, false);
+	team.Run(30.0, false);
+	CHECK(r.layer->Carries() == 1);
+	CHECK(world.Placed() == 1);
+	const std::string other = unit == "op.1" ? "op.2" : "op.1";
+	CHECK(r.layer->StateOf(other) == Algorithms::PoolState::DONE);
+}
 
 namespace {
 	std::vector<Algorithms::ZoneSpec> ZonesOf(const Generators::DeliveryJob& job) {
@@ -287,4 +360,148 @@ TEST_CASE("a robot low on battery recharges at a pad and finishes the deliveries
 	CHECK_FALSE(r.ctl->Stopped());
 	CHECK_FALSE(r.sim.crashed);
 	MESSAGE("makespan " << *team.issuer.Makespan() << " s, charged " << r.sim.energy_charged_wh << " Wh");
+}
+
+namespace {
+	// One package for (400, 0), drop areas at x = 150 and 280, one robot with a small battery and a
+	// charging pad at home (spec 18 §7). Runs until the package is placed, stranded or 1800 s pass.
+	struct LegRun {
+		Sim::Package pkg;
+		long planned = 0, stranded = 0;
+		bool crashed = false;
+	};
+	LegRun RunLegs(double capacity_wh) {
+		Generators::DeliveryOptions o;
+		o.seed = 2;
+		const std::vector<Generators::Point> sources{{0, 0, 0}};
+		const std::vector<Generators::Point> dests{{400, 0, 0}};
+		auto job = Generators::DeliveryTasks(1, sources, dests, o, "op", 1);
+		Sim::PackageWorld world;
+		LoadPiles(world, job, sources, o);
+
+		Sim::TeamConfig c;
+		c.mission.xmin = -50;
+		c.mission.xmax = 450;
+		c.mission.homes = {{0, -8, 0}};
+		c.packages = &world;
+		c.quad.capacity_wh = capacity_wh;
+		c.mrs.drop_areas = {{150, 0, 5}, {280, 0, 5}};
+		c.mrs.frame_mass = c.quad.mass;
+		Algorithms::ZoneSpec pad;
+		pad.id = 101;
+		pad.x = 4;
+		pad.y = -8;
+		pad.radius = 1.5;
+		pad.hold_x = 4;
+		pad.hold_y = -14;
+		pad.pad = true;
+		c.mrs.zones = {pad};
+		c.pads = {{4, -8, 0}};
+		c.charge_w = 2000.0;
+		c.recharge = true;
+		auto files = SlingFiles();
+		std::ostringstream cap;
+		cap << "capacity_wh " << capacity_wh;
+		files.definition = std::regex_replace(files.definition, std::regex("capacity_wh 50"), cap.str());
+		Sim::Team team(files, c);
+		team.issuer.LoadTimeline(TimelineOf(job));
+		auto& r = *team.robots[0];
+		while (team.Time() < 1800.0 && world.packages[0].state != Sim::Package::State::PLACED && r.layer->Stranded() == 0) team.Run(1.0, false);
+		return {world.packages[0], r.layer->LegsPlanned(), r.layer->Stranded(), r.sim.crashed};
+	}
+}
+
+TEST_CASE("a delivery out of range is left in drop areas and finished from there") {
+	// 7 Wh (the sling Mavic descends at 1 m/s, with soft position gains): the full trip does not fit, so the package goes to the area at 150, then 280, then
+	// to the destination, with recharges at home in between.
+	const auto run = RunLegs(7.0);
+	CHECK(run.planned >= 2);
+	CHECK(run.pkg.legs >= 2);
+	CHECK(run.stranded == 0);
+	CHECK(run.pkg.state == Sim::Package::State::PLACED);
+	CHECK(std::hypot(run.pkg.pos[0] - 400, run.pkg.pos[1]) < 1.5);
+	CHECK_FALSE(run.crashed);
+	MESSAGE("delivered at t " << run.pkg.t_placed << " s after " << run.pkg.legs << " intermediate drop(s)");
+}
+
+TEST_CASE("a package no robot can carry further stays in its drop area") {
+	// 6.75 Wh: even a fully charged robot cannot take the package on from 280, so it is put down
+	// there and no new delivery is posted.
+	const auto run = RunLegs(6.75);
+	CHECK(run.stranded == 1);
+	CHECK(run.pkg.state == Sim::Package::State::PILE);
+	CHECK(std::hypot(run.pkg.pos[0] - 280, run.pkg.pos[1]) < 5.0);
+	CHECK_FALSE(run.crashed);
+}
+
+namespace {
+	// One package from the pile at the origin to (130, 0); the operator at the origin with a 60 m
+	// radio, three robots relaying (spec 18 §6). Returns when the issuer heard the release leaf's
+	// M_DONE, or not at all, and when the package was placed.
+	struct RelayRun {
+		std::optional<double> heard;
+		double placed = -1.0;
+		std::size_t relays = 0;
+		long out_of_range = 0;
+	};
+	RelayRun RunRelay(bool relay_tasks) {
+		Generators::DeliveryOptions o;
+		o.seed = 4;
+		o.relay_range = relay_tasks ? 60.0 : 0.0;
+		const std::vector<Generators::Point> sources{{0, 0, 0}};
+		const std::vector<Generators::Point> dests{{130, 0, 0}};
+		auto job = Generators::DeliveryTasks(1, sources, dests, o);
+		Sim::PackageWorld world;
+		LoadPiles(world, job, sources, o);
+
+		Sim::TeamConfig c;
+		c.mission.xmin = -50;
+		c.mission.xmax = 180;
+		c.mission.homes = {{-4, -6, 0}, {0, -6, 0}, {4, -6, 0}};
+		c.packages = &world;
+		c.radio_range = 60.0;
+		c.operator_pos = {0, 0, 0};
+		c.mrs.relay = true;
+		Sim::Team team(SlingFiles(), c);
+		team.issuer.LoadTimeline(TimelineOf(job));
+		auto& pkg = world.packages[0];
+		while (team.Time() < 400.0 && !(pkg.state == Sim::Package::State::PLACED && team.Time() > pkg.t_placed + 20.0)) team.Run(1.0, false);
+		RelayRun r;
+		r.placed = pkg.t_placed;
+		r.relays = job.relays.size();
+		r.out_of_range = team.air.out_of_range;
+		const auto& leaves = team.issuer.Leaves();
+		if (auto it = leaves.find("op.1.4"); it != leaves.end()) r.heard = it->second.done;
+		return r;
+	}
+}
+
+TEST_CASE("relay positions: the generator spaces relays so no link is longer than the spacing") {
+	Generators::DeliveryOptions o;
+	o.relay_range = 60.0;
+	const auto points = Generators::RelayPoints({{35, 15, 0}, {130, 0, 0}, {-20, 110, 0}}, o);
+	// (35, 15) is in range; 130 m needs two relays, 111.8 m needs two; none is shared.
+	REQUIRE(points.size() == 4);
+	CHECK(points[0][0] == doctest::Approx(130.0 / 3));
+	CHECK(points[1][0] == doctest::Approx(260.0 / 3));
+	for (const auto& p : points) CHECK(p[2] == doctest::Approx(o.relay_altitude));
+	auto job = Generators::DeliveryTasks(2, {{0, 0, 0}}, {{130, 0, 0}}, o);
+	REQUIRE(job.relays.size() == 2);
+	REQUIRE(job.tasks.size() == 4);
+	CHECK(job.tasks[0].fields.at(0).s == "relay.1");
+	CHECK(Generators::RelayPoints({{40, 0, 0}}, o).empty());
+}
+
+TEST_CASE("relay positions: idle robots hold a chain, and the issuer hears the release at a far destination") {
+	const auto with = RunRelay(true);
+	REQUIRE(with.relays == 2);
+	REQUIRE(with.placed > 0);
+	REQUIRE(with.heard.has_value());
+	CHECK(*with.heard - with.placed < 3.0);
+	const auto without = RunRelay(false);
+	REQUIRE(without.placed > 0);
+	// Without relays the release M_DONE is sent out of range: the issuer hears it late or never.
+	CHECK((!without.heard || *without.heard - without.placed > 10.0));
+	MESSAGE("release heard " << (*with.heard - with.placed) << " s after placing with relays; without: "
+	                         << (without.heard ? std::to_string(*without.heard - without.placed) + " s" : std::string("never")));
 }

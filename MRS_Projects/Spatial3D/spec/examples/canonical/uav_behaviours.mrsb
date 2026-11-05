@@ -203,9 +203,12 @@ C_1: C_? ?_1/
 ?_1: airborne T/
 C_2: C_N/
 C_3: C_N/
+R_1: R_S R_1 R_2/
 R_1: R_C C_1/
 C_1: C_L 3 C_1/
 C_1: C_W 30/
+R_2: R_C C_1/
+C_1: C_m alt.agl gt 2.2 0/
 T_1: T_A 0 1 0 C_1 C_2 A_1 A_2/
 C_1: C_N/
 C_2: C_N/

@@ -415,7 +415,7 @@ namespace MRS {
 				}
 
 				Params fp;
-				Pass(p, fp, {"max_climb", "max_speed_xy", "hover_speed", "max_motor", "max_tilt", "max_yaw_rate", "kp_pos", "kp_vel",
+				Pass(p, fp, {"max_climb", "max_descent", "max_speed_xy", "hover_speed", "max_motor", "max_tilt", "max_yaw_rate", "kp_pos", "kp_vel",
 				             "ki_vel", "kv", "ki_z", "kp_yaw", "kr", "kp_att", "kd_att", "setpoint_timeout", "takeoff_tol", "state_timeout"});
 				const std::string fcu_key = registry.Has("fcu." + platform) ? "fcu." + platform : "fcu.default";
 				Pass(p, fp, {"port", "guided", "arm_timeout"});

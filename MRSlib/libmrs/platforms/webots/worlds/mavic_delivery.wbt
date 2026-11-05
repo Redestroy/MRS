@@ -1,0 +1,940 @@
+#VRML_SIM R2025a utf8
+# The package delivery world (spec 18 §9), written by make_delivery_world.py. Mavic 2 Pro with a
+# sling deliver the packages of the piles to the destinations on their tags; a charging pad
+# stands beside the homes. See README.md.
+
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackground.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/backgrounds/protos/TexturedBackgroundLight.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/objects/floors/protos/Floor.proto"
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/robots/dji/mavic/protos/Mavic2Pro.proto"
+
+WorldInfo {
+  info [
+    "MRS package delivery: Mavics with slings, piles, destinations, a charging pad"
+  ]
+  title "mavic_delivery"
+  basicTimeStep 8
+  defaultDamping Damping {
+    linear 0.5
+    angular 0.5
+  }
+  gpsCoordinateSystem "WGS84"
+  gpsReference 56.9496 24.1052 10
+}
+Viewpoint {
+  orientation -0.3 0.3 0.9 1.7
+  position 5 -55 40
+  follow "r1"
+}
+TexturedBackground {
+}
+TexturedBackgroundLight {
+}
+Floor {
+  size 220 220
+  tileSize 4 4
+}
+
+Solid {
+  translation -6 0 0.005
+  name "zone 1"
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.2 0.4 0.9
+        roughness 1
+        metalness 0
+      }
+      geometry Cylinder {
+        height 0.01
+        radius 3.0
+      }
+    }
+  ]
+}
+
+Solid {
+  translation 0 0 0.005
+  name "zone 2"
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.2 0.4 0.9
+        roughness 1
+        metalness 0
+      }
+      geometry Cylinder {
+        height 0.01
+        radius 3.0
+      }
+    }
+  ]
+}
+
+Solid {
+  translation 6 0 0.005
+  name "zone 3"
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.2 0.4 0.9
+        roughness 1
+        metalness 0
+      }
+      geometry Cylinder {
+        height 0.01
+        radius 3.0
+      }
+    }
+  ]
+}
+
+Solid {
+  translation 35 15 0.005
+  name "zone 201"
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.9 0.3 0.2
+        roughness 1
+        metalness 0
+      }
+      geometry Cylinder {
+        height 0.01
+        radius 3.0
+      }
+    }
+  ]
+}
+
+Solid {
+  translation -30 25 0.005
+  name "zone 202"
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.9 0.3 0.2
+        roughness 1
+        metalness 0
+      }
+      geometry Cylinder {
+        height 0.01
+        radius 3.0
+      }
+    }
+  ]
+}
+
+Solid {
+  translation 5 45 0.005
+  name "zone 203"
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.9 0.3 0.2
+        roughness 1
+        metalness 0
+      }
+      geometry Cylinder {
+        height 0.01
+        radius 3.0
+      }
+    }
+  ]
+}
+
+Solid {
+  translation 40 -20 0.005
+  name "zone 204"
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.9 0.3 0.2
+        roughness 1
+        metalness 0
+      }
+      geometry Cylinder {
+        height 0.01
+        radius 3.0
+      }
+    }
+  ]
+}
+
+Solid {
+  translation 10.0 -8.0 0.005
+  name "pad"
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.1 0.8 0.2
+        roughness 1
+        metalness 0
+      }
+      geometry Cylinder {
+        height 0.01
+        radius 0.8
+      }
+    }
+  ]
+}
+
+Charger {
+  translation 10.0 -8.0 0.02
+  name "charger"
+  battery [
+    1e9, 1e9, 3000
+  ]
+  radius 1.2
+}
+
+DEF PKG_1001 Solid {
+  translation -6.0 0.0 0.125
+  name "package 1001"
+  description "tag 1001 5 45 0 3 0.395"
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.72 0.53 0.32
+        roughness 1
+        metalness 0
+      }
+      geometry DEF BOX Box {
+        size 0.3 0.3 0.25
+      }
+    }
+    Connector {
+      translation 0 0 0.225
+      rotation 0 1 0 -1.5708
+      name "loop"
+      model "sling"
+      type "passive"
+      distanceTolerance 0.35
+      axisTolerance 1.0
+      rotationTolerance 0
+      numberOfRotations 0
+      snap FALSE
+    }
+  ]
+  boundingObject USE BOX
+  physics Physics {
+    density -1
+    mass 0.395
+  }
+}
+
+DEF PKG_1002 Solid {
+  translation 0.0 0.0 0.125
+  name "package 1002"
+  description "tag 1002 -30 25 0 2 0.439"
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.72 0.53 0.32
+        roughness 1
+        metalness 0
+      }
+      geometry DEF BOX Box {
+        size 0.3 0.3 0.25
+      }
+    }
+    Connector {
+      translation 0 0 0.225
+      rotation 0 1 0 -1.5708
+      name "loop"
+      model "sling"
+      type "passive"
+      distanceTolerance 0.35
+      axisTolerance 1.0
+      rotationTolerance 0
+      numberOfRotations 0
+      snap FALSE
+    }
+  ]
+  boundingObject USE BOX
+  physics Physics {
+    density -1
+    mass 0.439
+  }
+}
+
+DEF PKG_1003 Solid {
+  translation 6.0 0.0 0.125
+  name "package 1003"
+  description "tag 1003 5 45 0 3 0.366"
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.72 0.53 0.32
+        roughness 1
+        metalness 0
+      }
+      geometry DEF BOX Box {
+        size 0.3 0.3 0.25
+      }
+    }
+    Connector {
+      translation 0 0 0.225
+      rotation 0 1 0 -1.5708
+      name "loop"
+      model "sling"
+      type "passive"
+      distanceTolerance 0.35
+      axisTolerance 1.0
+      rotationTolerance 0
+      numberOfRotations 0
+      snap FALSE
+    }
+  ]
+  boundingObject USE BOX
+  physics Physics {
+    density -1
+    mass 0.366
+  }
+}
+
+DEF PKG_1004 Solid {
+  translation -6.0 0.0 0.375
+  name "package 1004"
+  description "tag 1004 35 15 0 1 0.452"
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.72 0.53 0.32
+        roughness 1
+        metalness 0
+      }
+      geometry DEF BOX Box {
+        size 0.3 0.3 0.25
+      }
+    }
+    Connector {
+      translation 0 0 0.225
+      rotation 0 1 0 -1.5708
+      name "loop"
+      model "sling"
+      type "passive"
+      distanceTolerance 0.35
+      axisTolerance 1.0
+      rotationTolerance 0
+      numberOfRotations 0
+      snap FALSE
+    }
+  ]
+  boundingObject USE BOX
+  physics Physics {
+    density -1
+    mass 0.452
+  }
+}
+
+DEF PKG_1005 Solid {
+  translation 0.0 0.0 0.375
+  name "package 1005"
+  description "tag 1005 35 15 0 1 0.424"
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.72 0.53 0.32
+        roughness 1
+        metalness 0
+      }
+      geometry DEF BOX Box {
+        size 0.3 0.3 0.25
+      }
+    }
+    Connector {
+      translation 0 0 0.225
+      rotation 0 1 0 -1.5708
+      name "loop"
+      model "sling"
+      type "passive"
+      distanceTolerance 0.35
+      axisTolerance 1.0
+      rotationTolerance 0
+      numberOfRotations 0
+      snap FALSE
+    }
+  ]
+  boundingObject USE BOX
+  physics Physics {
+    density -1
+    mass 0.424
+  }
+}
+
+DEF PKG_1006 Solid {
+  translation 6.0 0.0 0.375
+  name "package 1006"
+  description "tag 1006 5 45 0 3 0.435"
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.72 0.53 0.32
+        roughness 1
+        metalness 0
+      }
+      geometry DEF BOX Box {
+        size 0.3 0.3 0.25
+      }
+    }
+    Connector {
+      translation 0 0 0.225
+      rotation 0 1 0 -1.5708
+      name "loop"
+      model "sling"
+      type "passive"
+      distanceTolerance 0.35
+      axisTolerance 1.0
+      rotationTolerance 0
+      numberOfRotations 0
+      snap FALSE
+    }
+  ]
+  boundingObject USE BOX
+  physics Physics {
+    density -1
+    mass 0.435
+  }
+}
+
+DEF PKG_1007 Solid {
+  translation -6.0 0.0 0.625
+  name "package 1007"
+  description "tag 1007 -30 25 0 2 0.273"
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.72 0.53 0.32
+        roughness 1
+        metalness 0
+      }
+      geometry DEF BOX Box {
+        size 0.3 0.3 0.25
+      }
+    }
+    Connector {
+      translation 0 0 0.225
+      rotation 0 1 0 -1.5708
+      name "loop"
+      model "sling"
+      type "passive"
+      distanceTolerance 0.35
+      axisTolerance 1.0
+      rotationTolerance 0
+      numberOfRotations 0
+      snap FALSE
+    }
+  ]
+  boundingObject USE BOX
+  physics Physics {
+    density -1
+    mass 0.273
+  }
+}
+
+DEF PKG_1008 Solid {
+  translation 0.0 0.0 0.625
+  name "package 1008"
+  description "tag 1008 5 45 0 3 0.327"
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.72 0.53 0.32
+        roughness 1
+        metalness 0
+      }
+      geometry DEF BOX Box {
+        size 0.3 0.3 0.25
+      }
+    }
+    Connector {
+      translation 0 0 0.225
+      rotation 0 1 0 -1.5708
+      name "loop"
+      model "sling"
+      type "passive"
+      distanceTolerance 0.35
+      axisTolerance 1.0
+      rotationTolerance 0
+      numberOfRotations 0
+      snap FALSE
+    }
+  ]
+  boundingObject USE BOX
+  physics Physics {
+    density -1
+    mass 0.327
+  }
+}
+
+DEF PKG_1009 Solid {
+  translation 6.0 0.0 0.625
+  name "package 1009"
+  description "tag 1009 5 45 0 3 0.387"
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.72 0.53 0.32
+        roughness 1
+        metalness 0
+      }
+      geometry DEF BOX Box {
+        size 0.3 0.3 0.25
+      }
+    }
+    Connector {
+      translation 0 0 0.225
+      rotation 0 1 0 -1.5708
+      name "loop"
+      model "sling"
+      type "passive"
+      distanceTolerance 0.35
+      axisTolerance 1.0
+      rotationTolerance 0
+      numberOfRotations 0
+      snap FALSE
+    }
+  ]
+  boundingObject USE BOX
+  physics Physics {
+    density -1
+    mass 0.387
+  }
+}
+
+DEF PKG_1010 Solid {
+  translation -6.0 0.0 0.875
+  name "package 1010"
+  description "tag 1010 35 15 0 1 0.46"
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.72 0.53 0.32
+        roughness 1
+        metalness 0
+      }
+      geometry DEF BOX Box {
+        size 0.3 0.3 0.25
+      }
+    }
+    Connector {
+      translation 0 0 0.225
+      rotation 0 1 0 -1.5708
+      name "loop"
+      model "sling"
+      type "passive"
+      distanceTolerance 0.35
+      axisTolerance 1.0
+      rotationTolerance 0
+      numberOfRotations 0
+      snap FALSE
+    }
+  ]
+  boundingObject USE BOX
+  physics Physics {
+    density -1
+    mass 0.46
+  }
+}
+
+DEF PKG_1011 Solid {
+  translation 0.0 0.0 0.875
+  name "package 1011"
+  description "tag 1011 40 -20 0 4 0.365"
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.72 0.53 0.32
+        roughness 1
+        metalness 0
+      }
+      geometry DEF BOX Box {
+        size 0.3 0.3 0.25
+      }
+    }
+    Connector {
+      translation 0 0 0.225
+      rotation 0 1 0 -1.5708
+      name "loop"
+      model "sling"
+      type "passive"
+      distanceTolerance 0.35
+      axisTolerance 1.0
+      rotationTolerance 0
+      numberOfRotations 0
+      snap FALSE
+    }
+  ]
+  boundingObject USE BOX
+  physics Physics {
+    density -1
+    mass 0.365
+  }
+}
+
+DEF PKG_1012 Solid {
+  translation 6.0 0.0 0.875
+  name "package 1012"
+  description "tag 1012 5 45 0 3 0.316"
+  children [
+    Shape {
+      appearance PBRAppearance {
+        baseColor 0.72 0.53 0.32
+        roughness 1
+        metalness 0
+      }
+      geometry DEF BOX Box {
+        size 0.3 0.3 0.25
+      }
+    }
+    Connector {
+      translation 0 0 0.225
+      rotation 0 1 0 -1.5708
+      name "loop"
+      model "sling"
+      type "passive"
+      distanceTolerance 0.35
+      axisTolerance 1.0
+      rotationTolerance 0
+      numberOfRotations 0
+      snap FALSE
+    }
+  ]
+  boundingObject USE BOX
+  physics Physics {
+    density -1
+    mass 0.316
+  }
+}
+
+Mavic2Pro {
+  translation -4.0 -8.0 0.1
+  name "r1"
+  controller "mrs_uav"
+  controllerArgs [
+    "1"
+    "rta"
+    "mavic_sling_webots.mrsd"
+    "mavic_sling_webots.mrsp"
+    "uav_behaviours.mrsb"
+    "--zones"
+    "../../worlds/delivery_zones.csv"
+    "--pad"
+    "101,10,-8,16,-8"
+  ]
+  supervisor TRUE
+  battery [
+    180000, 180000, 3000
+  ]
+  bodySlot [
+    Emitter {
+      name "emitter"
+      channel 1
+    }
+    Receiver {
+      name "receiver"
+      channel 1
+    }
+    BallJoint {
+      jointParameters BallJointParameters {
+        anchor -0.075 0 -0.06
+        dampingConstant 0.2
+      }
+      endPoint Solid {
+        translation -0.075 0 -1.060
+        name "line"
+        children [
+          Shape {
+            appearance PBRAppearance {
+              baseColor 0.1 0.1 0.1
+              roughness 1
+              metalness 0
+            }
+            geometry Cylinder {
+              height 1.900
+              radius 0.004
+            }
+          }
+          SliderJoint {
+            jointParameters JointParameters {
+              axis 0 0 1
+              springConstant 150
+              dampingConstant 4
+              minStop -0.2
+              maxStop 0.05
+            }
+            device [
+              PositionSensor {
+                name "load cell"
+              }
+            ]
+            endPoint Solid {
+              translation 0 0 -1.000
+              name "hook body"
+              children [
+                Shape {
+                  appearance PBRAppearance {
+                    baseColor 0.8 0.6 0.1
+                    metalness 0.5
+                  }
+                  geometry Sphere {
+                    radius 0.03
+                  }
+                }
+                Connector {
+                  rotation 0 1 0 1.5708
+                  name "hook"
+                  model "sling"
+                  type "active"
+                  autoLock FALSE
+                  distanceTolerance 0.35
+                  axisTolerance 1.0
+                  rotationTolerance 0
+                  numberOfRotations 0
+                  snap FALSE
+                }
+              ]
+              physics Physics {
+                density -1
+                mass 0.1
+              }
+            }
+          }
+        ]
+        physics Physics {
+          density -1
+          mass 0.02
+        }
+      }
+    }
+  ]
+}
+
+Mavic2Pro {
+  translation 0.0 -8.0 0.1
+  name "r2"
+  controller "mrs_uav"
+  controllerArgs [
+    "2"
+    "rta"
+    "mavic_sling_webots.mrsd"
+    "mavic_sling_webots.mrsp"
+    "uav_behaviours.mrsb"
+    "--zones"
+    "../../worlds/delivery_zones.csv"
+    "--pad"
+    "101,10,-8,16,-8"
+  ]
+  supervisor TRUE
+  battery [
+    180000, 180000, 3000
+  ]
+  bodySlot [
+    Emitter {
+      name "emitter"
+      channel 1
+    }
+    Receiver {
+      name "receiver"
+      channel 1
+    }
+    BallJoint {
+      jointParameters BallJointParameters {
+        anchor -0.075 0 -0.06
+        dampingConstant 0.2
+      }
+      endPoint Solid {
+        translation -0.075 0 -1.060
+        name "line"
+        children [
+          Shape {
+            appearance PBRAppearance {
+              baseColor 0.1 0.1 0.1
+              roughness 1
+              metalness 0
+            }
+            geometry Cylinder {
+              height 1.900
+              radius 0.004
+            }
+          }
+          SliderJoint {
+            jointParameters JointParameters {
+              axis 0 0 1
+              springConstant 150
+              dampingConstant 4
+              minStop -0.2
+              maxStop 0.05
+            }
+            device [
+              PositionSensor {
+                name "load cell"
+              }
+            ]
+            endPoint Solid {
+              translation 0 0 -1.000
+              name "hook body"
+              children [
+                Shape {
+                  appearance PBRAppearance {
+                    baseColor 0.8 0.6 0.1
+                    metalness 0.5
+                  }
+                  geometry Sphere {
+                    radius 0.03
+                  }
+                }
+                Connector {
+                  rotation 0 1 0 1.5708
+                  name "hook"
+                  model "sling"
+                  type "active"
+                  autoLock FALSE
+                  distanceTolerance 0.35
+                  axisTolerance 1.0
+                  rotationTolerance 0
+                  numberOfRotations 0
+                  snap FALSE
+                }
+              ]
+              physics Physics {
+                density -1
+                mass 0.1
+              }
+            }
+          }
+        ]
+        physics Physics {
+          density -1
+          mass 0.02
+        }
+      }
+    }
+  ]
+}
+
+Mavic2Pro {
+  translation 4.0 -8.0 0.1
+  name "r3"
+  controller "mrs_uav"
+  controllerArgs [
+    "3"
+    "rta"
+    "mavic_sling_webots.mrsd"
+    "mavic_sling_webots.mrsp"
+    "uav_behaviours.mrsb"
+    "--zones"
+    "../../worlds/delivery_zones.csv"
+    "--pad"
+    "101,10,-8,16,-8"
+  ]
+  supervisor TRUE
+  battery [
+    72000, 180000, 3000
+  ]
+  bodySlot [
+    Emitter {
+      name "emitter"
+      channel 1
+    }
+    Receiver {
+      name "receiver"
+      channel 1
+    }
+    BallJoint {
+      jointParameters BallJointParameters {
+        anchor -0.075 0 -0.06
+        dampingConstant 0.2
+      }
+      endPoint Solid {
+        translation -0.075 0 -1.060
+        name "line"
+        children [
+          Shape {
+            appearance PBRAppearance {
+              baseColor 0.1 0.1 0.1
+              roughness 1
+              metalness 0
+            }
+            geometry Cylinder {
+              height 1.900
+              radius 0.004
+            }
+          }
+          SliderJoint {
+            jointParameters JointParameters {
+              axis 0 0 1
+              springConstant 150
+              dampingConstant 4
+              minStop -0.2
+              maxStop 0.05
+            }
+            device [
+              PositionSensor {
+                name "load cell"
+              }
+            ]
+            endPoint Solid {
+              translation 0 0 -1.000
+              name "hook body"
+              children [
+                Shape {
+                  appearance PBRAppearance {
+                    baseColor 0.8 0.6 0.1
+                    metalness 0.5
+                  }
+                  geometry Sphere {
+                    radius 0.03
+                  }
+                }
+                Connector {
+                  rotation 0 1 0 1.5708
+                  name "hook"
+                  model "sling"
+                  type "active"
+                  autoLock FALSE
+                  distanceTolerance 0.35
+                  axisTolerance 1.0
+                  rotationTolerance 0
+                  numberOfRotations 0
+                  snap FALSE
+                }
+              ]
+              physics Physics {
+                density -1
+                mass 0.1
+              }
+            }
+          }
+        ]
+        physics Physics {
+          density -1
+          mass 0.02
+        }
+      }
+    }
+  ]
+}
+
+Robot {
+  translation 0 -14 0.5
+  name "issuer"
+  controller "mrs_issuer"
+  controllerArgs [
+    "../../worlds/mavic_delivery_mission.mrs"
+    "../../worlds/delivery_12.mrsl"
+    "../../worlds/mavic_delivery_results.csv"
+  ]
+  supervisor TRUE
+  children [
+    Emitter {
+      name "emitter"
+      channel 1
+    }
+    Receiver {
+      name "receiver"
+      channel 1
+    }
+  ]
+}

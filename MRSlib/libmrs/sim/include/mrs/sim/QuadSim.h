@@ -127,8 +127,15 @@ namespace MRS {
 					const double support = world->SupportAt(p->pos[0], p->pos[1], p);
 					p->drop_height = p->pos[2] - support;
 					p->pos[2] = support;
-					p->state = Package::State::PLACED;
-					p->t_placed = t_;
+					// Left away from its destination (an intermediate drop, spec 18 §7), it is a pile
+					// of its own for the next robot.
+					if (std::hypot(p->pos[0] - p->dest[0], p->pos[1] - p->dest[1]) > world->place_radius) {
+						p->state = Package::State::PILE;
+						++p->legs;
+					} else {
+						p->state = Package::State::PLACED;
+						p->t_placed = t_;
+					}
 					drops.push_back({t_, pos});
 				}
 				carried = 0;

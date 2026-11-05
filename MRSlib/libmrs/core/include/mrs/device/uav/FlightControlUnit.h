@@ -30,6 +30,8 @@ namespace MRS {
 			struct FcuGains {
 				double hover_speed = 68.5, max_motor = 576;
 				double max_speed_xy = 8, max_climb = 2, max_tilt = 0.35, max_yaw_rate = 1.0;
+				// m/s; 0: the same as max_climb. A drone with a hanging load descends slower (spec 18 §9.3).
+				double max_descent = 0;
 				double kp_pos = 0.9, kp_vel = 1.6, ki_vel = 0.5;
 				double kv = 4.0, ki_z = 6.0;
 				double kp_yaw = 1.5, kr = 6.0;

@@ -101,6 +101,7 @@ namespace MRS {
 			UpdateTrees(t);
 			if (robot_.HasMission()) Allocate(t);
 			UpdateZones(t);
+			UpdateDelivery(t);
 			robot_.Tick(t);
 			AfterRobot(t);
 			if (robot_.HasMission()) {
@@ -192,19 +193,24 @@ namespace MRS {
 		void MrsLayer::OnTasks(const Comm::Message& m, double t) {
 			for (std::size_t k = 0; k < m.SlotCount(); ++k) {
 				if (m.Slot(k).type != FieldType::Ref) continue;
-				const Record& r = m.Child(k);
+				AddTaskRecord(m.Child(k), t);
+			}
+		}
+
+		void MrsLayer::AddTaskRecord(const Record& r, double t) {
+			{
 				// A task repeated by the issuer that this robot already did: the M_DONE was lost on
 				// the way (a limited channel drops messages, spec 13 §3), so say it again.
 				if (!r.fields.empty()) Redone(r.fields[0].s, t);
 				if (c_.split_trees && IsComplexTask(r)) {
 					AddTree(r, t);
-					continue;
+					return;
 				}
 				std::shared_ptr<const Task::Task> task;
 				try {
 					task = factory_.BuildTask(r);
 				} catch (const Task::TaskLoadError&) {
-					continue;  // a task this robot cannot load is a task it cannot do
+					return;  // a task this robot cannot load is a task it cannot do
 				}
 				AddEntry(task, t);
 			}
@@ -449,6 +455,33 @@ namespace MRS {
 						++stats_.done;
 					}
 					OnFinished(e.task_id, PoolState::DONE, self_, et);
+					// A carry task finished the delivery of a unit that lost its package (spec 18 §7.5).
+					if (auto c = carry_for_.find(e.task_id); c != carry_for_.end()) {
+						std::string unit = c->second;
+						carry_for_.erase(c);
+						// Packages of one pile are alike: when another robot finished the lost unit, the
+						// carried package was the one a later unit from the same pile would have taken.
+						if (PoolEntry* lost = pool_.Find(unit); lost && Finished(lost->state)) {
+							const auto from = Robot::ResourceManager::Targets(*lost->task);
+							unit.clear();
+							for (const PoolEntry* other : pool_.Entries()) {
+								if (Finished(other->state) || !from.size()) continue;
+								const auto to = Robot::ResourceManager::Targets(*other->task);
+								if (!to.empty() && std::hypot(to.front()[0] - from.front()[0], to.front()[1] - from.front()[1]) < 0.5 &&
+								    std::fabs(to.front()[2] - from.front()[2]) < 0.5) {
+									unit = other->id;
+									break;
+								}
+							}
+						}
+						if (PoolEntry* u = pool_.Find(unit); u && !Finished(u->state)) {
+							auto r = messenger_.Begin("M_DONE", "all", et);
+							r.fields.push_back(Tid(unit));
+							messenger_.Post(r);
+							++stats_.done;
+							OnFinished(unit, PoolState::DONE, self_, et);
+						}
+					}
 				} else if (e.state == TaskState::FAILED) {
 					if (assigned_ == e.task_id) assigned_.clear();
 					const long progress = static_cast<long>(robot_.Executor().IteratorOf(e.task_id));

@@ -190,8 +190,12 @@ namespace MRS {
 						w.SetBool("payload.at_dest", false, t, "sling");
 						return;
 					}
-					const double dx = RawScalar(w, "payload.dest.x", *px), dy = RawScalar(w, "payload.dest.y", *py);
-					const double dz = RawScalar(w, "payload.dest.z", 0.0);
+					// A planned intermediate drop (spec 18 §7) replaces the destination for this flight.
+					const bool leg = w.Scalar("payload.leg.x", t).has_value();
+					const double dx = leg ? RawScalar(w, "payload.leg.x", *px) : RawScalar(w, "payload.dest.x", *px);
+					const double dy = leg ? RawScalar(w, "payload.leg.y", *py) : RawScalar(w, "payload.dest.y", *py);
+					const double dz = leg ? RawScalar(w, "payload.leg.z", 0.0) : RawScalar(w, "payload.dest.z", 0.0);
+					if (leg) via_done_ = true;  // straight to the drop area
 					const double to_dest = std::hypot(dx - *px, dy - *py);
 					const double gz = dz + RawScalar(w, "sling.length", 2.0) + c_.approach + 0.5;
 					const double pz = w.Scalar("pose.enu.z", t).value_or(gz);

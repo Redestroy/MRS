@@ -1,6 +1,6 @@
 # 18 Package delivery
 
-Status: **draft**, started 2026-11-04 from JB's delivery demo request. Plan: `/mnt/project-files/delivery/Package_Delivery_Plan.md` (project files). JB's answers of 2026-11-04 are applied: fixed-length sling with a passive hook and loop; the destination is read from the package at pickup; intermediate drops go to allowed drop areas; relaying carries all messages; recharge at pads, swap as fallback.
+Status: **draft**, started 2026-11-04 from JB's delivery demo request. Plan: `/mnt/project-files/delivery/Package_Delivery_Plan.md` (project files). JB's answers of 2026-11-04 are applied: fixed-length sling with a passive hook and loop; the destination is read from the package at pickup; intermediate drops go to allowed drop areas; relaying carries all messages and idle robots hold relay positions; recharge at pads, swap as fallback.
 
 ## 1. Scope
 
@@ -11,7 +11,7 @@ A team of UAVs delivers small packages from a pile at a source point to destinat
 * shared zones with queues (§4);
 * a delivery generator and a package manifest (§5);
 * a range-limited radio and message relaying (§6);
-* intermediate drops in allowed drop areas for deliveries out of loaded range (§7, *pending*).
+* intermediate drops in allowed drop areas for deliveries out of loaded range (§7).
 
 ## 2. Sling
 
@@ -44,7 +44,7 @@ The robot file is [`examples/mavic_sling_webots.mrsd`](examples/mavic_sling_webo
 
 * with nothing on the hook and the hook closed, the hook catches a pile package whose loop (top + `loop_height` 0.10 m) is within `capture_xy` 0.35 m horizontally and `capture_z` 0.15 m vertically;
 * a carried package hangs below the hook; when its bottom reaches the ground or another package it stands there and the line goes slack. Its mass is added to the robot's mass while it hangs;
-* opening the hook places the package where it is (it falls to the support below; the fall is recorded as `drop_height`). A placed package is never caught again.
+* opening the hook puts the package down where it is (it falls to the support below; the fall is recorded as `drop_height`). Within `place_radius` (3 m) of its destination it is placed, and a placed package is never caught again. Farther away it becomes a pile of its own (an intermediate drop, §7) and its `legs` count goes up.
 
 `QuadSim` serves the ports `hook` (read: held, open; write 0: open), `load cell` (load, length, open) and `tag reader` (id, destination, area, mass, or 0). `TeamConfig::packages` shares one world between the robots; `TeamConfig::sling_length` sets the line.
 
@@ -71,7 +71,7 @@ All in [`examples/uav_behaviours.mrsb`](examples/uav_behaviours.mrsb):
 
 | Entry | Fulfils | What it does |
 |---|---|---|
-| `pickup` | `C_? payload.held` | Airborne; descends at 0.3 m/s where it is until the hook holds a package. Fails after 30 s (`R_C NOT C_W 30`) |
+| `pickup` | `C_? payload.held` | Airborne; descends at 0.3 m/s where it is until the hook holds a package. Fails after 30 s (`R_C NOT C_W 30`) or at 2.2 m above the ground (`R_C C_m alt.agl gt 2.2`), where the hook has missed and reached the ground |
 | `flyto.package` | `C_? payload.at_dest` | Package flight: towards `payload.goal` at the robot's layer (`pkg_x`, `pkg_y`, `pkg_z`, `yaw_to_goal`), the setpoint at most 5.5 m ahead (about 5 m/s with `kp_pos` 0.9), descending to the approach altitude within 3 m. Fails if the package is lost (`R_C payload.held`) |
 | `lower_package` | `C_? payload.grounded` | Descends at 0.4 m/s until the line goes slack. Fails after 40 s or if the package is lost |
 | `wait_in_line` | `C_? zone._.mine` | §4.3 |
@@ -116,7 +116,7 @@ A **zone** is a place only `capacity` robots may use at once: the pickup spot of
 |---|---|---|---|
 | `M_ZONE` | `int zone`, `id op` (`want` or `free`), `num stamp` | broadcast | The sender wants the zone since `stamp`, or no longer wants it |
 
-A robot sends `want` when it first asks for the zone and repeats it every `zone_renew` (2 s); a want not heard for `zone_timeout` (10 s) lapses. Robots line up by the stamp of their want, then by robot number; the first `capacity` hold the zone. A robot frees a zone when it has been inside the zone's radius while holding it and has moved more than 1 m beyond it, or when it has no unit any more (and no recharge running).
+A robot sends `want` when it first asks for the zone and repeats it every `zone_renew` (2 s); a want not heard for `zone_timeout` (10 s) lapses. Robots line up by the stamp of their want, then by robot number; the first `capacity` hold the zone. A robot frees a zone when it has been inside the zone's radius while holding it and has moved more than 1 m beyond it, or when it has no unit any more (and no recharge running). A robot left without a unit while it is airborne inside the column of a pile or drop zone (within the radius + 1 m) keeps the zone and flies out to the zone's holding point first (`idle.away`, which the idle-at-layer hold of spec 08 §3.3 follows), since another robot may already be descending into it. A pad is freed at once.
 
 `A_ZQ zone` (`ZONE_QUEUE`, `I64`) asks for a zone. The executor hands it to the MRS layer (`TaskExecutor::SetZone`) and moves on; a robot with a radio has it in its profile, like `A_SY`.
 
@@ -148,6 +148,15 @@ The unit says "deliver the next package from source *s*": the destination comes 
 
 `Generators::DeliveryTasks(n, sources, destinations, options)` makes `n` packages (ids from 1001), split over the sources in turn; each gets a destination drawn from the list (seeded) and a mass in [`mass_min`, `mass_max`] (0.2–0.5 kg). It returns the manifest (pile order per source, bottom first), one unit per package, and with `options.zones` the zones: one per source (holding point `hold_offset` 6 m away from the mean destination) and one per destination (holding point 6 m towards the first source). `ManifestCsv` writes `package,source,area,dest_x,dest_y,dest_z,mass` (source and area 1-based).
 
+### 5.3 Command line
+
+```
+mrs_generate delivery <packages> <sources.csv> <destinations.csv> [--seed S] [--zones] [--at SECONDS]
+                      [--issuer ID] [--first N] [--manifest FILE] [--zones-out FILE]
+```
+
+The point files hold one point per line, `x,y` or `x,y,z` (ENU, m); lines starting with `#` are comments. The timeline (`.mrsl`, spec 07) goes to standard output; `--manifest` and `--zones-out` write the manifest and the zones as CSV. The demo scenario is in `MRS_Projects/Spatial3D/experiments/delivery/` (one pile at the origin, four destinations, 20 packages).
+
 
 ## 6. Radio range and relaying
 
@@ -171,11 +180,49 @@ Every robot relays when the option is on; there are no designated relay robots i
 * the spec 15 rule that sync is "never relayed" is about the content (a robot does not re-publish fields it learned from peers in its own `M_SYNC`); relaying the original `M_SYNC` message unchanged is allowed;
 * the issuer does not relay.
 
-### 6.3 Relay positions (*pending* Q5)
+### 6.3 Relay positions
 
-When a delivery's destination is beyond the issuer's range and no chain of robots covers the gap, the generator adds hold-position tasks at points along the line, spaced below `range_m`, for idle robots. Details follow the answer to Q5.
+JB, 2026-11-04 (Q5): relaying carries every message, and idle robots hold relay positions when a destination is out of the issuer's range.
 
-## 7. Intermediate drop points (*pending*)
+`DeliveryOptions::relay_range` (m, 0 = off) with `operator_pos` turns on relay positions in the generator. `Generators::RelayPoints` takes each destination farther than `relay_spacing` × range (0.8) from the operator and puts the fewest evenly spaced points on the line between them so that no link is longer than that; a point within 0.3 × range of one already chosen is shared. The points are at `relay_altitude` (40 m, above the robots' layers). Each becomes a HOVER point task (spec 11 §3.1) `relay.<k>` that holds for `relay_hold_s` (600 s), tolerance 2 m / 1 m, priority `relay_priority` (2, above the deliveries, so the first idle robots take them). Their tasks come first in the job, before the deliveries. On the command line: `--relay-range M --operator X,Y [--relay-hold S]` (§5.3).
+
+A robot holding a relay position runs no delivery; with `MrsConfig::relay` on (§6.2) it sends on what it hears, so the chain carries the delivering robot's messages (claims, `M_DONE` of each leaf) to the issuer and the issuer's to it. The battery rules (spec 08 §7) end a hold early as for any task.
+
+## 7. Intermediate drops in drop areas
+
+JB, 2026-11-04: a package that cannot be carried to its destination on the battery a robot has is left in an allowed drop area on the ground, and another robot (or the same one after recharging) takes it on from there.
+
+### 7.1 Drop areas
+
+`MrsConfig::drop_areas`: circles on the ground (`x`, `y`, `radius`, default 5 m), the same list on every robot. A package is left at the point of an area nearest its destination, 1 m inside the edge.
+
+### 7.2 The leg planner
+
+Each tick, before the robot controller, the layer looks at the package on the hook (`payload.id`). Once per hooked package, after its tag has been read (the `payload.dest` stamp is not older than the hook), it estimates the energy of going to a point *p* and then home:
+
+* loaded: climb to the robot's layer, cruise to above *p* at `loaded_speed` (4.5 m/s), descend, and hover `package_hover_s` (40 s) to lower and release. Hover and cruise power come from the robot's energy model (spec 08 §6) times ((M + m) / M)^1.5, with M = `frame_mass` (0.9 kg) and m the tag's mass;
+* empty: from *p* back to above home and down;
+* the sum times `leg_margin` (1.1).
+
+The budget is the remaining energy less the reserve (spec 08 §6). Then:
+
+1. if the destination fits the budget, nothing changes: the robot delivers;
+2. otherwise the drop area whose point is nearest the destination, at least `leg_min_progress` (10 m) closer than the robot is now, and within budget, becomes the leg point;
+3. otherwise the package is put back down where the robot is. If the robot has about what a robot fully charged at home would have on arriving here (within 10 % of capacity), no robot can do better, so the package is *stranded*: it stays there and no new delivery is posted (`MrsLayer::Stranded()` counts them).
+
+While a leg point is set the layer writes `payload.leg` (vector), and the sling processor (§3.3) aims the package flight straight at it, without the via point, in place of `payload.dest`. Releasing there (the same lower-and-release leaf) completes the robot's unit as usual. The layer then posts a new delivery unit from the leg point (§5.1, id `<robot>.<k>`) as an `M_TASK` to all and adds it to its own pool, so any robot can take it; the next robot hooks the package from the pile it now forms and plans again.
+
+### 7.3 Energy model calibration
+
+The energy model is of the robot alone: one-second windows in which `payload.held` is TRUE are not calibration samples (spec 08 §6). Without this the model learns the loaded power as the robot's own and the planner counts the package twice.
+
+### 7.4 Idle top-up
+
+With recharge on (§3.5), an idle robot (nothing running, no swap pending) whose battery is below `recharge_idle_below` (60 %) goes to a pad and charges before it takes more work.
+
+### 7.5 A package without a task
+
+A unit can end while its package is on the hook: in the open RTA two robots may run the same unit, and the one that loses it is cancelled after its pickup; a unit can also be dumped after the pickup. The layer remembers the task that was running when the hook caught. When the robot has run another task (or none) for `orphan_after` (3 s) while still holding the package, and is not returning or recharging, it adds a task of its own, `Generators::CarryTask` (id `<robot>.<k>`, priority `carry_priority` 5): the rest of a delivery from "the package is held", that is the destination queue, package flight, lowering and release, and return home. Only this robot learns of the task. `MrsLayer::Carries()` counts these. When the carry task is done, the robot reports the lost unit done (`M_DONE`). If another robot finished that unit meanwhile, the carried package is the one a later unit from the same pile would have taken (the packages of a pile are alike), so the robot reports the first unfinished unit whose first target is the same point instead; otherwise that unit would send robots to an empty pile.
 
 ## 8. Tests
 
@@ -185,6 +232,34 @@ When a delivery's destination is beyond the issuer's range and no chain of robot
 * One robot delivers three packages from one pile to two destinations read at pickup: all units done, every package within 1.5 m of its destination, released less than 0.3 m above the ground (makespan about 190 s).
 * Three robots share one pile and deliver nine packages to three destinations with zones on: all done, every robot carries some, no two robots below 7 m within 2 m of each other (makespan about 420 s).
 * A robot that starts at 34 % battery recharges at a pad (3 kW charger in the test) and delivers all four packages without a swap.
+* Lost unit: one robot hooks a package, then its unit is cancelled. It carries the package on under its own task and places it within 1.5 m of the destination (`Carries() == 1`).
+* Lost unit finished elsewhere: two units from one pile; the robot's unit is reported done by another robot after its pickup. It carries the package on, and the other unit from the pile is reported done.
+* Intermediate drops: one package for (400, 0), drop areas at x = 150 and 280, one robot with a pad at home. With 7 Wh (the sling Mavic of §9.3) the package goes through both areas (at least two drops) and is placed within 1.5 m of its destination. With 6.75 Wh even a fully charged robot cannot take it on from 280: it is stranded there, no robot crashes.
+* Relay positions: destinations at (35, 15), (130, 0) and (−20, 110) with a 60 m range give four points (two each for the far ones, the near one needs none), the first two at x = 43.3 and 86.7 m, at the relay altitude; a job puts `relay.1`, `relay.2` before its deliveries.
+* Relay chain: one package from the origin to (130, 0), operator at the origin with a 60 m radio, three relaying robots. With relay positions two robots hold them and the issuer hears the release leaf's `M_DONE` within 3 s of the package being placed (about 1 s); without them it hears it late or never.
+* Worldview: invalidating a vector after an earlier invalidation left a placeholder still clears its components (the cause of a leg point that outlived its package).
 
 * Relay (`tests/delivery/test_relay.cpp`): on a three-agent chain, a broadcast crosses once per agent; hearing it again sends nothing; a unicast passes through a relay that does not take it; a unicast to the relay is not sent on.
 * Range: three QuadSim robots 25 m apart, the operator 20 m before the first, range 30 m. Without relay only the first robot learns the mission within 5 s; with relay all three do, and the first two have relayed messages.
+
+## 9. Webots
+
+### 9.1 Sling ports (`WebotsPlatform`)
+
+The parts of `sling.webots` (§2.2) map to Webots as follows:
+
+| Port (mrsp address) | Webots | Read | Write |
+|---|---|---|---|
+| `hook`, parameter `mode sling` | an `active` Connector, model `sling`, autoLock FALSE, at the end of the line | held (locked), open | 0 opens |
+| `load cell`, `mode sling` | a PositionSensor on a vertical SliderJoint spring in the line | load kg = −x · `spring` / g − `tare`; line length (`length` 2 m, `length_open` + 0.1 m); open | |
+| `tag reader` | (no device; the robot's `supervisor` must be TRUE) | the tag of the package nearest the hook within `reach` 0.6 m while the hook is locked: id, destination, area, mass; else 0 | |
+
+The hook is passive in the sense of §2.1: whenever a sling port is read, a closed hook that is present to a loop connector locks to it, unless it was opened in the last `hook_open_s` (1 s) or has not yet left the package it let go of, or (with a supervisor) the hook is rising faster than 0.1 m/s: a robot that missed and climbs away does not snag the package on its way up. A package is a Solid whose `description` is its tag, `tag <id> <dest x> <dest y> <dest z> <area> <mass>`, with a `passive` loop Connector (model `sling`) 0.1 m above its top. Only the top of a pile can be caught: on each read the platform sets the loop model of every package with another package resting on it to `sling covered`, which the hook does not dock with. `MRS_SLING_DEBUG` in the environment prints the hook state, the hook position and the nearest package once a second, and each catch.
+
+### 9.2 World
+
+`platforms/webots/worlds/make_delivery_world.py` writes the world from the generator's manifest, sources, zones and timeline (§5.3): the piles; per Mavic the sling in `bodySlot` (2 m line on a BallJoint below the centre of mass, x = −0.075 m; a 150 N/m load-cell spring; a 0.1 kg hook), `supervisor TRUE` and `mrs_uav … --zones <zones.csv> --pad <id,x,y,hold_x,hold_y>`; a Charger at the pad; and the mission header. `mrs_uav` options: `--zones`, `--pad` (also turns recharging on), `--drop-area X,Y,R` (repeatable, §7) and `--relay` (§6.2). See the worlds README.
+
+### 9.3 Loaded descent
+
+A package on a 2 m line swings and lags the airframe, so a fast descent from the cruise layer overshoots and can slam the package into the ground. The FCU takes `max_descent` (m/s; 0: the same as `max_climb`) apart from `max_climb`. The sling Mavic sets `max_descent 1`, and softer outer loops (`kp_pos 0.5`, `kp_vel 1`, `max_tilt 0.25`): with the default gains the position loop fed the package's swing (period about 3 s on the 2 m line) until the airframe pitched past 0.5 rad and flipped. With the softer gains a one-robot run of three deliveries stays under 0.4 rad. The resource model's path costs use the same rate for descents (`ResourceConfig::sink_rate`), so the leg planner (§7) counts the slower descent.

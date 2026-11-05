@@ -15,6 +15,6 @@ P: P_A leds led1 SIM "front right led" 0/
 P: P_A bat battery SIM "battery" 1 rate_hz 1/
 P: P_A radio tx SIM "emitter" 0/
 P: P_A radio rx SIM "receiver" 1 rate_hz 31.25/
-P: P_A hook hook SIM "hook" 1 rate_hz 20/
-P: P_A load load SIM "load cell" 1 rate_hz 20/
+P: P_A hook hook SIM "hook" 2 rate_hz 20 mode sling/
+P: P_A load load SIM "load cell" 4 rate_hz 20 mode sling spring 150 tare 0.1/
 P: P_A tag tag SIM "tag reader" 1 rate_hz 10/
